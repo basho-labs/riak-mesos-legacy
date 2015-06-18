@@ -14,3 +14,12 @@ compared to Java.
 7. Check out Bletchley into WORKSPACE/src/github.com/basho/
 
 ```
+
+Building Bletchley itself:
+```
+1. cd into WORKSPACE/src/github.com/basho/bletchley
+# Make sure you have gox installed, from here: https://github.com/mitchellh/gox
+2. gox -osarch="linux/amd64" -osarch=darwin/amd64 ./...
+```
+
+Running Bletchley: `./scheduler_darwin_amd64` on Mac OS X or `./scheduler_linux_amd64` on Linux
