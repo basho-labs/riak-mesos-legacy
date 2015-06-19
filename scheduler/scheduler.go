@@ -11,6 +11,8 @@ import (
 	"os"
 	"github.com/kr/pretty"
     "fmt"
+	"net/http"
+
 
 )
 
@@ -173,25 +175,84 @@ errorHandle io.Writer) {
 		"ERROR: ",
 		log.Ldate|log.Ltime|log.Lshortfile)
 }
-func main() {
-	setupLogger(os.Stdout, os.Stdout, os.Stdout, os.Stderr)
-	exec := mesos.ExecutorInfo{
+
+func serveExecutorArtifact() (*string, string) {
+
+	ln, err := net.Listen("tcp", ":0")
+	if (err != nil) {
+		log.Fatal(err)
+	}
+	_, strPort, err := net.SplitHostPort(ln.Addr().String())
+	if (err != nil) {
+		log.Fatal(err)
+	}
+	port, err := strconv.Atoi(strPort)
+	if (err != nil) {
+		log.Fatal(err)
+	}
+
+	executorName := "executor"
+
+	hostname, err := os.Hostname()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+
+	//TODO: MAKE THIS SMARTER
+	//We need to ideally embed the executor into the scheduler
+	//And we need to intelligently choose / decompress the executor based upon the host OS
+	//This is a HACK.
+	hostURI := fmt.Sprintf("http://%s:%d/%s", hostname, port, executorName)
+	//Info.Printf("Hosting artifact '%s' at '%s'", path, hostURI)
+	log.Println("Serving at HostURI: ", hostURI)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/executor", func(w http.ResponseWriter, request *http.Request) {
+		log.Printf("%v %s %s %s ? %s %s %s", request.Host, request.RemoteAddr, request.Method, request.URL.Path, request.URL.RawQuery, request.Proto, request.Header.Get("User-Agent"))
+		http.ServeFile(w, request, "./executor_linux_amd64")
+	})
+	//http.Serve(ln, newHandler())
+	go http.Serve(ln, mux)
+	return &hostURI, "./" + executorName
+}
+
+
+func prepareExecutorInfo() *mesos.ExecutorInfo {
+
+
+	uri, executorCommand := serveExecutorArtifact()
+
+
+	executorUris := []*mesos.CommandInfo_URI{}
+	executorUris = append(executorUris, &mesos.CommandInfo_URI{Value: uri, Executable: proto.Bool(true)})
+	return &mesos.ExecutorInfo{
 		ExecutorId: util.NewExecutorID("default"),
 		Name:       proto.String("Test Executor (Go)"),
 		Source:     proto.String("go_test"),
 		Command: &mesos.CommandInfo{
-			Value: proto.String("/bin/sleep 10000"),
-			//Uris:  executorUris,
+			Value: proto.String(executorCommand),
+			Uris:  executorUris,
 		},
+	}
+}
+
+func main() {
+	setupLogger(os.Stdout, os.Stdout, os.Stdout, os.Stderr)
+	exec := prepareExecutorInfo()
+	// Hardcoded, should take this as a flag
+	frameworkId := &mesos.FrameworkID{
+		Value: proto.String("riak-mesos-go"),
 	}
 	fwinfo := &mesos.FrameworkInfo{
 		User: proto.String("sargun"), // Mesos-go will fill in user.
 		Name: proto.String("Test Framework (Go)"),
+		Id:   frameworkId,
 	}
 	cred := (*mesos.Credential)(nil)
 	bindingAddress := parseIP("33.33.33.1")
 	config := sched.DriverConfig{
-		Scheduler:      newExampleScheduler(&exec),
+		Scheduler:      newExampleScheduler(exec),
 		Framework:      fwinfo,
 		Master:         "33.33.33.2:5050",
 		Credential:     cred,

@@ -22,4 +22,13 @@ Building Bletchley itself:
 2. gox -osarch="linux/amd64" -osarch=darwin/amd64 ../...
 ```
 
+TODO: Eventually, we should use go-bindata and go generate to embed the executor in the scheduler. But for now, I'm lazy.
+(Reference: https://github.com/jteeuwen/go-bindata)
 Running Bletchley: `./scheduler_darwin_amd64` on Mac OS X or `./scheduler_linux_amd64` on Linux
+
+
+Directory structure at the end:
+```
+bletchley/src/github.com/basho/bletchley/.git
+bletchley/src/github.com/mesos/mesos-go/.git
+```
