@@ -8,12 +8,16 @@ import (
 	"time"
 )
 
+const (
+	kill int = iota
+)
 type exampleExecutor struct {
-	tasksLaunched int
+	tasksLaunched 	int
+	tasks			map[string]chan int
 }
 
 func newExampleExecutor() *exampleExecutor {
-	return &exampleExecutor{tasksLaunched: 0}
+	return &exampleExecutor{tasksLaunched: 0, tasks:make(map[string]chan int)}
 }
 
 func (exec *exampleExecutor) Registered(driver exec.ExecutorDriver, execInfo *mesos.ExecutorInfo, fwinfo *mesos.FrameworkInfo, slaveInfo *mesos.SlaveInfo) {
@@ -40,27 +44,59 @@ func (exec *exampleExecutor) LaunchTask(driver exec.ExecutorDriver, taskInfo *me
 		fmt.Println("Got error", err)
 	}
 
+	ch := make(chan int, 1)
+	exec.tasks[*taskInfo.TaskId.Value] = ch
 	exec.tasksLaunched++
 	fmt.Println("Total tasks launched ", exec.tasksLaunched)
 	//
 	// this is where one would perform the requested task
 	//
-	time.Sleep(100 * time.Second)
-	// finish task
-	fmt.Println("Finishing task", taskInfo.GetName())
-	finStatus := &mesos.TaskStatus{
-		TaskId: taskInfo.GetTaskId(),
-		State:  mesos.TaskState_TASK_FINISHED.Enum(),
+	lol := func() {
+		fmt.Println("Starting task")
+		select {
+			case <-time.After(time.Second * 10):
+				{
+					fmt.Println("Finishing task", taskInfo.GetName())
+					finStatus := &mesos.TaskStatus{
+						TaskId: taskInfo.GetTaskId(),
+						State:  mesos.TaskState_TASK_FINISHED.Enum(),
+					}
+					_, err = driver.SendStatusUpdate(finStatus)
+					if err != nil {
+						fmt.Println("Got error", err)
+					}
+					delete(exec.tasks, *taskInfo.TaskId.Value)
+					fmt.Println("Task finished", taskInfo.GetName())
+				}
+			case <-ch:
+				{
+					fmt.Println("Killing task", taskInfo.GetName())
+					finStatus := &mesos.TaskStatus{
+						TaskId: taskInfo.GetTaskId(),
+						State:  mesos.TaskState_TASK_KILLED.Enum(),
+					}
+					_, err = driver.SendStatusUpdate(finStatus)
+					if err != nil {
+						fmt.Println("Got error", err)
+					}
+					delete(exec.tasks, *taskInfo.TaskId.Value)
+					fmt.Println("Killed task", taskInfo.GetName())
+				}
+
+		}
 	}
-	_, err = driver.SendStatusUpdate(finStatus)
-	if err != nil {
-		fmt.Println("Got error", err)
-	}
-	fmt.Println("Task finished", taskInfo.GetName())
+	go lol()
+	fmt.Println("Scheduler continuing")
 }
 
-func (exec *exampleExecutor) KillTask(exec.ExecutorDriver, *mesos.TaskID) {
+func (exec *exampleExecutor) KillTask(driver exec.ExecutorDriver, taskId *mesos.TaskID) {
 	fmt.Println("Kill task")
+	ch, ok := exec.tasks[*taskId.Value]
+	if ok != true {
+		fmt.Println("Error, task not found:", taskId)
+	} else {
+		ch <- kill
+	}
 }
 
 func (exec *exampleExecutor) FrameworkMessage(driver exec.ExecutorDriver, msg string) {

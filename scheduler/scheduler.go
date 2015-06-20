@@ -12,6 +12,9 @@ import (
 	"github.com/kr/pretty"
     "fmt"
 	"net/http"
+	"os/signal"
+	"syscall"
+	"code.google.com/p/go-uuid/uuid"
 
 
 )
@@ -26,9 +29,12 @@ var (
 )
 type ExampleScheduler struct {
 	executor      *mesos.ExecutorInfo
+	driver 		  sched.SchedulerDriver
 	tasksLaunched int
 	tasksFinished int
 	totalTasks    int
+	statusesMap   map[string]*mesos.TaskStatus
+
 }
 func newExampleScheduler(exec *mesos.ExecutorInfo) *ExampleScheduler {
 	total := 5
@@ -37,13 +43,39 @@ func newExampleScheduler(exec *mesos.ExecutorInfo) *ExampleScheduler {
 		tasksLaunched: 0,
 		tasksFinished: 0,
 		totalTasks:    total,
+		statusesMap:   make(map[string]*mesos.TaskStatus),
 	}
 }
+
+func (sched *ExampleScheduler) channelWatcher() {
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, syscall.SIGUSR1)
+	for {
+		<-ch
+		log.Println("Got signal")
+		v := make([]*mesos.TaskStatus, 0, len(sched.statusesMap))
+		sched.executor.ExecutorId = util.NewExecutorID(uuid.New())
+		for _, task := range sched.statusesMap {
+			state := *task.State
+			if state == mesos.TaskState_TASK_RUNNING {
+				log.Println("Killing task: ", task)
+				sched.driver.KillTask(task.TaskId)
+			}
+			v = append(v, task)
+		}
+		sched.driver.ReconcileTasks(v)
+	}
+}
+
 func (sched *ExampleScheduler) Registered(driver sched.SchedulerDriver, frameworkId *mesos.FrameworkID, masterInfo *mesos.MasterInfo) {
+	sched.driver = driver
+	go sched.channelWatcher()
 	Info.Println("Framework Registered with Master ", masterInfo)
 }
 
 func (sched *ExampleScheduler) Reregistered(driver sched.SchedulerDriver, masterInfo *mesos.MasterInfo) {
+	sched.driver = driver
+	go sched.channelWatcher()
 	Info.Println("Framework Re-Registered with Master ", masterInfo)
 }
 
@@ -89,7 +121,7 @@ func (sched *ExampleScheduler) ResourceOffers(driver sched.SchedulerDriver, offe
 			}
 
 			task := &mesos.TaskInfo{
-				Name:     proto.String("go-task-" + taskId.GetValue()),
+				Name:     proto.String("go-task-" + taskId.GetValue() + "-" + uuid.New()),
 				TaskId:   taskId,
 				SlaveId:  offer.SlaveId,
 				Executor: sched.executor,
@@ -111,25 +143,36 @@ func (sched *ExampleScheduler) ResourceOffers(driver sched.SchedulerDriver, offe
 }
 
 func (sched *ExampleScheduler) StatusUpdate(driver sched.SchedulerDriver, status *mesos.TaskStatus) {
+	sched.statusesMap[*status.TaskId.Value] = status
 	Info.Println("Status update: task", status.TaskId.GetValue(), " is in state ", status.State.Enum().String())
+	Info.Println(status)
 	if status.GetState() == mesos.TaskState_TASK_FINISHED {
 		sched.tasksFinished++
+		_, ok := sched.statusesMap[*status.TaskId.Value]
+		if ok == true {
+			delete(sched.statusesMap, *status.TaskId.Value)
+		}
 	}
-
+	                     /*
 	if sched.tasksFinished >= sched.totalTasks {
 		Info.Println("Total tasks completed, stopping framework.")
 		driver.Stop(false)
 	}
+	*/
 
 	if status.GetState() == mesos.TaskState_TASK_LOST ||
 	status.GetState() == mesos.TaskState_TASK_KILLED ||
 	status.GetState() == mesos.TaskState_TASK_FAILED {
 		Info.Println(
-			"Aborting because task", status.TaskId.GetValue(),
+			"Something is wrong, because task", status.TaskId.GetValue(),
 			"is in unexpected state", status.State.String(),
 			"with message", status.GetMessage(),
 		)
-		driver.Abort()
+		_, ok := sched.statusesMap[*status.TaskId.Value]
+		if ok == true {
+			delete(sched.statusesMap, *status.TaskId.Value)
+		}
+		//driver.Abort()
 	}
 }
 
@@ -219,40 +262,42 @@ func serveExecutorArtifact() (*string, string) {
 
 
 func prepareExecutorInfo() *mesos.ExecutorInfo {
-
-
 	uri, executorCommand := serveExecutorArtifact()
-
-
 	executorUris := []*mesos.CommandInfo_URI{}
 	executorUris = append(executorUris, &mesos.CommandInfo_URI{Value: uri, Executable: proto.Bool(true)})
 	return &mesos.ExecutorInfo{
-		ExecutorId: util.NewExecutorID("default"),
+		//No idea is this is the "right" way to do it, but I think so?
+		ExecutorId: util.NewExecutorID(uuid.New()),
 		Name:       proto.String("Test Executor (Go)"),
 		Source:     proto.String("go_test"),
 		Command: &mesos.CommandInfo{
 			Value: proto.String(executorCommand),
 			Uris:  executorUris,
+			Shell: proto.Bool(true),
 		},
 	}
 }
 
+
 func main() {
 	setupLogger(os.Stdout, os.Stdout, os.Stdout, os.Stderr)
+
 	exec := prepareExecutorInfo()
 	// Hardcoded, should take this as a flag
 	frameworkId := &mesos.FrameworkID{
-		Value: proto.String("riak-mesos-go"),
+		Value: proto.String("riak-mesos-go3"),
 	}
 	fwinfo := &mesos.FrameworkInfo{
 		User: proto.String("sargun"), // Mesos-go will fill in user.
 		Name: proto.String("Test Framework (Go)"),
 		Id:   frameworkId,
+		FailoverTimeout: proto.Float64(86400),
 	}
 	cred := (*mesos.Credential)(nil)
 	bindingAddress := parseIP("33.33.33.1")
+	scheduler := newExampleScheduler(exec)
 	config := sched.DriverConfig{
-		Scheduler:      newExampleScheduler(exec),
+		Scheduler:      scheduler,
 		Framework:      fwinfo,
 		Master:         "33.33.33.2:5050",
 		Credential:     cred,
