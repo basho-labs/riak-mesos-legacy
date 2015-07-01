@@ -19,7 +19,7 @@ Building Bletchley itself:
 ```
 1. cd into WORKSPACE/src/github.com/basho/bletchley/bin
 # Make sure you have gox installed, from here: https://github.com/mitchellh/gox
-2. gox -osarch="linux/amd64" -osarch=darwin/amd64 ../...
+2. go generate ../... && gox -osarch="linux/amd64" -osarch=darwin/amd64 ../...
 ```
 
 TODO: Eventually, we should use go-bindata and go generate to embed the executor in the scheduler. But for now, I'm lazy.

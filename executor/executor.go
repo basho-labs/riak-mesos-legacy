@@ -1,11 +1,13 @@
 package main
 
+//go:generate go-bindata -o bindata_generated.go data/
+
 import (
-	"flag"
 	"fmt"
 	exec "github.com/mesos/mesos-go/executor"
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	"time"
+	"os"
 )
 
 const (
@@ -34,6 +36,9 @@ func (exec *exampleExecutor) Disconnected(exec.ExecutorDriver) {
 
 func (exec *exampleExecutor) LaunchTask(driver exec.ExecutorDriver, taskInfo *mesos.TaskInfo) {
 	fmt.Println("Launching task", taskInfo.GetName(), "with command", taskInfo.Command.GetValue())
+	os.Args[0] = fmt.Sprintf("executor - %s", taskInfo.TaskId.GetValue())
+
+		fmt.Println("Other hilarious facts: ", taskInfo)
 
 	runStatus := &mesos.TaskStatus{
 		TaskId: taskInfo.GetTaskId(),
@@ -54,7 +59,7 @@ func (exec *exampleExecutor) LaunchTask(driver exec.ExecutorDriver, taskInfo *me
 	lol := func() {
 		fmt.Println("Starting task")
 		select {
-			case <-time.After(time.Second * 10):
+			case <-time.After(time.Second * 1000):
 				{
 					fmt.Println("Finishing task", taskInfo.GetName())
 					finStatus := &mesos.TaskStatus{
@@ -82,8 +87,11 @@ func (exec *exampleExecutor) LaunchTask(driver exec.ExecutorDriver, taskInfo *me
 					delete(exec.tasks, *taskInfo.TaskId.Value)
 					fmt.Println("Killed task", taskInfo.GetName())
 				}
-
 		}
+		time.Sleep(time.Second * 10)
+		driver.Stop()
+		time.Sleep(time.Second * 10)
+		os.Exit(0)
 	}
 	go lol()
 	fmt.Println("Scheduler continuing")
@@ -111,13 +119,15 @@ func (exec *exampleExecutor) Error(driver exec.ExecutorDriver, err string) {
 	fmt.Println("Got error message:", err)
 }
 
-// -------------------------- func inits () ----------------- //
-func init() {
-	flag.Parse()
-}
+
 
 func main() {
+
 	fmt.Println("Starting Example Executor (Go)")
+	fmt.Println("Args: ", os.Args)
+	data, _ := Asset("data/stuff")
+	s := string(data)
+	fmt.Printf("data=%v\n", s)
 
 	dconfig := exec.DriverConfig{
 		Executor: newExampleExecutor(),
