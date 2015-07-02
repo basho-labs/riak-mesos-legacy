@@ -32,7 +32,7 @@ Vagrant.configure(2) do |config|
   end
 
   config.vm.provision "shell", inline: <<-SHELL
-
+    # Host communication
     HOSTMACHINE=`netstat -rn | grep "^0.0.0.0 " | cut -d " " -f10`
     echo "$HOSTMACHINE	33.33.33.1" >> /etc/hosts
 
@@ -40,7 +40,6 @@ Vagrant.configure(2) do |config|
     apt-key adv --keyserver keyserver.ubuntu.com --recv E56151BF
     DISTRO=$(lsb_release -is | tr '[:upper:]' '[:lower:]')
     CODENAME=$(lsb_release -cs)
-
     echo "deb http://repos.mesosphere.io/${DISTRO} ${CODENAME} main" | \
       tee /etc/apt/sources.list.d/mesosphere.list
     apt-get -y update
@@ -49,24 +48,13 @@ Vagrant.configure(2) do |config|
     service mesos-master start
     service mesos-slave start
     service marathon start
-
     MASTER=$(mesos-resolve `cat /etc/mesos/zk` 2>/dev/null)
     mesos-execute --master=$MASTER --name="cluster-test" --command="sleep 5"
-
-    # Riak
-    apt-get -y install libpam0g-dev
-    if [ ! -f riak_2.1.1-1_amd64.deb ]; then
-      wget http://s3.amazonaws.com/downloads.basho.com/riak/2.1/2.1.1/ubuntu/trusty/riak_2.1.1-1_amd64.deb
-    fi
-    dpkg -i riak_2.1.1-1_amd64.deb
 
     # Go
     if [ ! -f go1.4.2.linux-amd64.tar.gz ]; then
         curl -O https://storage.googleapis.com/golang/go1.4.2.linux-amd64.tar.gz
     fi
     tar -C /usr/local -xzf go1.4.2.linux-amd64.tar.gz
-    # echo "export GOPATH=/riak-mesos" >> /home/vagrant/.bashrc
-    # echo "export PATH=$PATH:/riak-mesos/bin:/usr/local/go/bin" >> /home/vagrant/.bashrc
-
   SHELL
 end
