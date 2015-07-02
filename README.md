@@ -22,7 +22,7 @@ Mac OS X
 
 Vagrant / Linux
 
-``
+```
 cd /riak-mesos/src/github.com/basho/bletchley/bin
 ./scheduler_linux_amd64 -master=33.33.33.2:5050 -zk=33.33.33.2:2181 -host=33.33.33.2
 ```
