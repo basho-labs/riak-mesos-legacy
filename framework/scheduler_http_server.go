@@ -1,4 +1,4 @@
-package main
+package framework
 
 import (
 	"fmt"
@@ -25,7 +25,7 @@ func parseIP(address string) net.IP {
 	}
 	return addr[0]
 }
-func serveExecutorArtifact(schedulerHost string) *SchedulerHTTPServer {
+func ServeExecutorArtifact(schedulerHost string) *SchedulerHTTPServer {
 
 	ln, err := net.Listen("tcp", ":0")
 	if err != nil {

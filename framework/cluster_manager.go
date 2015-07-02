@@ -1,4 +1,4 @@
-package main
+package framework
 
 // Responsible for loading up the cluster status from our metadata store
 

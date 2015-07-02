@@ -1,4 +1,4 @@
-package main
+package framework
 
 import (
 	log "github.com/Sirupsen/logrus"
@@ -74,7 +74,7 @@ type scheduleTask struct {
 	replyChannel    chan bool
 }
 
-func newSchedulerCore(frameworkName string, schedulerHTTPServer *SchedulerHTTPServer, mgr *metadata_manager.MetadataManager, mesosMaster string, schedulerHost string) *SchedulerCore {
+func NewSchedulerCore(frameworkName string, schedulerHTTPServer *SchedulerHTTPServer, mgr *metadata_manager.MetadataManager, mesosMaster string, schedulerHost string) *SchedulerCore {
 	scheduler := &SchedulerCore{
 		subscribtionLock:        &sync.Mutex{},
 		driver:                  nil,
