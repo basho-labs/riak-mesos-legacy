@@ -23,7 +23,7 @@ Vagrant.configure(2) do |config|
   # zookeeper
   config.vm.network "forwarded_port", guest: 2181, host:2181
 
-  config.vm.network "private_network", ip: "33.33.33.2"
+  config.vm.network "private_network", ip: "33.33.33.2", auto_config: false
 
   config.vm.synced_folder "./../../../../", "/riak-mesos"
 
@@ -44,10 +44,17 @@ Vagrant.configure(2) do |config|
       tee /etc/apt/sources.list.d/mesosphere.list
     apt-get -y update
     apt-get -y install mesos marathon
+
+    echo "33.33.33.2" > /etc/mesos-master/hostname
+    echo "33.33.33.2" > /etc/mesos-master/ip
+
+    echo "33.33.33.2" > /etc/mesos-slave/hostname
+    echo "33.33.33.2" > /etc/mesos-slave/ip
+
     service zookeeper restart
-    service mesos-master start
-    service mesos-slave start
-    service marathon start
+    service mesos-master restart
+    service mesos-slave restart
+    service marathon restart
     MASTER=$(mesos-resolve `cat /etc/mesos/zk` 2>/dev/null)
     mesos-execute --master=$MASTER --name="cluster-test" --command="sleep 5"
 

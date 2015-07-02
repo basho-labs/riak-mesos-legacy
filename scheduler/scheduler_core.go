@@ -31,7 +31,7 @@ type SchedulerCore struct {
 	taskStateSubscribe      chan taskStateSubscribe
 	mgr                     *metadata_manager.MetadataManager
 	mesosMaster             string
-	schedulerHost           string
+	schedulerIpAddr         string
 }
 
 // Private "internal" structs
@@ -74,7 +74,7 @@ type scheduleTask struct {
 	replyChannel    chan bool
 }
 
-func newSchedulerCore(frameworkName string, schedulerHTTPServer *SchedulerHTTPServer, mgr *metadata_manager.MetadataManager, mesosMaster string, schedulerHost string) *SchedulerCore {
+func newSchedulerCore(frameworkName string, schedulerHTTPServer *SchedulerHTTPServer, mgr *metadata_manager.MetadataManager, mesosMaster string, schedulerIpAddr string) *SchedulerCore {
 	scheduler := &SchedulerCore{
 		subscribtionLock:        &sync.Mutex{},
 		driver:                  nil,
@@ -91,15 +91,14 @@ func newSchedulerCore(frameworkName string, schedulerHTTPServer *SchedulerHTTPSe
 		outstandingTasks:        make(chan scheduleTask, 10),
 		mgr:                     mgr,
 		mesosMaster:             mesosMaster,
-		schedulerHost:           schedulerHost,
+		schedulerIpAddr:         schedulerIpAddr,
 	}
 	frameworkId := &mesos.FrameworkID{
 		Value: proto.String(frameworkName),
 	}
 	// TODO: Get "Real" credentials here
 	cred := (*mesos.Credential)(nil)
-	// TODO: Take flag for
-	bindingAddress := parseIP(schedulerHost)
+	bindingAddress := parseIP(schedulerIpAddr)
 	fwinfo := &mesos.FrameworkInfo{
 		User:            proto.String("sargun"), // Mesos-go will fill in user.
 		Name:            proto.String("Test Framework (Go)"),

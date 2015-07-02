@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"net/http/pprof"
+	"os"
 )
 
 type SchedulerHTTPServer struct {
@@ -25,7 +26,7 @@ func parseIP(address string) net.IP {
 	}
 	return addr[0]
 }
-func serveExecutorArtifact(schedulerHost string) *SchedulerHTTPServer {
+func serveExecutorArtifact(schedulerHostname string) *SchedulerHTTPServer {
 
 	ln, err := net.Listen("tcp", ":0")
 	if err != nil {
@@ -42,7 +43,16 @@ func serveExecutorArtifact(schedulerHost string) *SchedulerHTTPServer {
 
 	executorName := "executor"
 
-	hostname := schedulerHost
+	var hostname string
+
+	if schedulerHostname == "" {
+		hostname, err = os.Hostname()
+		if err != nil {
+			log.Fatal(err)
+		}
+    } else {
+        hostname = schedulerHostname
+    }
 
 	//TODO: MAKE THIS SMARTER
 	//We need to ideally embed the executor into the scheduler

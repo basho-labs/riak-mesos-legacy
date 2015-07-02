@@ -17,12 +17,12 @@ go generate ../... && gox -osarch="linux/amd64" -osarch=darwin/amd64 ../...
 Mac OS X
 
 ```
-./scheduler_darwin_amd64 -master=33.33.33.2:5050 -zk=33.33.33.2:2181 -host=33.33.33.1
+./scheduler_darwin_amd64 -master=zk://33.33.33.2:2181/mesos -zk=33.33.33.2:2181 -hostname=33.33.33.1 -ip=33.33.33.1
 ```
 
 Vagrant / Linux
 
 ```
 cd /riak-mesos/src/github.com/basho/bletchley/bin
-./scheduler_linux_amd64 -master=33.33.33.2:5050 -zk=33.33.33.2:2181 -host=33.33.33.2
+./scheduler_linux_amd64 -master=zk://33.33.33.2:2181/mesos -zk=33.33.33.2:2181 -hostname=33.33.33.2 -ip=localhost
 ```
