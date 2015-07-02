@@ -1,8 +1,9 @@
-package main
+package common
 
 import (
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	util "github.com/mesos/mesos-go/mesosutil"
+	"sort"
 )
 
 // The new value for the resource, the ask, and whether or not the ask was accomodated - the ask may be nil if it wasn't accomodated
@@ -34,8 +35,14 @@ func AskForMemory(memory float64) ResourceAsker {
 }
 
 
+type intarray []int64
+func (a intarray) Len() int           { return len(a) }
+func (a intarray) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a intarray) Less(i, j int) bool { return a[i] < a[j] }
+
 // We assume the input is sorted
 func arrayToRanges(ports []int64) []*mesos.Value_Range {
+	sort.Sort(intarray(ports))
 	if len(ports) == 0 {
 		return []*mesos.Value_Range{}
 	}

@@ -3,6 +3,7 @@ package main
 import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
+	"github.com/basho/bletchley/common"
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	"github.com/basho/bletchley/metadata_manager"
 	sched "github.com/mesos/mesos-go/scheduler"
@@ -16,7 +17,7 @@ var (
 )
 
 const (
-	OFFER_INTERVAL float64 = 1
+	OFFER_INTERVAL float64 = 5
 )
 
 func init() {
@@ -77,7 +78,7 @@ type resourceOffersRescinded struct {
 type scheduleTask struct {
 	TaskInfo   		*mesos.TaskInfo
 	TargetTask 		*TargetTask
-	Filters			[]ResourceAsker
+	Filters			[]common.ResourceAsker
 	replyChannel    chan bool
 }
 
@@ -138,7 +139,7 @@ func (sched *SchedulerCore) Subscribe(taskID string, targetTask *TargetTask) {
 func (sched *SchedulerCore) Unsubscribe(taskID string, targetTask *TargetTask) {
 	sched.taskStateSubscribe <- taskStateSubscribe{targetTask: targetTask, taskID: taskID, subscriptionChangeType: unsubscribe}
 }
-func (sched *SchedulerCore) ScheduleTask(TaskInfo *mesos.TaskInfo, TargetTask *TargetTask, askers []ResourceAsker) bool {
+func (sched *SchedulerCore) ScheduleTask(TaskInfo *mesos.TaskInfo, TargetTask *TargetTask, askers []common.ResourceAsker) bool {
 	log.Infof("Scheduler called!")
 	sc := scheduleTask{TaskInfo: TaskInfo, TargetTask: TargetTask, replyChannel:make(chan bool), Filters: askers}
 	sched.outstandingTasks <- sc

@@ -8,8 +8,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	util "github.com/mesos/mesos-go/mesosutil"
 	"time"
-//	"github.com/satori/go.uuid"
-
+	"github.com/basho/bletchley/common"
 )
 
 type targetTaskStateType int
@@ -18,13 +17,21 @@ const (
 	unknownTargetTaskState targetTaskStateType = iota
 )
 
+type internalStatus int
+const (
+	targetTaskUnknown internalStatus = iota
+	targetTaskStarting = iota
+	targetTaskStartingFailed = iota
+)
 type TargetTask struct {
 	schedulerCore          *SchedulerCore
 	TaskName               string
 	uuid             	   string
 	mesosTaskStatusUpdates chan *mesos.TaskStatus
+	currentTaskStatus	   *mesos.TaskStatus
 	targetTaskState        targetTaskStateType
 	mgr                    *metadata_manager.MetadataManager
+	status		           internalStatus
 }
 
 func NewTargetTask(taskName string, schedulerCore *SchedulerCore, mgr *metadata_manager.MetadataManager) *TargetTask {
@@ -35,6 +42,7 @@ func NewTargetTask(taskName string, schedulerCore *SchedulerCore, mgr *metadata_
 		// TODO: Add lower generation marker
 		uuid:        uuid,
 		mgr:               mgr,
+		status:		targetTaskUnknown,
 	}
 }
 
@@ -57,6 +65,14 @@ func (task *TargetTask) Loop() {
 		select {
 		case statusUpdate := <-task.mesosTaskStatusUpdates:
 			task.handleStatusUpdate(statusUpdate)
+		case <-time.After(1 * time.Minute): {
+			// Refresh task
+			if task.currentTaskStatus != nil {
+				switch task.status {
+				case targetTaskStartingFailed: task.reviveTask()
+				}
+			}
+		}
 		}
 	}
 
@@ -98,9 +114,9 @@ func (task *TargetTask) reviveTask() {
 		},
 		Data: []byte{'h', 'e', 'l', 'l', 'o'},
 	}
-	if !task.schedulerCore.ScheduleTask(taskInfo, task, []ResourceAsker{AskForPorts(2), AskForMemory(128)}) {
-		log.Info("Failed to schedule task")
-		time.AfterFunc(15 * time.Second, func() { task.schedulerCore.TriggerReconcilation(task.currentTaskName()) })
+	if !task.schedulerCore.ScheduleTask(taskInfo, task, []common.ResourceAsker{common.AskForPorts(2), common.AskForMemory(128)}) {
+		log.Error("Failed to schedule task")
+		task.status = targetTaskStartingFailed
 	}
 
 }
@@ -115,12 +131,16 @@ func (task *TargetTask) handleStatusUpdate(statusUpdate *mesos.TaskStatus) {
 		default: panic("Historical task may have come back alive")
 		}
 	} else {
+		task.currentTaskStatus = statusUpdate
+		task.status = targetTaskStarting
 		switch *statusUpdate.State {
 		case mesos.TaskState_TASK_LOST: task.reviveTask()
 		case mesos.TaskState_TASK_FAILED: task.reviveTask()
-		case mesos.TaskState_TASK_FINISHED: task.reviveTask()
+		case mesos.TaskState_TASK_FINISHED: {
+			task.reviveTask()
+		}
 		case mesos.TaskState_TASK_ERROR: task.reviveTask()
-		default: log.Info("Curren task status update: ", statusUpdate)
+		default: log.Info("Current task status update: ", statusUpdate)
 		}
 	}
 }
