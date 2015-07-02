@@ -1,17 +1,18 @@
 package main
 
-
 import (
-	mesos "github.com/mesos/mesos-go/mesosproto"
-	log "github.com/Sirupsen/logrus"
-	"time"
-	"os"
 	"fmt"
+	log "github.com/Sirupsen/logrus"
+	mesos "github.com/mesos/mesos-go/mesosproto"
+	"os"
+	"time"
 )
+
 type RiakNode struct {
-	executor 	*ExecutorCore
-	taskInfo 	*mesos.TaskInfo
+	executor *ExecutorCore
+	taskInfo *mesos.TaskInfo
 }
+
 func NewRiakNode(taskInfo *mesos.TaskInfo, executor *ExecutorCore) *RiakNode {
 	return &RiakNode{
 		executor: executor,

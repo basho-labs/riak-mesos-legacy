@@ -1,13 +1,14 @@
 package common
+
 import (
-	"github.com/stretchr/testify/assert"
-    "testing"
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	util "github.com/mesos/mesos-go/mesosutil"
+	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func generateResourceOffer() []*mesos.Resource {
-	val :=[]*mesos.Resource{
+	val := []*mesos.Resource{
 		util.NewScalarResource("cpus", 3),
 		util.NewScalarResource("disk", 73590),
 		util.NewScalarResource("mem", 1985),
@@ -74,14 +75,13 @@ func TestGoodMemoryAsk(t *testing.T) {
 	assert.Equal(1885.0, cpuResources[0].Scalar.GetValue())
 }
 
-
 func TestArrayToRanges(t *testing.T) {
 	assert := assert.New(t)
 	assert.Equal(arrayToRanges([]int64{}), []*mesos.Value_Range{})
-	assert.Equal(arrayToRanges([]int64{1,2,3,4}), []*mesos.Value_Range{util.NewValueRange(1,4)})
-	assert.Equal(arrayToRanges([]int64{1,2,3,4,6,7,8}), []*mesos.Value_Range{util.NewValueRange(1,4), util.NewValueRange(6,8)})
-	assert.Equal(arrayToRanges([]int64{2,3,4,6,7,8}), []*mesos.Value_Range{util.NewValueRange(2,4), util.NewValueRange(6,8)})
-	assert.Equal(arrayToRanges([]int64{1,3,5}), []*mesos.Value_Range{util.NewValueRange(1,1), util.NewValueRange(3,3), util.NewValueRange(5,5)})
+	assert.Equal(arrayToRanges([]int64{1, 2, 3, 4}), []*mesos.Value_Range{util.NewValueRange(1, 4)})
+	assert.Equal(arrayToRanges([]int64{1, 2, 3, 4, 6, 7, 8}), []*mesos.Value_Range{util.NewValueRange(1, 4), util.NewValueRange(6, 8)})
+	assert.Equal(arrayToRanges([]int64{2, 3, 4, 6, 7, 8}), []*mesos.Value_Range{util.NewValueRange(2, 4), util.NewValueRange(6, 8)})
+	assert.Equal(arrayToRanges([]int64{1, 3, 5}), []*mesos.Value_Range{util.NewValueRange(1, 1), util.NewValueRange(3, 3), util.NewValueRange(5, 5)})
 }
 
 func TestGoodPortAsk(t *testing.T) {
@@ -110,4 +110,3 @@ func TestTotalPortAsk(t *testing.T) {
 	assert.Equal(0, len(newOffer[0].GetRanges().GetRange()))
 	assert.Equal(true, success)
 }
-

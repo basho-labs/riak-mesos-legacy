@@ -4,25 +4,23 @@ package main
 
 import (
 	"fmt"
+	log "github.com/Sirupsen/logrus"
 	exec "github.com/mesos/mesos-go/executor"
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	"os"
-	log "github.com/Sirupsen/logrus"
 )
 
 const (
 	kill int = iota
 )
+
 type ExecutorCore struct {
-	tasks	map[string]*RiakNode
-	Driver  exec.ExecutorDriver
+	riakNode *RiakNode
+	Driver   exec.ExecutorDriver
 }
 
-
 func newExecutor() *ExecutorCore {
-	return &ExecutorCore{
-		tasks:make(map[string]*RiakNode),
-	}
+	return &ExecutorCore{}
 }
 
 func (exec *ExecutorCore) Registered(driver exec.ExecutorDriver, execInfo *mesos.ExecutorInfo, fwinfo *mesos.FrameworkInfo, slaveInfo *mesos.SlaveInfo) {
@@ -43,53 +41,52 @@ func (exec *ExecutorCore) LaunchTask(driver exec.ExecutorDriver, taskInfo *mesos
 	fmt.Println("Launching task", taskInfo.GetName(), "with command", taskInfo.Command.GetValue())
 	os.Args[0] = fmt.Sprintf("executor - %s", taskInfo.TaskId.GetValue())
 
-		//fmt.Println("Other hilarious facts: ", taskInfo)
-
+	//fmt.Println("Other hilarious facts: ", taskInfo)
 
 	//
 	// this is where one would perform the requested task
 	//
 	fmt.Println("Starting task")
 
-	exec.tasks[taskInfo.TaskId.GetValue()] = NewRiakNode(taskInfo, exec)
-	go exec.tasks[taskInfo.TaskId.GetValue()].Loop()
+	exec.riakNode = NewRiakNode(taskInfo, exec)
+	go exec.riakNode.Loop()
 	/*	select {
-			case <-time.After(time.Second * 120):
-				{
-					fmt.Println("Finishing task", taskInfo.GetName())
-					finStatus := &mesos.TaskStatus{
-						TaskId: taskInfo.GetTaskId(),
-						State:  mesos.TaskState_TASK_FINISHED.Enum(),
+				case <-time.After(time.Second * 120):
+					{
+						fmt.Println("Finishing task", taskInfo.GetName())
+						finStatus := &mesos.TaskStatus{
+							TaskId: taskInfo.GetTaskId(),
+							State:  mesos.TaskState_TASK_FINISHED.Enum(),
+						}
+						_, err = driver.SendStatusUpdate(finStatus)
+						if err != nil {
+							fmt.Println("Got error", err)
+						}
+						delete(exec.tasks, *taskInfo.TaskId.Value)
+						fmt.Println("Task finished", taskInfo.GetName())
 					}
-					_, err = driver.SendStatusUpdate(finStatus)
-					if err != nil {
-						fmt.Println("Got error", err)
+				case <-ch:
+					{
+						fmt.Println("Killing task", taskInfo.GetName())
+						finStatus := &mesos.TaskStatus{
+							TaskId: taskInfo.GetTaskId(),
+							State:  mesos.TaskState_TASK_KILLED.Enum(),
+						}
+						_, err = driver.SendStatusUpdate(finStatus)
+						if err != nil {
+							fmt.Println("Got error", err)
+						}
+						delete(exec.tasks, *taskInfo.TaskId.Value)
+						fmt.Println("Killed task", taskInfo.GetName())
 					}
-					delete(exec.tasks, *taskInfo.TaskId.Value)
-					fmt.Println("Task finished", taskInfo.GetName())
-				}
-			case <-ch:
-				{
-					fmt.Println("Killing task", taskInfo.GetName())
-					finStatus := &mesos.TaskStatus{
-						TaskId: taskInfo.GetTaskId(),
-						State:  mesos.TaskState_TASK_KILLED.Enum(),
-					}
-					_, err = driver.SendStatusUpdate(finStatus)
-					if err != nil {
-						fmt.Println("Got error", err)
-					}
-					delete(exec.tasks, *taskInfo.TaskId.Value)
-					fmt.Println("Killed task", taskInfo.GetName())
-				}
+			}
+			time.Sleep(time.Second * 10)
+			driver.Stop()
+			time.Sleep(time.Second * 10)
+			os.Exit(0)
 		}
-		time.Sleep(time.Second * 10)
-		driver.Stop()
-		time.Sleep(time.Second * 10)
-		os.Exit(0)
-	}
-	go lol()
-	fmt.Println("Scheduler continuing")        */
+		go lol()
+		fmt.Println("Scheduler continuing")        */
 }
 
 func (exec *ExecutorCore) KillTask(driver exec.ExecutorDriver, taskId *mesos.TaskID) {
@@ -109,8 +106,6 @@ func (exec *ExecutorCore) Shutdown(driver exec.ExecutorDriver) {
 func (exec *ExecutorCore) Error(driver exec.ExecutorDriver, err string) {
 	fmt.Println("Got error message:", err)
 }
-
-
 
 func main() {
 
@@ -138,4 +133,3 @@ func main() {
 	fmt.Println("Executor process has started and running.")
 	driver.Join()
 }
-

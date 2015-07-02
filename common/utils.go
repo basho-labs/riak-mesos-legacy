@@ -9,14 +9,13 @@ import (
 // The new value for the resource, the ask, and whether or not the ask was accomodated - the ask may be nil if it wasn't accomodated
 type ResourceAsker (func([]*mesos.Resource) ([]*mesos.Resource, *mesos.Resource, bool))
 
-
 func AskForScalar(resourceName string, askSize float64) ResourceAsker {
 	return func(resources []*mesos.Resource) ([]*mesos.Resource, *mesos.Resource, bool) {
 		newResources := make([]*mesos.Resource, len(resources))
 		copy(newResources, resources)
 		for idx, resource := range resources {
 			if resource.GetName() == resourceName && askSize <= resource.GetScalar().GetValue() {
-				newResources[idx] = util.NewScalarResource(resourceName, resource.GetScalar().GetValue() - askSize)
+				newResources[idx] = util.NewScalarResource(resourceName, resource.GetScalar().GetValue()-askSize)
 				ask := util.NewScalarResource(resourceName, askSize)
 				return newResources, ask, true
 			}
@@ -28,14 +27,13 @@ func AskForCPU(cpuAsk float64) ResourceAsker {
 	return AskForScalar("cpus", cpuAsk)
 }
 
-
 func AskForMemory(memory float64) ResourceAsker {
 	return AskForScalar("mem", memory)
 
 }
 
-
 type intarray []int64
+
 func (a intarray) Len() int           { return len(a) }
 func (a intarray) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a intarray) Less(i, j int) bool { return a[i] < a[j] }
@@ -63,7 +61,7 @@ func arrayToRanges(ports []int64) []*mesos.Value_Range {
 func rangesToArray(ranges []*mesos.Value_Range) []int64 {
 	array := make([]int64, 0)
 	for _, mesosRange := range ranges {
-		temp := make([]int64, mesosRange.GetEnd() - mesosRange.GetBegin() + 1)
+		temp := make([]int64, mesosRange.GetEnd()-mesosRange.GetBegin()+1)
 		idx := 0
 		for i := mesosRange.GetBegin(); i <= mesosRange.GetEnd(); i++ {
 			temp[idx] = int64(i)
@@ -76,7 +74,7 @@ func rangesToArray(ranges []*mesos.Value_Range) []int64 {
 
 func AskForPorts(portCount int) ResourceAsker {
 	ret := func(resources []*mesos.Resource) ([]*mesos.Resource, *mesos.Resource, bool) {
-	newResources := make([]*mesos.Resource, len(resources))
+		newResources := make([]*mesos.Resource, len(resources))
 		copy(newResources, resources)
 		for idx, resource := range resources {
 			if resource.GetName() == "ports" {

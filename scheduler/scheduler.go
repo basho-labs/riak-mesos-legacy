@@ -1,16 +1,17 @@
 package main
+
 import (
-	log "github.com/Sirupsen/logrus"
-	"github.com/basho/bletchley/metadata_manager"
-	"github.com/basho/bletchley/framework"
 	"flag"
+	log "github.com/Sirupsen/logrus"
+	"github.com/basho/bletchley/framework"
+	"github.com/basho/bletchley/metadata_manager"
 )
 
 var (
-	mesosMaster string
-	zookeeperAddr string
+	mesosMaster       string
+	zookeeperAddr     string
 	schedulerHostname string
-	schedulerIpAddr string
+	schedulerIpAddr   string
 )
 
 func init() {
@@ -28,9 +29,8 @@ func main() {
 	mgr := metadata_manager.NewMetadataManager(scheduler_name, zookeeperAddr)
 	sched := framework.NewSchedulerCore(scheduler_name, SchedulerHTTPServer, mgr, mesosMaster, schedulerIpAddr)
 	go framework.NewTargetTask("golang-riak-task-a", sched, mgr).Loop()
-//	go framework.NewTargetTask("golang-riak-task-b", sched, mgr).Loop()
-//	go framework.NewTargetTask("golang-riak-task-c", sched, mgr).Loop()
+	//	go framework.NewTargetTask("golang-riak-task-b", sched, mgr).Loop()
+	//	go framework.NewTargetTask("golang-riak-task-c", sched, mgr).Loop()
 	sched.Run()
-
 
 }

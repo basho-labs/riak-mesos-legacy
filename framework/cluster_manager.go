@@ -3,10 +3,10 @@ package framework
 // Responsible for loading up the cluster status from our metadata store
 
 type Cluster struct {
-
 }
+
 func NewCluster() *Cluster {
-	 return &Cluster{}
+	return &Cluster{}
 }
 func Loop() {
 

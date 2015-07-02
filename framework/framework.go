@@ -2,10 +2,10 @@ package framework
 
 import (
 	log "github.com/Sirupsen/logrus"
-	"github.com/golang/protobuf/proto"
 	"github.com/basho/bletchley/common"
-	mesos "github.com/mesos/mesos-go/mesosproto"
 	"github.com/basho/bletchley/metadata_manager"
+	"github.com/golang/protobuf/proto"
+	mesos "github.com/mesos/mesos-go/mesosproto"
 	sched "github.com/mesos/mesos-go/scheduler"
 	"sync"
 	"time"
@@ -68,10 +68,10 @@ type resourceOffersRescinded struct {
 }
 
 type scheduleTask struct {
-	TaskInfo   		*mesos.TaskInfo
-	TargetTask 		*TargetTask
-	Filters			[]common.ResourceAsker
-	replyChannel    chan bool
+	TaskInfo     *mesos.TaskInfo
+	TargetTask   *TargetTask
+	Filters      []common.ResourceAsker
+	replyChannel chan bool
 }
 
 func NewSchedulerCore(frameworkName string, schedulerHTTPServer *SchedulerHTTPServer, mgr *metadata_manager.MetadataManager, mesosMaster string, schedulerIpAddr string) *SchedulerCore {
@@ -134,7 +134,7 @@ func (sched *SchedulerCore) Unsubscribe(taskID string, targetTask *TargetTask) {
 }
 func (sched *SchedulerCore) ScheduleTask(TaskInfo *mesos.TaskInfo, TargetTask *TargetTask, askers []common.ResourceAsker) bool {
 	log.Infof("Scheduler called!")
-	sc := scheduleTask{TaskInfo: TaskInfo, TargetTask: TargetTask, replyChannel:make(chan bool), Filters: askers}
+	sc := scheduleTask{TaskInfo: TaskInfo, TargetTask: TargetTask, replyChannel: make(chan bool), Filters: askers}
 	sched.outstandingTasks <- sc
 	return <-sc.replyChannel
 }
@@ -183,7 +183,9 @@ func (sched *SchedulerCore) handleResourceOffers(mesosOffers []*mesos.Offer) {
 					asks := []*mesos.Resource{}
 					for _, filter := range request.Filters {
 						tmpResources, resourceAsk, success = filter(tmpResources)
-						if !success { break }
+						if !success {
+							break
+						}
 						asks = append(asks, resourceAsk)
 					}
 					if success {
@@ -224,17 +226,20 @@ func (sched *SchedulerCore) handleResourceOffers(mesosOffers []*mesos.Offer) {
 func (sched *SchedulerCore) SchedulingLoop() {
 	for {
 		select {
-		case offers := <-sched.resourceOffers: sched.handleResourceOffers(offers.offers)
+		case offers := <-sched.resourceOffers:
+			sched.handleResourceOffers(offers.offers)
 		// This number is chosen
-		case <- time.After(time.Duration(3 * OFFER_INTERVAL) * time.Second):
+		case <-time.After(time.Duration(3*OFFER_INTERVAL) * time.Second):
 			{
 				log.Info("No resource offers received")
 				select {
-				case request := <-sched.outstandingTasks: {
-					log.Info("received outstanding tasks during no offer period: ", request)
-					request.replyChannel <- false
-				}
-				default: log.Info("Received no outstanding tasks during no offer period")
+				case request := <-sched.outstandingTasks:
+					{
+						log.Info("received outstanding tasks during no offer period: ", request)
+						request.replyChannel <- false
+					}
+				default:
+					log.Info("Received no outstanding tasks during no offer period")
 				}
 			}
 
@@ -333,10 +338,12 @@ func (sched *SchedulerCore) OfferRescinded(driver sched.SchedulerDriver, offerID
 func (sched *SchedulerCore) FrameworkMessage(driver sched.SchedulerDriver, executorID *mesos.ExecutorID, slaveID *mesos.SlaveID, message string) {
 	log.Info("Got unknown framework message %v")
 }
+
 // TODO: Write handler
 func (sched *SchedulerCore) SlaveLost(sched.SchedulerDriver, *mesos.SlaveID) {
 	log.Info("Slave Lost")
 }
+
 // TODO: Write handler
 func (sched *SchedulerCore) ExecutorLost(sched.SchedulerDriver, *mesos.ExecutorID, *mesos.SlaveID, int) {
 	log.Info("Executor Lost")

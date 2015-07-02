@@ -3,12 +3,12 @@ package framework
 import (
 	"fmt"
 	log "github.com/Sirupsen/logrus"
+	"github.com/basho/bletchley/common"
 	"github.com/basho/bletchley/metadata_manager"
-	mesos "github.com/mesos/mesos-go/mesosproto"
 	"github.com/golang/protobuf/proto"
+	mesos "github.com/mesos/mesos-go/mesosproto"
 	util "github.com/mesos/mesos-go/mesosutil"
 	"time"
-	"github.com/basho/bletchley/common"
 )
 
 type targetTaskStateType int
@@ -18,20 +18,22 @@ const (
 )
 
 type internalStatus int
+
 const (
-	targetTaskUnknown internalStatus = iota
-	targetTaskStarting = iota
-	targetTaskStartingFailed = iota
+	targetTaskUnknown        internalStatus = iota
+	targetTaskStarting                      = iota
+	targetTaskStartingFailed                = iota
 )
+
 type TargetTask struct {
 	schedulerCore          *SchedulerCore
 	TaskName               string
-	uuid             	   string
+	uuid                   string
 	mesosTaskStatusUpdates chan *mesos.TaskStatus
-	currentTaskStatus	   *mesos.TaskStatus
+	currentTaskStatus      *mesos.TaskStatus
 	targetTaskState        targetTaskStateType
 	mgr                    *metadata_manager.MetadataManager
-	status		           internalStatus
+	status                 internalStatus
 }
 
 func NewTargetTask(taskName string, schedulerCore *SchedulerCore, mgr *metadata_manager.MetadataManager) *TargetTask {
@@ -40,9 +42,9 @@ func NewTargetTask(taskName string, schedulerCore *SchedulerCore, mgr *metadata_
 		TaskName:               taskName,
 		mesosTaskStatusUpdates: make(chan *mesos.TaskStatus),
 		// TODO: Add lower generation marker
-		uuid:        uuid,
-		mgr:               mgr,
-		status:		targetTaskUnknown,
+		uuid:   uuid,
+		mgr:    mgr,
+		status: targetTaskUnknown,
 	}
 }
 
@@ -65,14 +67,16 @@ func (task *TargetTask) Loop() {
 		select {
 		case statusUpdate := <-task.mesosTaskStatusUpdates:
 			task.handleStatusUpdate(statusUpdate)
-		case <-time.After(1 * time.Minute): {
-			// Refresh task
-			if task.currentTaskStatus != nil {
-				switch task.status {
-				case targetTaskStartingFailed: task.reviveTask()
+		case <-time.After(1 * time.Minute):
+			{
+				// Refresh task
+				if task.currentTaskStatus != nil {
+					switch task.status {
+					case targetTaskStartingFailed:
+						task.reviveTask()
+					}
 				}
 			}
-		}
 		}
 	}
 
@@ -88,16 +92,16 @@ func (task *TargetTask) reviveTask() {
 	//	executorUris = append(executorUris, &mesos.CommandInfo_URI{Value: &(task.schedulerCore.schedulerHTTPServer.riakURI),
 	//		Executable: proto.Bool(false), Extract: proto.Bool(true)})
 
-	 exec := &mesos.ExecutorInfo{
+	exec := &mesos.ExecutorInfo{
 		//No idea is this is the "right" way to do it, but I think so?
 		ExecutorId: util.NewExecutorID(task.currentTaskName()),
 		Name:       proto.String("Test Executor (Go)"),
 		// Dynamically populate this based
 		Source: proto.String(task.schedulerCore.driverConfig.Framework.Id.GetValue()),
 		Command: &mesos.CommandInfo{
-			Value: proto.String(task.schedulerCore.schedulerHTTPServer.executorName),
-			Uris:  executorUris,
-			Shell: proto.Bool(false),
+			Value:     proto.String(task.schedulerCore.schedulerHTTPServer.executorName),
+			Uris:      executorUris,
+			Shell:     proto.Bool(false),
 			Arguments: []string{"-taskid", task.currentTaskName()},
 		},
 	}
@@ -128,19 +132,25 @@ func (task *TargetTask) handleStatusUpdate(statusUpdate *mesos.TaskStatus) {
 		case mesos.TaskState_TASK_FAILED:
 		case mesos.TaskState_TASK_FINISHED:
 		case mesos.TaskState_TASK_ERROR:
-		default: panic("Historical task may have come back alive")
+		default:
+			panic("Historical task may have come back alive")
 		}
 	} else {
 		task.currentTaskStatus = statusUpdate
 		task.status = targetTaskStarting
 		switch *statusUpdate.State {
-		case mesos.TaskState_TASK_LOST: task.reviveTask()
-		case mesos.TaskState_TASK_FAILED: task.reviveTask()
-		case mesos.TaskState_TASK_FINISHED: {
+		case mesos.TaskState_TASK_LOST:
 			task.reviveTask()
-		}
-		case mesos.TaskState_TASK_ERROR: task.reviveTask()
-		default: log.Info("Current task status update: ", statusUpdate)
+		case mesos.TaskState_TASK_FAILED:
+			task.reviveTask()
+		case mesos.TaskState_TASK_FINISHED:
+			{
+				task.reviveTask()
+			}
+		case mesos.TaskState_TASK_ERROR:
+			task.reviveTask()
+		default:
+			log.Info("Current task status update: ", statusUpdate)
 		}
 	}
 }

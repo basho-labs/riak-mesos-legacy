@@ -5,9 +5,9 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"net"
 	"net/http"
-	"strconv"
 	"net/http/pprof"
 	"os"
+	"strconv"
 )
 
 type SchedulerHTTPServer struct {
@@ -50,9 +50,9 @@ func ServeExecutorArtifact(schedulerHostname string) *SchedulerHTTPServer {
 		if err != nil {
 			log.Fatal(err)
 		}
-    } else {
-        hostname = schedulerHostname
-    }
+	} else {
+		hostname = schedulerHostname
+	}
 
 	//TODO: MAKE THIS SMARTER
 	//We need to ideally embed the executor into the scheduler
