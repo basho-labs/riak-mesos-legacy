@@ -7,7 +7,17 @@ import (
 	"strings"
 	"time"
 	"github.com/satori/go.uuid"
+	// "flag"
 )
+
+// var (
+// 	zookeeper	string
+// )
+
+// func init() {
+// 	flag.StringVar(&zookeeper, "zk", "ubuntu:2181", "Zookeeper")
+// 	flag.Parse()
+// }
 
 type MetadataManager struct {
 	frameworkName           string
@@ -35,10 +45,8 @@ func (msg *getTaskUUIDRequest) Reply(response string) {
 	msg.replyChannel <- response
 }
 
-func NewMetadataManager(frameworkName string) *MetadataManager {
-//	go zk.StartTracer("localhost:2181", "ubuntu:2181")
-//	conn, _, err := zk.Connect([]string{"localhost:2181"}, time.Second*10)
-	conn, _, err := zk.Connect([]string{"ubuntu:2181"}, time.Second*10)
+func NewMetadataManager(frameworkName string, zookeeperAddr string) *MetadataManager {
+	conn, _, err := zk.Connect([]string{zookeeperAddr}, time.Second*10)
 	if err != nil {
 		panic(err)
 	}
@@ -163,5 +171,3 @@ func (mgr *MetadataManager) SetTaskUUID(taskName string, oldUUID string) string 
 	retval := <-rq.replyChannel
 	return retval
 }
-
-
