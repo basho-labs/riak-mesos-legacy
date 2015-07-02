@@ -5,7 +5,6 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"net"
 	"net/http"
-	"os"
 	"strconv"
 	"net/http/pprof"
 )
@@ -26,7 +25,7 @@ func parseIP(address string) net.IP {
 	}
 	return addr[0]
 }
-func serveExecutorArtifact() *SchedulerHTTPServer {
+func serveExecutorArtifact(schedulerHost string) *SchedulerHTTPServer {
 
 	ln, err := net.Listen("tcp", ":0")
 	if err != nil {
@@ -43,10 +42,7 @@ func serveExecutorArtifact() *SchedulerHTTPServer {
 
 	executorName := "executor"
 
-	hostname, err := os.Hostname()
-	if err != nil {
-		log.Fatal(err)
-	}
+	hostname := schedulerHost
 
 	//TODO: MAKE THIS SMARTER
 	//We need to ideally embed the executor into the scheduler
