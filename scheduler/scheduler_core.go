@@ -264,15 +264,16 @@ func (sched *SchedulerCore) handleSubChange(subChange taskStateSubscribe) {
 	}
 }
 func (sched *SchedulerCore) MesosLoop() {
-	select {
-	case msg := <-sched.registered:
-		log.Info("Scheduler routine registered: ", msg.frameworkId, msg.masterInfo)
-	case msg := <-sched.reregistered:
-		log.Info("Scheduler routine reregistered: ", msg.masterInfo)
-	}
+	initialRegistration := <-sched.registered
+	log.Info("Scheduler routine registered: ", initialRegistration.frameworkId, initialRegistration.masterInfo)
+
 	go sched.SchedulingLoop()
 	for {
 		select {
+		case msg := <-sched.reregistered:
+			{
+				log.Info("Scheduler routine reregistered: ", msg.masterInfo)
+			}
 		case msg := <-sched.statusUpdate:
 			{
 				sched.handleStatusUpdate(msg)
@@ -309,11 +310,14 @@ func (sched *SchedulerCore) Registered(driver sched.SchedulerDriver, frameworkId
 
 func (sched *SchedulerCore) Reregistered(driver sched.SchedulerDriver, masterInfo *mesos.MasterInfo) {
 	//go NewTargetTask(*sched).Loop()
-	log.Info("Framework reregistered")
+	// We don't actually handle this correctly
+	log.Error("Framework reregistered")
 	sched.reregistered <- reregisteredCast{masterInfo}
 
 }
-func (sched *SchedulerCore) Disconnected(sched.SchedulerDriver) {}
+func (sched *SchedulerCore) Disconnected(sched.SchedulerDriver) {
+	log.Error("Framework disconnected")
+}
 
 func (sched *SchedulerCore) ResourceOffers(driver sched.SchedulerDriver, offers []*mesos.Offer) {
 	sched.resourceOffers <- resourceOffers{offers}
