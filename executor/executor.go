@@ -6,60 +6,55 @@ import (
 	"fmt"
 	exec "github.com/mesos/mesos-go/executor"
 	mesos "github.com/mesos/mesos-go/mesosproto"
-	"time"
 	"os"
+	log "github.com/Sirupsen/logrus"
 )
 
 const (
 	kill int = iota
 )
-type exampleExecutor struct {
-	tasksLaunched 	int
-	tasks			map[string]chan int
+type ExecutorCore struct {
+	tasks	map[string]*RiakNode
+	Driver  exec.ExecutorDriver
 }
 
-func newExampleExecutor() *exampleExecutor {
-	return &exampleExecutor{tasksLaunched: 0, tasks:make(map[string]chan int)}
+
+func newExecutor() *ExecutorCore {
+	return &ExecutorCore{
+		tasks:make(map[string]*RiakNode),
+	}
 }
 
-func (exec *exampleExecutor) Registered(driver exec.ExecutorDriver, execInfo *mesos.ExecutorInfo, fwinfo *mesos.FrameworkInfo, slaveInfo *mesos.SlaveInfo) {
+func (exec *ExecutorCore) Registered(driver exec.ExecutorDriver, execInfo *mesos.ExecutorInfo, fwinfo *mesos.FrameworkInfo, slaveInfo *mesos.SlaveInfo) {
+	exec.Driver = driver
 	fmt.Println("Registered Executor on slave ", slaveInfo.GetHostname())
 }
 
-func (exec *exampleExecutor) Reregistered(driver exec.ExecutorDriver, slaveInfo *mesos.SlaveInfo) {
+func (exec *ExecutorCore) Reregistered(driver exec.ExecutorDriver, slaveInfo *mesos.SlaveInfo) {
+	exec.Driver = driver
 	fmt.Println("Re-registered Executor on slave ", slaveInfo.GetHostname())
 }
 
-func (exec *exampleExecutor) Disconnected(exec.ExecutorDriver) {
+func (exec *ExecutorCore) Disconnected(exec.ExecutorDriver) {
 	fmt.Println("Executor disconnected.")
 }
 
-func (exec *exampleExecutor) LaunchTask(driver exec.ExecutorDriver, taskInfo *mesos.TaskInfo) {
+func (exec *ExecutorCore) LaunchTask(driver exec.ExecutorDriver, taskInfo *mesos.TaskInfo) {
 	fmt.Println("Launching task", taskInfo.GetName(), "with command", taskInfo.Command.GetValue())
 	os.Args[0] = fmt.Sprintf("executor - %s", taskInfo.TaskId.GetValue())
 
-		fmt.Println("Other hilarious facts: ", taskInfo)
+		//fmt.Println("Other hilarious facts: ", taskInfo)
 
-	runStatus := &mesos.TaskStatus{
-		TaskId: taskInfo.GetTaskId(),
-		State:  mesos.TaskState_TASK_RUNNING.Enum(),
-	}
-	_, err := driver.SendStatusUpdate(runStatus)
-	if err != nil {
-		fmt.Println("Got error", err)
-	}
 
-	ch := make(chan int, 1)
-	exec.tasks[*taskInfo.TaskId.Value] = ch
-	exec.tasksLaunched++
-	fmt.Println("Total tasks launched ", exec.tasksLaunched)
 	//
 	// this is where one would perform the requested task
 	//
-	lol := func() {
-		fmt.Println("Starting task")
-		select {
-			case <-time.After(time.Second * 1000):
+	fmt.Println("Starting task")
+
+	exec.tasks[taskInfo.TaskId.GetValue()] = NewRiakNode(taskInfo, exec)
+	go exec.tasks[taskInfo.TaskId.GetValue()].Loop()
+	/*	select {
+			case <-time.After(time.Second * 120):
 				{
 					fmt.Println("Finishing task", taskInfo.GetName())
 					finStatus := &mesos.TaskStatus{
@@ -94,28 +89,24 @@ func (exec *exampleExecutor) LaunchTask(driver exec.ExecutorDriver, taskInfo *me
 		os.Exit(0)
 	}
 	go lol()
-	fmt.Println("Scheduler continuing")
+	fmt.Println("Scheduler continuing")        */
 }
 
-func (exec *exampleExecutor) KillTask(driver exec.ExecutorDriver, taskId *mesos.TaskID) {
+func (exec *ExecutorCore) KillTask(driver exec.ExecutorDriver, taskId *mesos.TaskID) {
 	fmt.Println("Kill task")
-	ch, ok := exec.tasks[*taskId.Value]
-	if ok != true {
-		fmt.Println("Error, task not found:", taskId)
-	} else {
-		ch <- kill
-	}
 }
 
-func (exec *exampleExecutor) FrameworkMessage(driver exec.ExecutorDriver, msg string) {
+func (exec *ExecutorCore) FrameworkMessage(driver exec.ExecutorDriver, msg string) {
 	fmt.Println("Got framework message: ", msg)
 }
 
-func (exec *exampleExecutor) Shutdown(exec.ExecutorDriver) {
+func (exec *ExecutorCore) Shutdown(driver exec.ExecutorDriver) {
 	fmt.Println("Shutting down the executor")
+	driver.Stop()
+	os.Exit(0)
 }
 
-func (exec *exampleExecutor) Error(driver exec.ExecutorDriver, err string) {
+func (exec *ExecutorCore) Error(driver exec.ExecutorDriver, err string) {
 	fmt.Println("Got error message:", err)
 }
 
@@ -123,6 +114,7 @@ func (exec *exampleExecutor) Error(driver exec.ExecutorDriver, err string) {
 
 func main() {
 
+	log.SetLevel(log.DebugLevel)
 	fmt.Println("Starting Example Executor (Go)")
 	fmt.Println("Args: ", os.Args)
 	data, _ := Asset("data/stuff")
@@ -130,7 +122,7 @@ func main() {
 	fmt.Printf("data=%v\n", s)
 
 	dconfig := exec.DriverConfig{
-		Executor: newExampleExecutor(),
+		Executor: newExecutor(),
 	}
 	driver, err := exec.NewMesosExecutorDriver(dconfig)
 
