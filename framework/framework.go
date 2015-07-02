@@ -213,6 +213,7 @@ func (sched *SchedulerCore) handleResourceOffers(mesosOffers []*mesos.Offer) {
 						tasks = append(tasks, task.TaskInfo)
 					}
 				}
+				log.Infof("Launching %v task(s) using offerID(s): %v\n", len(tasks), offerIDs)
 				sched.driver.LaunchTasks(offerIDs, tasks, &mesos.Filters{RefuseSeconds: proto.Float64(OFFER_INTERVAL)})
 				log.Info("No outstanding tasks")
 				return
