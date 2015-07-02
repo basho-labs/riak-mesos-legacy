@@ -13,7 +13,17 @@ type MetadataManager struct {
 	frameworkName           string
 	setTaskUUIDChan 		chan setTaskUUIDRequest
 	getTaskUUIDChan  	    chan getTaskUUIDRequest
+	addClusterChan			chan addClusterRequest
 	zkConn                  *zk.Conn
+}
+
+type addClusterRequest struct {
+	clusterName				string
+	replyChannel			chan bool
+}
+
+func (msg *addClusterRequest) Reply(response bool) {
+	msg.replyChannel <- response
 }
 
 type setTaskUUIDRequest struct {
@@ -31,6 +41,7 @@ type getTaskUUIDRequest struct {
 	replyChannel	chan string
 }
 
+
 func (msg *getTaskUUIDRequest) Reply(response string) {
 	msg.replyChannel <- response
 }
@@ -44,6 +55,7 @@ func NewMetadataManager(frameworkName string, zookeeperAddr string) *MetadataMan
 		frameworkName:           frameworkName,
 		setTaskUUIDChan:         make(chan setTaskUUIDRequest, 1),
 		getTaskUUIDChan:         make(chan getTaskUUIDRequest, 1),
+		addClusterChan:			 make(chan addClusterRequest, 1),
 		zkConn:                  conn,
 	}
 
@@ -72,13 +84,25 @@ func (mgr *MetadataManager) createIfNotExists(path string) {
 func (mgr *MetadataManager) loop() {
 	defer close(mgr.setTaskUUIDChan)
 	defer close(mgr.getTaskUUIDChan)
-	path := fmt.Sprintf("/bletchley/frameworks/%s/tasks", mgr.frameworkName)
-	mgr.createPathIfNotExists(path)
+	tasksPath := fmt.Sprintf("/bletchley/frameworks/%s/tasks", mgr.frameworkName)
+	mgr.createPathIfNotExists(tasksPath)
+	clustersPath := fmt.Sprintf("/bletchley/frameworks/%s/clusters", mgr.frameworkName)
+	mgr.createPathIfNotExists(clustersPath)
+	children, _, clusterEventChannel, err := mgr.zkConn.ChildrenW("/bletchley/frameworks/%s/clusters")
+
+	if err != nil {
+		log.Panic(err)
+	}
+	for child := range children {
+		log.Info("Saw child: ", child)
+	}
+
 	for {
 		select {
 		case rq := <-mgr.setTaskUUIDChan: mgr.setTaskUUID(rq)
 		case rq := <-mgr.getTaskUUIDChan: mgr.getTaskUUID(rq)
-
+		case event := <- clusterEventChannel: { log.Info("Got cluster event: ", event) }
+		case rq := <-mgr.addClusterChan: { log.Panic("not yet implemented: ", rq) }
 		}
 	}
 }
@@ -158,6 +182,18 @@ func (mgr *MetadataManager) SetTaskUUID(taskName string, oldUUID string) string 
 		oldUUID:	  oldUUID,
 	}
 	mgr.setTaskUUIDChan <- rq
+	retval := <-rq.replyChannel
+	return retval
+}
+
+
+
+func (mgr *MetadataManager) AddCluster(clusterName string) bool {
+	rq := addClusterRequest{
+		replyChannel: 	make(chan bool),
+		clusterName:	clusterName,
+	}
+	mgr.addClusterChan <- rq
 	retval := <-rq.replyChannel
 	return retval
 }
