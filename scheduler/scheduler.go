@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	mesosMaster	string
+	mesosMaster string
 	zookeeperAddr string
 	schedulerHost string
 )

@@ -7,17 +7,7 @@ import (
 	"strings"
 	"time"
 	"github.com/satori/go.uuid"
-	// "flag"
 )
-
-// var (
-// 	zookeeper	string
-// )
-
-// func init() {
-// 	flag.StringVar(&zookeeper, "zk", "ubuntu:2181", "Zookeeper")
-// 	flag.Parse()
-// }
 
 type MetadataManager struct {
 	frameworkName           string

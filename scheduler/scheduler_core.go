@@ -29,8 +29,8 @@ type SchedulerCore struct {
 	outstandingTasks        chan scheduleTask
 	taskStateSubscribe      chan taskStateSubscribe
 	mgr                     *metadata_manager.MetadataManager
-	mesosMaster				string
-	schedulerHost			string
+	mesosMaster             string
+	schedulerHost           string
 }
 
 // Private "internal" structs
@@ -89,8 +89,8 @@ func newSchedulerCore(frameworkName string, schedulerHTTPServer *SchedulerHTTPSe
 		driverConfig:            nil,
 		outstandingTasks:        make(chan scheduleTask, 10),
 		mgr:                     mgr,
-		mesosMaster:			 mesosMaster,
-		schedulerHost:			 schedulerHost,
+		mesosMaster:             mesosMaster,
+		schedulerHost:           schedulerHost,
 	}
 	frameworkId := &mesos.FrameworkID{
 		Value: proto.String(frameworkName),

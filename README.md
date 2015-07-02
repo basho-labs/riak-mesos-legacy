@@ -9,7 +9,7 @@ Build Bletchley
 
 ```
 cd $GOPATH/src/github.com/basho/bletchley/bin
-gox -osarch="linux/amd64" -osarch=darwin/amd64 ../...
+go generate ../... && gox -osarch="linux/amd64" -osarch=darwin/amd64 ../...
 ```
 
 ## Running Bletchley
