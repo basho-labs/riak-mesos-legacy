@@ -16,7 +16,7 @@ const (
 )
 
 type SchedulerCore struct {
-	subscribtionLock        *sync.Mutex
+	subscriptionLock        *sync.Mutex
 	driver                  sched.SchedulerDriver
 	registered              chan registeredCast
 	reregistered            chan reregisteredCast
@@ -76,7 +76,7 @@ type scheduleTask struct {
 
 func NewSchedulerCore(frameworkName string, schedulerHTTPServer *SchedulerHTTPServer, mgr *metadata_manager.MetadataManager, mesosMaster string, schedulerIpAddr string) *SchedulerCore {
 	scheduler := &SchedulerCore{
-		subscribtionLock:        &sync.Mutex{},
+		subscriptionLock:        &sync.Mutex{},
 		driver:                  nil,
 		registered:              make(chan registeredCast, 1),
 		reregistered:            make(chan reregisteredCast, 1),
@@ -206,9 +206,9 @@ func (sched *SchedulerCore) handleResourceOffers(mesosOffers []*mesos.Offer) {
 				for offerID, launchPlanTasks := range launchPlan {
 					offerIDs = append(offerIDs, outstandingOffers[offerID].Id)
 					for _, task := range launchPlanTasks {
-						sched.subscribtionLock.Lock()
+						sched.subscriptionLock.Lock()
 						sched.targetTasksSubs[task.TaskInfo.TaskId.GetValue()] = task.TargetTask
-						sched.subscribtionLock.Unlock()
+						sched.subscriptionLock.Unlock()
 						task.replyChannel <- true
 						tasks = append(tasks, task.TaskInfo)
 					}
@@ -242,8 +242,8 @@ func (sched *SchedulerCore) SchedulingLoop() {
 }
 func (sched *SchedulerCore) handleSubChange(subChange taskStateSubscribe) {
 	log.Info("Changing subscription: ", subChange)
-	sched.subscribtionLock.Lock()
-	defer sched.subscribtionLock.Unlock()
+	sched.subscriptionLock.Lock()
+	defer sched.subscriptionLock.Unlock()
 	switch subChange.subscriptionChangeType {
 	case subscribe:
 		{
