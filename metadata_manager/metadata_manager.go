@@ -1,48 +1,108 @@
 package metadata_manager
 
 import (
-	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"github.com/samuel/go-zookeeper/zk"
-	"github.com/satori/go.uuid"
+	// "github.com/golang/protobuf/proto"
 	"strings"
+	"sync"
 	"time"
 )
 
+
+type ZkNode struct {
+	mgr				*MetadataManager
+	stat			*zk.Stat
+	data			[]byte
+	ns				Namespace
+}
+func (node *ZkNode) GetData() []byte {
+	return node.data
+}
+func (node *ZkNode) SetData(data []byte) {
+	var err error
+	log.Info("Persisting data")
+	node.stat, err = node.mgr.zkConn.Set(node.ns.GetZKPath(), data, node.stat.Version)
+	if err != nil {
+		log.Panic("Error persisting data: ", err)
+	}
+}
+func (node *ZkNode) GetChildren() []*ZkNode {
+	return node.mgr.getChildren(node.ns)
+}
+
+func (node *ZkNode) MakeChild(name string) *ZkNode {
+	if strings.Contains(name, "/") {
+		panic("Error, name of subnode cannot contain /")
+	}
+	ns := &SubNamespace{
+		parent:node.ns,
+		components:[]string{name},
+	}
+	return node.mgr.makeNode(ns)
+}
+
+func (node *ZkNode) GetChild(name string) *ZkNode {
+	if strings.Contains(name, "/") {
+		panic("Error, name of subnode cannot contain /")
+	}
+	ns := &SubNamespace{
+		parent:node.ns,
+		components:[]string{name},
+	}
+	return node.mgr.getNode(ns)
+}
+
+func (node *ZkNode) CreateChildIfNotExists(name string) {
+	if strings.Contains(name, "/") {
+		panic("Error, name of subnode cannot contain /")
+	}
+	ns := &SubNamespace{
+		parent:node.ns,
+		components:[]string{name},
+	}
+	node.mgr.CreateNSIfNotExists(ns)
+}
+
+type Namespace interface {
+	GetComponents() []string
+	GetZKPath() string
+}
+type baseNamespace struct {
+}
+
+// Base namespace should only ever return "" -- at least for Zookeeper
+func (baseNamespace) GetComponents() []string {
+	return []string{""}
+}
+
+// Base namespace should only ever return "" -- at least for Zookeeper
+func (baseNamespace) GetZKPath() string {
+	return "/"
+}
+
+type SubNamespace struct {
+	parent     Namespace
+	components []string
+}
+
+// Components are read-only, so not pointer-receiver
+func (ns SubNamespace) GetComponents() []string {
+	return append(ns.parent.GetComponents(), ns.components...)
+}
+func (ns SubNamespace) GetZKPath() string {
+	return strings.Join(ns.GetComponents(), "/")
+}
+
 type MetadataManager struct {
-	frameworkName   string
-	setTaskUUIDChan chan setTaskUUIDRequest
-	getTaskUUIDChan chan getTaskUUIDRequest
-	addClusterChan  chan addClusterRequest
-	zkConn          *zk.Conn
+	frameworkName string
+	zkConn        *zk.Conn
+	namespace     Namespace
+	lock          *sync.Mutex
 }
 
-type addClusterRequest struct {
-	clusterName  string
-	replyChannel chan bool
-}
-
-func (msg *addClusterRequest) Reply(response bool) {
-	msg.replyChannel <- response
-}
-
-type setTaskUUIDRequest struct {
-	oldUUID      string
-	taskName     string
-	replyChannel chan string
-}
-
-func (msg *setTaskUUIDRequest) Reply(response string) {
-	msg.replyChannel <- response
-}
-
-type getTaskUUIDRequest struct {
-	taskName     string
-	replyChannel chan string
-}
-
-func (msg *getTaskUUIDRequest) Reply(response string) {
-	msg.replyChannel <- response
+func (mgr *MetadataManager) setup() {
+	mgr.CreateNSIfNotExists(mgr.namespace)
 }
 
 func NewMetadataManager(frameworkName string, zookeeperAddr string) *MetadataManager {
@@ -51,14 +111,15 @@ func NewMetadataManager(frameworkName string, zookeeperAddr string) *MetadataMan
 		panic(err)
 	}
 	manager := &MetadataManager{
-		frameworkName:   frameworkName,
-		setTaskUUIDChan: make(chan setTaskUUIDRequest, 1),
-		getTaskUUIDChan: make(chan getTaskUUIDRequest, 1),
-		addClusterChan:  make(chan addClusterRequest, 1),
-		zkConn:          conn,
+		lock:          &sync.Mutex{},
+		frameworkName: frameworkName,
+		zkConn:        conn,
+		namespace: SubNamespace{
+			parent:     baseNamespace{},
+			components: []string{"bletchley", "frameworks", frameworkName},
+		},
 	}
-
-	go manager.loop()
+	manager.setup()
 	return manager
 }
 func (mgr *MetadataManager) createPathIfNotExists(path string) {
@@ -68,6 +129,16 @@ func (mgr *MetadataManager) createPathIfNotExists(path string) {
 			continue
 		}
 		mgr.createIfNotExists(strings.Join(splitString[0:idx+1], "/"))
+	}
+}
+
+func (mgr *MetadataManager) CreateNSIfNotExists(ns Namespace) {
+	components := ns.GetComponents()
+	for idx := range components {
+		if idx == 0 {
+			continue
+		}
+		mgr.createIfNotExists(strings.Join(components[0:idx+1], "/"))
 	}
 }
 func (mgr *MetadataManager) createIfNotExists(path string) {
@@ -82,127 +153,45 @@ func (mgr *MetadataManager) createIfNotExists(path string) {
 		}
 	}
 }
-func (mgr *MetadataManager) loop() {
-	defer close(mgr.setTaskUUIDChan)
-	defer close(mgr.getTaskUUIDChan)
-	tasksPath := fmt.Sprintf("/bletchley/frameworks/%s/tasks", mgr.frameworkName)
-	mgr.createPathIfNotExists(tasksPath)
-	clustersPath := fmt.Sprintf("/bletchley/frameworks/%s/clusters", mgr.frameworkName)
-	mgr.createPathIfNotExists(clustersPath)
-	children, _, clusterEventChannel, err := mgr.zkConn.ChildrenW("/bletchley/frameworks/%s/clusters")
 
-	if err != nil {
-		log.Panic(err)
-	}
-	for child := range children {
-		log.Info("Saw child: ", child)
-	}
-
-	for {
-		select {
-		case rq := <-mgr.setTaskUUIDChan:
-			mgr.setTaskUUID(rq)
-		case rq := <-mgr.getTaskUUIDChan:
-			mgr.getTaskUUID(rq)
-		case event := <-clusterEventChannel:
-			{
-				log.Info("Got cluster event: ", event)
-			}
-		case rq := <-mgr.addClusterChan:
-			{
-				log.Panic("not yet implemented: ", rq)
-			}
-		}
-	}
+// This subspaces the node in the "current working namespace"
+func (mgr *MetadataManager) GetRootNode() *ZkNode {
+	return mgr.getNode(mgr.namespace)
 }
 
-func (mgr *MetadataManager) getTaskUUID(rq getTaskUUIDRequest) {
-	defer close(rq.replyChannel)
-
-	path := fmt.Sprintf("/bletchley/frameworks/%s/tasks/%s/uuid", mgr.frameworkName, rq.taskName)
-
-	exists, _, err := mgr.zkConn.Exists(path)
-	if err != nil {
+func (mgr *MetadataManager) getChildren(ns Namespace) []*ZkNode {
+	children, _, err :=  mgr.zkConn.Children(ns.GetZKPath())
+	if err != nil{
 		log.Panic(err)
 	}
-
-	if exists {
-		data, _, err := mgr.zkConn.Get(path)
-		if err != nil {
-			log.Panic(err)
-		}
-		zkUUID, err := uuid.FromBytes(data)
-		if err != nil {
-			log.Panic(err)
-		}
-		rq.Reply(zkUUID.String())
-	} else {
-		taskBasePath := fmt.Sprintf("/bletchley/frameworks/%s/tasks/%s", mgr.frameworkName, rq.taskName)
-		mgr.createPathIfNotExists(taskBasePath)
-		uuid := uuid.NewV4()
-		_, err := mgr.zkConn.Create(path, uuid.Bytes(), 0, zk.WorldACL(zk.PermAll))
-		if err != nil {
-			log.Panic(err)
-		}
-		rq.Reply(uuid.String())
+	result := make([]*ZkNode, len(children))
+	for idx, name := range children {
+		result[idx] = mgr.getNode(SubNamespace{parent:ns, components:[]string{name}})
 	}
+	return result
 }
 
-func (mgr *MetadataManager) setTaskUUID(rq setTaskUUIDRequest) {
-	defer close(rq.replyChannel)
-	path := fmt.Sprintf("/bletchley/frameworks/%s/tasks/%s/uuid", mgr.frameworkName, rq.taskName)
-	data, stat, err := mgr.zkConn.Get(path)
-	if err != nil {
+func (mgr *MetadataManager) getNode(ns Namespace) *ZkNode {
+	// Namespaces are also nodes
+	data, stat, err := mgr.zkConn.Get(ns.GetZKPath())
+	if err != nil{
 		log.Panic(err)
 	}
-	oldZKUUID, err := uuid.FromBytes(data)
-	if err != nil {
-		log.Panic(err)
+	node := &ZkNode{
+		mgr:	mgr,
+		data:	data,
+		stat:	stat,
+		ns:		ns,
 	}
-	oldTaskUUID, err := uuid.FromString(rq.oldUUID)
-	if err != nil {
-		log.Panic(err)
-	}
-
-	if !uuid.Equal(oldZKUUID, oldTaskUUID) {
-		log.Panic("UUIDs not equal")
-	}
-
-	newUUID := uuid.NewV4()
-	_, err = mgr.zkConn.Set(path, newUUID.Bytes(), stat.Version)
-	if err != nil {
-		log.Panic(err)
-	}
-	rq.Reply(newUUID.String())
+	return node
 }
 
-func (mgr *MetadataManager) GetTaskUUID(taskName string) string {
-	rq := getTaskUUIDRequest{
-		replyChannel: make(chan string),
-		taskName:     taskName,
+func (mgr *MetadataManager) makeNode(ns Namespace) *ZkNode {
+	// Namespaces are also nodes
+	log.Info("Making node")
+	_, err := mgr.zkConn.Create(ns.GetZKPath(), nil, 0, zk.WorldACL(zk.PermAll))
+	if err != nil {
+		log.Panic(err)
 	}
-	mgr.getTaskUUIDChan <- rq
-	retval := <-rq.replyChannel
-	return retval
-}
-
-func (mgr *MetadataManager) SetTaskUUID(taskName string, oldUUID string) string {
-	rq := setTaskUUIDRequest{
-		replyChannel: make(chan string),
-		taskName:     taskName,
-		oldUUID:      oldUUID,
-	}
-	mgr.setTaskUUIDChan <- rq
-	retval := <-rq.replyChannel
-	return retval
-}
-
-func (mgr *MetadataManager) AddCluster(clusterName string) bool {
-	rq := addClusterRequest{
-		replyChannel: make(chan bool),
-		clusterName:  clusterName,
-	}
-	mgr.addClusterChan <- rq
-	retval := <-rq.replyChannel
-	return retval
+	return mgr.getNode(ns)
 }

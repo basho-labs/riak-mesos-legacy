@@ -1,5 +1,6 @@
 package framework
 
+/*
 import (
 	"fmt"
 	log "github.com/Sirupsen/logrus"
@@ -154,3 +155,5 @@ func (task *TargetTask) handleStatusUpdate(statusUpdate *mesos.TaskStatus) {
 		}
 	}
 }
+
+*/

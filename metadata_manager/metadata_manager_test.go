@@ -8,8 +8,11 @@ import (
 func TestStub(t *testing.T) {
 	assert.True(t, true, "This is good. Canary test passing")
 }
-
-func TestManager(t *testing.T) {
-	manager := NewMetadataManager()
-	manager.GetClusters()
+func TestNS(t *testing.T) {
+	assert := assert.New(t)
+	namespace := SubNamespace{
+		parent:		baseNamespace{},
+		components: []string{"bletchley", "frameworks", "fakeFramework"},
+	}
+	assert.Equal([]string{"", "bletchley", "frameworks", "fakeFramework"}, namespace.GetComponents())
 }

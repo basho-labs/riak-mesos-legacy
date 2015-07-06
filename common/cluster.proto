@@ -3,5 +3,5 @@ package common;
 
 message Cluster {
   required string uuid = 1;
-
+  required string nicename = 2;
 }
