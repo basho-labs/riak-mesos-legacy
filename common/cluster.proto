@@ -1,0 +1,7 @@
+package common;
+
+
+message Cluster {
+  required string uuid = 1;
+
+}
