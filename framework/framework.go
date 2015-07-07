@@ -8,7 +8,6 @@ import (
 	sched "github.com/mesos/mesos-go/scheduler"
 	"sync"
 	"encoding/json"
-	"github.com/satori/go.uuid"
 )
 
 const (
@@ -229,86 +228,6 @@ func (sched *SchedulerCore) TriggerReconcilation(taskID string) {
 
 
 
-type FrameworkRiakNode struct {
-	frc				*FrameworkRiakCluster `json:"-"`
-	zkNode			*metamgr.ZkNode `json:"-"`
-	UUID			uuid.UUID
-}
-
-
-func (frn *FrameworkRiakNode) Persist() {
-	data, err := json.Marshal(frn)
-	if err != nil {
-		log.Panic("error:", err)
-	}
-	frn.zkNode.SetData(data)
-}
-
-type FrameworkRiakCluster struct {
-	sc 				*SchedulerCore
-	zkNode			*metamgr.ZkNode `json:"-"`
-	nodes			map[string]*FrameworkRiakNode `json:"-"`
-	// Do not use direct access to properties!
-	Name			string
-}
-
-func (frc *FrameworkRiakCluster) GetNodes() map[string]*FrameworkRiakNode {
-	return frc.nodes
-}
-
-func (frc *FrameworkRiakCluster) Persist() {
-	data, err := json.Marshal(frc)
-	if err != nil {
-		log.Panic("error:", err)
-	}
-	frc.zkNode.SetData(data)
-}
-
-func (frc *FrameworkRiakCluster) GetZkNode() *metamgr.ZkNode {
-	return frc.zkNode
-}
-
-func (frn *FrameworkRiakNode) GetZkNode() *metamgr.ZkNode {
-	return frn.zkNode
-}
-
-func (frc *FrameworkRiakCluster) NewNode() metamgr.MetadataManagerNode {
-	nodes := frc.zkNode.GetChild("nodes")
-	myUUID := uuid.NewV4()
-	zkNode := nodes.MakeEmptyChild(myUUID.String())
-	frn := NewFrameworkRiakNode()
-	frn.frc = frc
-	frn.zkNode = zkNode
-	frn.UUID = myUUID
-
-	return frn
-}
-// This is an add cluster callback from the metadata manager
-func (frc *FrameworkRiakCluster) AddNode(zkNode *metamgr.ZkNode) metamgr.MetadataManagerNode {
-	frc.sc.lock.Lock()
-	defer frc.sc.lock.Unlock()
-	log.Debug("Adding node: ", zkNode)
-	frn := NewFrameworkRiakNode()
-	frn.frc = frc
-	frn.zkNode = zkNode
-	err := json.Unmarshal(zkNode.GetData(), &frn)
-	if err != nil {
-		log.Panic("Error getting node: ", err)
-	}
-	frc.nodes[frn.UUID.String()] = frn
-	return frn
-}
-func NewFrameworkRiakCluster() *FrameworkRiakCluster {
-	return &FrameworkRiakCluster{
-		nodes:  make(map[string]*FrameworkRiakNode),
-	}
-}
-
-func NewFrameworkRiakNode() *FrameworkRiakNode {
-	 return &FrameworkRiakNode{
-
-	 }
-}
 
 // This is an add cluster callback from the metadata manager
 func (sc *SchedulerCore) AddCluster(zkNode *metamgr.ZkNode) metamgr.MetadataManagerCluster {
