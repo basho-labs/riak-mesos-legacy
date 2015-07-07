@@ -9,7 +9,7 @@ import (
 	sched "github.com/mesos/mesos-go/scheduler"
 	"sync"
 
-//"github.com/basho-labs/riak-mesos/common"
+	//"github.com/basho-labs/riak-mesos/common"
 	"time"
 )
 
@@ -17,24 +17,24 @@ const (
 	OFFER_INTERVAL float64 = 5
 )
 
-
 func newReconciliationServer(driver sched.SchedulerDriver) *ReconcilationServer {
 	rs := &ReconcilationServer{
-		tasksToReconcile:make(chan *mesos.TaskStatus, 10),
-		lock: &sync.Mutex{},
-		enabled: false,
-		driver: driver,
+		tasksToReconcile: make(chan *mesos.TaskStatus, 10),
+		lock:             &sync.Mutex{},
+		enabled:          false,
+		driver:           driver,
 	}
 	go rs.loop()
 	return rs
 }
-type ReconcilationServer struct {
-	tasksToReconcile	chan *mesos.TaskStatus
-	driver 				sched.SchedulerDriver
-	lock				*sync.Mutex
-	enabled				bool
 
+type ReconcilationServer struct {
+	tasksToReconcile chan *mesos.TaskStatus
+	driver           sched.SchedulerDriver
+	lock             *sync.Mutex
+	enabled          bool
 }
+
 func (rServer *ReconcilationServer) enable() {
 	rServer.lock.Lock()
 	defer rServer.lock.Unlock()
@@ -55,7 +55,7 @@ func (rServer *ReconcilationServer) loop() {
 			{
 				tasksToReconcile = append(tasksToReconcile, task)
 			}
-		case <- ticker:
+		case <-ticker:
 			{
 				rServer.lock.Lock()
 				if rServer.enabled {
@@ -72,16 +72,16 @@ func (rServer *ReconcilationServer) loop() {
 		}
 	}
 }
+
 type SchedulerCore struct {
 	lock                *sync.Mutex
 	frameworkName       string
 	clusters            map[string]*FrameworkRiakCluster
 	schedulerHTTPServer *SchedulerHTTPServer
-	mgr             *metamgr.MetadataManager
-	schedulerIpAddr string
-	frnDict				map[string]*FrameworkRiakNode
-	rServer				*ReconcilationServer
-
+	mgr                 *metamgr.MetadataManager
+	schedulerIpAddr     string
+	frnDict             map[string]*FrameworkRiakNode
+	rServer             *ReconcilationServer
 }
 
 func NewSchedulerCore(schedulerHostname string, frameworkName string, mgr *metamgr.MetadataManager, schedulerIpAddr string) *SchedulerCore {
@@ -90,13 +90,12 @@ func NewSchedulerCore(schedulerHostname string, frameworkName string, mgr *metam
 		frameworkName:   frameworkName,
 		schedulerIpAddr: schedulerIpAddr,
 		clusters:        make(map[string]*FrameworkRiakCluster),
-		mgr: mgr,
-		frnDict: make(map[string]*FrameworkRiakNode),
+		mgr:             mgr,
+		frnDict:         make(map[string]*FrameworkRiakNode),
 	}
 	scheduler.schedulerHTTPServer = ServeExecutorArtifact(scheduler, schedulerHostname)
 	return scheduler
 }
-
 
 // This is an add cluster callback from the metadata manager
 func (sc *SchedulerCore) AddCluster(zkNode *metamgr.ZkNode) metamgr.MetadataManagerCluster {
@@ -194,9 +193,6 @@ func (sc *SchedulerCore) ResourceOffers(driver sched.SchedulerDriver, offers []*
 	sc.lock.Lock()
 	defer sc.lock.Unlock()
 	log.Info("Received resource offers")
-	executorUris := []*mesos.CommandInfo_URI{}
-	executorUris = append(executorUris,
-		&mesos.CommandInfo_URI{Value: &(sc.schedulerHTTPServer.hostURI), Executable: proto.Bool(true)})
 	launchTasks := []*mesos.TaskInfo{}
 	toBeScheduled := []*FrameworkRiakNode{}
 	for _, cluster := range sc.clusters {
@@ -208,7 +204,6 @@ func (sc *SchedulerCore) ResourceOffers(driver sched.SchedulerDriver, offers []*
 			}
 		}
 	}
-
 
 	// TODO: This currently fills in each Mesos node as much as possible
 	// Simply switching the outer and inner loops would result in spreading

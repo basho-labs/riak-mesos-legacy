@@ -6,7 +6,7 @@ package riak_node_states
 type State int
 
 const (
-	Unknown      State = iota
+	Unknown State = iota
 	Starting
 	Started
 	ShuttingDown
