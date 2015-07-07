@@ -3,7 +3,7 @@ package framework
 import (
 	"encoding/json"
 	log "github.com/Sirupsen/logrus"
-	metamgr "github.com/basho/bletchley/metadata_manager"
+	metamgr "github.com/basho-labs/riak-mesos/metadata_manager"
 	"github.com/satori/go.uuid"
 )
 

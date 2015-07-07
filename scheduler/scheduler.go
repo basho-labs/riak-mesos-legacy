@@ -3,8 +3,8 @@ package main
 import (
 	"flag"
 	log "github.com/Sirupsen/logrus"
-	"github.com/basho/bletchley/framework"
-	"github.com/basho/bletchley/metadata_manager"
+	"github.com/basho-labs/riak-mesos/framework"
+	"github.com/basho-labs/riak-mesos/metadata_manager"
 )
 
 var (
