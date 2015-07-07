@@ -8,6 +8,10 @@ import (
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	sched "github.com/mesos/mesos-go/scheduler"
 	"sync"
+	util "github.com/mesos/mesos-go/mesosutil"
+	"github.com/basho/bletchley/framework/riak_node_states"
+
+//"github.com/basho/bletchley/common"
 )
 
 const (
@@ -15,19 +19,13 @@ const (
 )
 
 type SchedulerCore struct {
-	// New:
 	lock                *sync.Mutex
 	frameworkName       string
 	clusters            map[string]*FrameworkRiakCluster
 	schedulerHTTPServer *SchedulerHTTPServer
-	// Old:
-	//driver              sched.SchedulerDriver
-	internalTaskStates map[string]*mesos.TaskStatus
-
-	//targetTasksSubs     map[string]*TargetTask
-	//driverConfig        *sched.DriverConfig
 	mgr             *metamgr.MetadataManager
 	schedulerIpAddr string
+	frnDict				map[string]*FrameworkRiakNode
 }
 
 func NewSchedulerCore(schedulerHostname string, frameworkName string, mgr *metamgr.MetadataManager, schedulerIpAddr string) *SchedulerCore {
@@ -36,15 +34,10 @@ func NewSchedulerCore(schedulerHostname string, frameworkName string, mgr *metam
 		frameworkName:   frameworkName,
 		schedulerIpAddr: schedulerIpAddr,
 		clusters:        make(map[string]*FrameworkRiakCluster),
-
-		// Old:
-		internalTaskStates: make(map[string]*mesos.TaskStatus),
-		//driverConfig:        nil,
 		mgr: mgr,
+		frnDict: make(map[string]*FrameworkRiakNode),
 	}
 	scheduler.schedulerHTTPServer = ServeExecutorArtifact(scheduler, schedulerHostname)
-	//scheduler.driver = driver
-	//scheduler.driverConfig = &config
 	return scheduler
 }
 
@@ -257,6 +250,14 @@ func (sc SchedulerCore) NewCluster(zkNode *metamgr.ZkNode, name string) metamgr.
 
 func (sc *SchedulerCore) setupMetadataManager() {
 	sc.mgr.SetupFramework(sc.schedulerHTTPServer.URI, sc)
+	for _, cluster := range sc.clusters {
+		for _, riakNode := range cluster.nodes {
+			if riakNode.TaskStatus != nil {
+				log.Info("Populate FRN dict: %v -> %v", riakNode.TaskStatus.TaskId.GetValue(), riakNode)
+				sc.frnDict[riakNode.TaskStatus.TaskId.GetValue()] = riakNode
+			}
+		}
+	}
 }
 func (sc *SchedulerCore) Run(mesosMaster string) {
 	frameworkId := &mesos.FrameworkID{
@@ -292,11 +293,20 @@ func (sc *SchedulerCore) Run(mesosMaster string) {
 		log.Infof("Framework stopped with status %s and error: %s\n", stat.String(), err.Error())
 	}
 }
+func (sc *SchedulerCore) reconcileTasks(driver sched.SchedulerDriver) {
+	tasksToReconcile := []*mesos.TaskStatus{}
+	for _, cluster := range sc.clusters {
+		for _, riakNode := range cluster.nodes {
+			tasksToReconcile = append(tasksToReconcile, riakNode.GetTaskStatus())
+		}
+	}
+	driver.ReconcileTasks(tasksToReconcile)
+}
 func (sc *SchedulerCore) Registered(driver sched.SchedulerDriver, frameworkId *mesos.FrameworkID, masterInfo *mesos.MasterInfo) {
 	sc.lock.Lock()
 	defer sc.lock.Unlock()
 	log.Info("Framework registered")
-
+	sc.reconcileTasks(driver)
 }
 
 func (sc *SchedulerCore) Reregistered(driver sched.SchedulerDriver, masterInfo *mesos.MasterInfo) {
@@ -305,7 +315,7 @@ func (sc *SchedulerCore) Reregistered(driver sched.SchedulerDriver, masterInfo *
 	//go NewTargetTask(*sched).Loop()
 	// We don't actually handle this correctly
 	log.Error("Framework reregistered")
-
+	sc.reconcileTasks(driver)
 }
 func (sc *SchedulerCore) Disconnected(sched.SchedulerDriver) {
 	sc.lock.Lock()
@@ -317,11 +327,77 @@ func (sc *SchedulerCore) ResourceOffers(driver sched.SchedulerDriver, offers []*
 	sc.lock.Lock()
 	defer sc.lock.Unlock()
 	log.Info("Received resource offers")
+	executorUris := []*mesos.CommandInfo_URI{}
+	executorUris = append(executorUris,
+		&mesos.CommandInfo_URI{Value: &(sc.schedulerHTTPServer.hostURI), Executable: proto.Bool(true)})
+	launchTasks := []*mesos.TaskInfo{}
+	for _, cluster := range sc.clusters {
+		for _, riakNode := range cluster.nodes {
+			if riakNode.NeedsToBeScheduled() {
+				log.Infof("Adding Riak node for scheduling: %+v", riakNode)
+				// We need to schedule this task I guess?
+				riakNode.generation = riakNode.generation + 1
+				task_id := riakNode.NewID()
+				exec := &mesos.ExecutorInfo{
+					//No idea is this is the "right" way to do it, but I think so?
+					ExecutorId: util.NewExecutorID(task_id),
+					Name:       proto.String("Test Executor (Go)"),
+					Source:     proto.String("Riak Mesos Framework (Go)"),
+					Command: &mesos.CommandInfo{
+						Value:     proto.String(sc.schedulerHTTPServer.executorName),
+						Uris:      executorUris,
+						Shell:     proto.Bool(false),
+						Arguments: []string{sc.schedulerHTTPServer.executorName, "-taskid", task_id},
+					},
+				}
+
+				taskId := &mesos.TaskID{
+					Value: proto.String(task_id),
+				}
+				taskInfo := &mesos.TaskInfo{
+					Name:     proto.String(task_id),
+					TaskId:   taskId,
+					SlaveId:  offers[0].SlaveId,
+					Executor: exec,
+					Resources: []*mesos.Resource{
+						util.NewScalarResource("mem", 1),
+					},
+					Data: []byte{'h', 'e', 'l', 'l', 'o'},
+				}
+				ts := mesos.TaskState_TASK_ERROR
+				taskStatus := &mesos.TaskStatus{
+					TaskId:  &mesos.TaskID{Value: proto.String(task_id)},
+					State:   &ts,
+					SlaveId: &mesos.SlaveID{Value: proto.String("")}, // Slave ID isn't required
+				}
+				sc.frnDict[task_id] = riakNode
+				riakNode.CurrentState = riak_node_states.Starting
+				riakNode.TaskStatus = taskStatus
+				riakNode.Persist()
+				launchTasks = append(launchTasks, taskInfo)
+			}
+		}
+	}
+	offerIDs := make([]*mesos.OfferID, len(offers))
+	for idx, offer := range offers {
+		offerIDs[idx] = offer.Id
+	}
+	log.Info("Launching Tasks: ", launchTasks)
+	driver.LaunchTasks(offerIDs, launchTasks, &mesos.Filters{RefuseSeconds: proto.Float64(OFFER_INTERVAL)})
 }
 func (sc *SchedulerCore) StatusUpdate(driver sched.SchedulerDriver, status *mesos.TaskStatus) {
 	sc.lock.Lock()
 	defer sc.lock.Unlock()
-	log.Info("Received status updates")
+	riak_node, assigned := sc.frnDict[status.TaskId.GetValue()]
+	if assigned {
+		log.Info("Received status updates: ", status)
+		log.Info("Riak Node: ", riak_node)
+		riak_node.handleStatusUpdate(status)
+		riak_node.Persist()
+	} else {
+		log.Error("Received status update for unknown job: ", status)
+	}
+
 }
 
 func (sc *SchedulerCore) OfferRescinded(driver sched.SchedulerDriver, offerID *mesos.OfferID) {
