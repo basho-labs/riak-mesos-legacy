@@ -5,7 +5,7 @@ import (
 	"flag"
 	log "github.com/Sirupsen/logrus"
 	"github.com/basho/bletchley/metadata_manager"
-	"github.com/basho/bletchley/framework"
+	//"github.com/basho/bletchley/framework"
 	"os"
 	"fmt"
 )
@@ -36,12 +36,22 @@ func init() {
 }
 
 func main() {
-	if clusterName == "" {
+
+	switch(Cmd) {
+		case "get-url": fmt.Println(get_url())
+	}
+}
+func get_url() string {
+	mgr := metadata_manager.NewMetadataManager(FrameworkName, zookeeperAddr)
+	return string(mgr.GetRootNode().GetChild("uri").GetData())
+}
+/*
+if clusterName == "" {
 		fmt.Println("Please specify value for cluster name")
 		os.Exit(1)
 	}
-	switch(Cmd) {
-		case "add-cluster": add_cluster()
+ */
+/*		case "add-cluster": add_cluster()
 		case "add-node": add_node()
 		case "dump-cluster": dump_cluster()
 	}
@@ -72,3 +82,4 @@ func add_node() {
 	cluster := clusters.GetChild(clusterName)
 	framework.FrameworkRiakClusterFromZKNode(cluster).AddNode()
 }
+*/

@@ -1,46 +1,6 @@
 package framework
-import (
-	"encoding/json"
-	"github.com/satori/go.uuid"
-	metamgr "github.com/basho/bletchley/metadata_manager"
-	log "github.com/Sirupsen/logrus"
 
-)
-
-type FrameworkRiakNode struct {
-	rc				*FrameworkRiakCluster `json:"-"`
-	zkNode			*metamgr.ZkNode `json:"-"`
-	UUID			uuid.UUID
-}
-
-
-func (frn *FrameworkRiakNode) Persist() {
-	data, err := json.Marshal(frn)
-	if err != nil {
-		log.Panic("error:", err)
-	}
-	frn.zkNode.SetData(data)
-}
-
-type FrameworkRiakCluster struct {
-	zkNode			*metamgr.ZkNode `json:"-"`
-	nodes			map[string]*FrameworkRiakNode `json:"-"`
-	// Do not use direct access to properties!
-	Name			string
-}
-
-func (frc *FrameworkRiakCluster) GetNodes() map[string]*FrameworkRiakNode {
-	return frc.nodes
-}
-
-func (frc *FrameworkRiakCluster) Persist() {
-	data, err := json.Marshal(frc)
-	if err != nil {
-		log.Panic("error:", err)
-	}
-	frc.zkNode.SetData(data)
-}
-func (frc *FrameworkRiakCluster) AddNode() {
+	/*
 	frc.zkNode.CreateChildIfNotExists("nodes")
 	nodes := frc.zkNode.GetChild("nodes")
 	nodeUUID := uuid.NewV4()
@@ -52,20 +12,28 @@ func (frc *FrameworkRiakCluster) AddNode() {
 	}
 	frn.Persist()
 }
+*/
 
-func FrameworkRiakClusterFromZKNode(node *metamgr.ZkNode) *FrameworkRiakCluster {
+/*
+func FrameworkRiakClusterFromZKNode(clusterZkNode *metamgr.ZkNode) *FrameworkRiakCluster {
 	frc := &FrameworkRiakCluster{
-		zkNode: node,
+		zkNode: clusterZkNode,
 		nodes:	make(map[string]*FrameworkRiakNode),
 	}
-	err := json.Unmarshal(node.GetData(), &frc)
+	err := json.Unmarshal(clusterZkNode.GetData(), &frc)
 	if err != nil {
 		log.Panic("Error getting cluster: ", err)
 	}
 
-	node.CreateChildIfNotExists("nodes")
-	nodes := node.GetChild("nodes")
+	clusterChildren, watchChan := clusterZkNode.GetChildrenW()
+	for _, child := range clusterChildren {
+		log.Infof("Saw child: %v", child)
+	}
+
+	clusterZkNode.CreateChildIfNotExists("nodes")
+	nodes := clusterZkNode.GetChild("nodes")
 	children := nodes.GetChildren()
+
 	for _, value := range children {
 		frn := &FrameworkRiakNode{rc: frc, zkNode: value}
 		err := json.Unmarshal(value.GetData(), &frn)
@@ -74,8 +42,14 @@ func FrameworkRiakClusterFromZKNode(node *metamgr.ZkNode) *FrameworkRiakCluster 
 		}
 		frc.nodes[frn.UUID.String()] = frn
 	}
+	go func() {
+		for msg := range watchChan  {
+			log.Infof("Received event: %v for NS: %v", msg, clusterZkNode)
+		}
+	}()
 	return frc
 }
+
 func NewFrameworkRiakCluster(root_node *metamgr.ZkNode, name string) *FrameworkRiakCluster {
 	root_node.CreateChildIfNotExists("clusters")
 	clusters := root_node.GetChild("clusters")
@@ -90,3 +64,4 @@ func NewFrameworkRiakCluster(root_node *metamgr.ZkNode, name string) *FrameworkR
 	frc.Persist()
 	return frc
 }
+*/

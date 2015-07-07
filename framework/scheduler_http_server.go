@@ -8,12 +8,16 @@ import (
 	"net/http/pprof"
 	"os"
 	"strconv"
+	"encoding/json"
+	"github.com/gorilla/mux"
 )
 
 type SchedulerHTTPServer struct {
+	sc			 *SchedulerCore
 	hostURI      string
 	riakURI      string
 	executorName string
+	URI			 string
 }
 
 func parseIP(address string) net.IP {
@@ -27,7 +31,56 @@ func parseIP(address string) net.IP {
 	return addr[0]
 }
 
-func ServeExecutorArtifact(schedulerHostname string) *SchedulerHTTPServer {
+func (schttp *SchedulerHTTPServer) createNode(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	clusterName := vars["cluster"]
+	cluster, assigned := schttp.sc.clusters[clusterName]
+	if !assigned {
+		w.WriteHeader(404)
+		fmt.Fprintf(w, "Cluster %s not found", clusterName)
+	} else {
+		json.NewEncoder(w).Encode(schttp.sc.mgr.CreateNode(cluster))
+	}
+}
+
+func (schttp *SchedulerHTTPServer) serveClusters(w http.ResponseWriter, r *http.Request) {
+	json.NewEncoder(w).Encode(schttp.sc.clusters)
+}
+
+func (schttp *SchedulerHTTPServer) createCluster(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	clusterName := vars["cluster"]
+	_, assigned := schttp.sc.clusters[clusterName]
+	log.Info("CREATE CLUSTER: ", )
+	if assigned {
+		w.WriteHeader(409)
+	} else {
+		cluster := schttp.sc.mgr.CreateCluster(clusterName)
+		json.NewEncoder(w).Encode(cluster)
+	}
+}
+
+func (schttp *SchedulerHTTPServer) getCluster(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	clusterName := vars["cluster"]
+	cluster, assigned := schttp.sc.clusters[clusterName]
+
+	if !assigned {
+		http.NotFound(w, r)
+	} else {
+		json.NewEncoder(w).Encode(cluster)
+	}
+
+}
+
+func (schttp *SchedulerHTTPServer) serveNodes(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	clusterName := vars["cluster"]
+	nodes := schttp.sc.clusters[clusterName].nodes
+	json.NewEncoder(w).Encode(nodes)
+}
+
+func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *SchedulerHTTPServer {
 	ln, err := net.Listen("tcp", ":0")
 	if err != nil {
 		log.Fatal(err)
@@ -60,23 +113,39 @@ func ServeExecutorArtifact(schedulerHostname string) *SchedulerHTTPServer {
 	//This is a HACK.
 	hostURI := fmt.Sprintf("http://%s:%d/%s", hostname, port, executorName)
 	riakURI := fmt.Sprintf("http://%s:%d/static/riak.tar.gz", hostname, port)
-
+	URI :=  fmt.Sprintf("http://%s:%d/", hostname, port)
 	fs := http.FileServer(http.Dir("."))
 	//Info.Printf("Hosting artifact '%s' at '%s'", path, hostURI)
 	log.Println("Serving at HostURI: ", hostURI)
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("/executor", func(w http.ResponseWriter, request *http.Request) {
+	router := mux.NewRouter().StrictSlash(true)
+	router.HandleFunc("/executor", func(w http.ResponseWriter, request *http.Request) {
 		log.Printf("%v %s %s %s ? %s %s %s", request.Host, request.RemoteAddr, request.Method, request.URL.Path, request.URL.RawQuery, request.Proto, request.Header.Get("User-Agent"))
 		http.ServeFile(w, request, "./executor_linux_amd64")
 	})
-	mux.Handle("/static/", http.StripPrefix("/static/", fs))
-	mux.Handle("/debug/pprof/", http.HandlerFunc(pprof.Index))
-	mux.Handle("/debug/pprof/cmdline", http.HandlerFunc(pprof.Cmdline))
-	mux.Handle("/debug/pprof/profile", http.HandlerFunc(pprof.Profile))
-	mux.Handle("/debug/pprof/symbol", http.HandlerFunc(pprof.Symbol))
-	//http.Serve(ln, newHandler())
-	go http.Serve(ln, mux)
+	router.Handle("/static/", http.StripPrefix("/static/", fs))
+	debugMux := http.NewServeMux()
+	router.PathPrefix("/debug").Handler(debugMux)
+	debugMux.Handle("/debug/pprof/", http.HandlerFunc(pprof.Index))
+	debugMux.Handle("/debug/pprof/cmdline", http.HandlerFunc(pprof.Cmdline))
+	debugMux.Handle("/debug/pprof/profile", http.HandlerFunc(pprof.Profile))
+	debugMux.Handle("/debug/pprof/symbol", http.HandlerFunc(pprof.Symbol))
 
-	return &SchedulerHTTPServer{hostURI: hostURI, riakURI: riakURI, executorName: "./" + executorName}
+	schttp := &SchedulerHTTPServer{
+		sc:		sc,
+		hostURI: hostURI,
+		riakURI: riakURI,
+		executorName: "./" + executorName,
+		URI: URI,
+	}
+	router.HandleFunc("/clusters", schttp.serveClusters)
+	router.Methods("POST", "PUT").Path("/clusters/{cluster}").HandlerFunc(schttp.createCluster)
+	router.Methods("GET").Path("/clusters/{cluster}").HandlerFunc(schttp.getCluster)
+	router.Methods("GET").Path("/clusters/{cluster}/nodes").HandlerFunc(schttp.serveNodes)
+	router.Methods("POST").Path("/clusters/{cluster}/nodes").HandlerFunc(schttp.createNode)
+
+	//http.Serve(ln, newHandler())
+	go http.Serve(ln, router)
+
+	return schttp
 }

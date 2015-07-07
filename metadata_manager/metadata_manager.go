@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"fmt"
 )
 
 
@@ -16,40 +17,72 @@ type ZkNode struct {
 	data			[]byte
 	ns				Namespace
 }
+func (node *ZkNode) String() string {
+	return fmt.Sprintf("<%s> -> %v", node.ns.GetZKPath(), node.data)
+}
 func (node *ZkNode) GetData() []byte {
 	return node.data
 }
 func (node *ZkNode) SetData(data []byte) {
 	var err error
 	log.Info("Persisting data")
-	node.stat, err = node.mgr.zkConn.Set(node.ns.GetZKPath(), data, node.stat.Version)
-	if err != nil {
-		log.Panic("Error persisting data: ", err)
+	if node.stat != nil {
+		node.stat, err = node.mgr.zkConn.Set(node.ns.GetZKPath(), data, node.stat.Version)
+		if err != nil {
+			log.Panic("Error persisting data: ", err)
+		}
+	} else {
+		_, err = node.mgr.zkConn.Create(node.ns.GetZKPath(), data, 0, zk.WorldACL(zk.PermAll))
+		if err != nil {
+			log.Panic("Error persisting data: ", err)
+		}
+		node.data, node.stat, err = node.mgr.zkConn.Get(node.ns.GetZKPath())
+		if err != nil {
+			log.Panic("Error persisting data: ", err)
+		}
 	}
 }
 func (node *ZkNode) GetChildren() []*ZkNode {
 	return node.mgr.getChildren(node.ns)
 }
 
+func (node *ZkNode) GetChildrenW() ([]*ZkNode, <-chan zk.Event) {
+	return node.mgr.getChildrenW(node.ns)
+}
+
+func (node *ZkNode) MakeEmptyChild(name string) *ZkNode {
+	if strings.Contains(name, "/") {
+		panic("Error, name of subnode cannot contain /")
+	}
+	ns := makeSubSpace(node.ns, name)
+	newNode := &ZkNode{
+		mgr:	node.mgr,
+		ns:		ns,
+	}
+	return newNode
+}
 func (node *ZkNode) MakeChild(name string) *ZkNode {
 	if strings.Contains(name, "/") {
 		panic("Error, name of subnode cannot contain /")
 	}
-	ns := &SubNamespace{
-		parent:node.ns,
-		components:[]string{name},
-	}
+	ns := makeSubSpace(node.ns, name)
 	return node.mgr.makeNode(ns)
+}
+
+
+func (node *ZkNode) MakeChildWithData(name string, data []byte) *ZkNode {
+	if strings.Contains(name, "/") {
+		panic("Error, name of subnode cannot contain /")
+	}
+	ns := makeSubSpace(node.ns, name)
+	return node.mgr.makeNodeWithData(ns, data)
 }
 
 func (node *ZkNode) GetChild(name string) *ZkNode {
 	if strings.Contains(name, "/") {
 		panic("Error, name of subnode cannot contain /")
 	}
-	ns := &SubNamespace{
-		parent:node.ns,
-		components:[]string{name},
-	}
+	ns := makeSubSpace(node.ns, name)
 	return node.mgr.getNode(ns)
 }
 
@@ -57,10 +90,7 @@ func (node *ZkNode) CreateChildIfNotExists(name string) {
 	if strings.Contains(name, "/") {
 		panic("Error, name of subnode cannot contain /")
 	}
-	ns := &SubNamespace{
-		parent:node.ns,
-		components:[]string{name},
-	}
+	ns := makeSubSpace(node.ns, name)
 	node.mgr.CreateNSIfNotExists(ns)
 }
 
@@ -83,22 +113,27 @@ func (baseNamespace) GetZKPath() string {
 
 type SubNamespace struct {
 	parent     Namespace
-	components []string
+	component  string
 }
 
 // Components are read-only, so not pointer-receiver
 func (ns SubNamespace) GetComponents() []string {
-	return append(ns.parent.GetComponents(), ns.components...)
+	return append(ns.parent.GetComponents(), ns.component)
 }
 func (ns SubNamespace) GetZKPath() string {
 	return strings.Join(ns.GetComponents(), "/")
 }
+func makeSubSpace(ns Namespace, subSpaceName string) Namespace {
+	return SubNamespace{parent:ns, component:subSpaceName}
+}
 
 type MetadataManager struct {
+	framework		MetadataManagerFramework
 	frameworkName string
 	zkConn        *zk.Conn
 	namespace     Namespace
 	lock          *sync.Mutex
+	zkLock			zk.Lock
 }
 
 func (mgr *MetadataManager) setup() {
@@ -106,19 +141,23 @@ func (mgr *MetadataManager) setup() {
 }
 
 func NewMetadataManager(frameworkName string, zookeeperAddr string) *MetadataManager {
-	conn, _, err := zk.Connect([]string{zookeeperAddr}, time.Second*10)
+	conn, _, err := zk.Connect([]string{zookeeperAddr}, time.Second)
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
+	bns := baseNamespace{}
+	ns := makeSubSpace(makeSubSpace(makeSubSpace(bns, "bletchley"), "frameworks"), frameworkName)
+	lockPath := makeSubSpace(ns, "lock")
+	zkLock := zk.NewLock(conn, lockPath.GetZKPath(),  zk.WorldACL(zk.PermAll))
+
 	manager := &MetadataManager{
 		lock:          &sync.Mutex{},
 		frameworkName: frameworkName,
 		zkConn:        conn,
-		namespace: SubNamespace{
-			parent:     baseNamespace{},
-			components: []string{"bletchley", "frameworks", frameworkName},
-		},
+		namespace: 	   ns,
+		zkLock:			*zkLock,
 	}
+
 	manager.setup()
 	return manager
 }
@@ -159,6 +198,17 @@ func (mgr *MetadataManager) GetRootNode() *ZkNode {
 	return mgr.getNode(mgr.namespace)
 }
 
+func (mgr *MetadataManager) getChildrenW(ns Namespace) ([]*ZkNode, <-chan zk.Event) {
+	children, _, watchChan, err :=  mgr.zkConn.ChildrenW(ns.GetZKPath())
+	if err != nil{
+		log.Panic(err)
+	}
+	result := make([]*ZkNode, len(children))
+	for idx, name := range children {
+		result[idx] = mgr.getNode(makeSubSpace(ns, name))
+	}
+	return result, watchChan
+}
 func (mgr *MetadataManager) getChildren(ns Namespace) []*ZkNode {
 	children, _, err :=  mgr.zkConn.Children(ns.GetZKPath())
 	if err != nil{
@@ -166,7 +216,7 @@ func (mgr *MetadataManager) getChildren(ns Namespace) []*ZkNode {
 	}
 	result := make([]*ZkNode, len(children))
 	for idx, name := range children {
-		result[idx] = mgr.getNode(SubNamespace{parent:ns, components:[]string{name}})
+		result[idx] = mgr.getNode(makeSubSpace(ns, name))
 	}
 	return result
 }
@@ -190,6 +240,17 @@ func (mgr *MetadataManager) makeNode(ns Namespace) *ZkNode {
 	// Namespaces are also nodes
 	log.Info("Making node")
 	_, err := mgr.zkConn.Create(ns.GetZKPath(), nil, 0, zk.WorldACL(zk.PermAll))
+	if err != nil {
+		log.Panic(err)
+	}
+	return mgr.getNode(ns)
+}
+
+
+func (mgr *MetadataManager) makeNodeWithData(ns Namespace, data []byte) *ZkNode {
+	// Namespaces are also nodes
+	log.Info("Making node")
+	_, err := mgr.zkConn.Create(ns.GetZKPath(), data, 0, zk.WorldACL(zk.PermAll))
 	if err != nil {
 		log.Panic(err)
 	}

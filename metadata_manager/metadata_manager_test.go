@@ -10,9 +10,8 @@ func TestStub(t *testing.T) {
 }
 func TestNS(t *testing.T) {
 	assert := assert.New(t)
-	namespace := SubNamespace{
-		parent:		baseNamespace{},
-		components: []string{"bletchley", "frameworks", "fakeFramework"},
-	}
+	bns := baseNamespace{}
+	namespace := makeSubSpace(makeSubSpace(makeSubSpace(bns, "bletchley"), "frameworks"), "fakeFramework")
+
 	assert.Equal([]string{"", "bletchley", "frameworks", "fakeFramework"}, namespace.GetComponents())
 }
