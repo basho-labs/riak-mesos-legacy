@@ -8,16 +8,70 @@ import (
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	sched "github.com/mesos/mesos-go/scheduler"
 	"sync"
-	util "github.com/mesos/mesos-go/mesosutil"
-	"github.com/basho/bletchley/framework/riak_node_states"
 
 //"github.com/basho/bletchley/common"
+	"time"
 )
 
 const (
 	OFFER_INTERVAL float64 = 5
 )
 
+
+func newReconciliationServer(driver sched.SchedulerDriver) *ReconcilationServer {
+	rs := &ReconcilationServer{
+		tasksToReconcile:make(chan *mesos.TaskStatus, 10),
+		lock: &sync.Mutex{},
+		enabled: false,
+		driver: driver,
+	}
+	go rs.loop()
+	return rs
+}
+type ReconcilationServer struct {
+	tasksToReconcile	chan *mesos.TaskStatus
+	driver 				sched.SchedulerDriver
+	lock				*sync.Mutex
+	enabled				bool
+
+}
+func (rServer *ReconcilationServer) enable() {
+	rServer.lock.Lock()
+	defer rServer.lock.Unlock()
+	rServer.enabled = true
+}
+
+func (rServer *ReconcilationServer) disable() {
+	rServer.lock.Lock()
+	defer rServer.lock.Unlock()
+	rServer.enabled = true
+}
+func (rServer *ReconcilationServer) loop() {
+	tasksToReconcile := []*mesos.TaskStatus{}
+	ticker := time.Tick(time.Millisecond * 100)
+	for {
+		select {
+		case task := <-rServer.tasksToReconcile:
+			{
+				tasksToReconcile = append(tasksToReconcile, task)
+			}
+		case <- ticker:
+			{
+				rServer.lock.Lock()
+				if rServer.enabled {
+					rServer.lock.Unlock()
+					if len(tasksToReconcile) > 0 {
+						log.Info("Reconciling tasks")
+						rServer.driver.ReconcileTasks(tasksToReconcile)
+						tasksToReconcile = []*mesos.TaskStatus{}
+					}
+				} else {
+					rServer.lock.Unlock()
+				}
+			}
+		}
+	}
+}
 type SchedulerCore struct {
 	lock                *sync.Mutex
 	frameworkName       string
@@ -26,6 +80,8 @@ type SchedulerCore struct {
 	mgr             *metamgr.MetadataManager
 	schedulerIpAddr string
 	frnDict				map[string]*FrameworkRiakNode
+	rServer				*ReconcilationServer
+
 }
 
 func NewSchedulerCore(schedulerHostname string, frameworkName string, mgr *metamgr.MetadataManager, schedulerIpAddr string) *SchedulerCore {
@@ -41,182 +97,6 @@ func NewSchedulerCore(schedulerHostname string, frameworkName string, mgr *metam
 	return scheduler
 }
 
-/*
-
-func (sched *SchedulerCore) handleStatusUpdate(msg statusUpdateCast) {
-	targetTask, assigned := sched.targetTasksSubs[msg.status.TaskId.GetValue()]
-	if assigned {
-		targetTask.UpdateStatus(msg.status)
-	}
-	// We should probably garbage collect the internal task state dictionary
-	// But, for now just collect them all -- memory is cheap!
-	sched.internalTaskStates[msg.status.TaskId.GetValue()] = msg.status
-}
-*/
-
-/*
-func (sched *SchedulerCore) handleResourceOffers(mesosOffers []*mesos.Offer) {
-log.Debugf("Received resource offers: %v", mesosOffers)
-launchPlan := make(map[string][]scheduleTask)
-outstandingOffers := make(map[string]*mesos.Offer)
-for _, offer := range mesosOffers {
-	outstandingOffers[offer.Id.GetValue()] = offer
-	launchPlan[offer.Id.GetValue()] = []scheduleTask{}
-}
-
-for {
-	select {
-	case request := <-sched.resourceOffersRescinded:
-		{
-			delete(outstandingOffers, request.offerId.GetValue())
-			for _, scheduledTask := range launchPlan[request.offerId.GetValue()] {
-				scheduledTask.replyChannel <- false
-			}
-			delete(launchPlan, request.offerId.GetValue())
-		}
-	case request := <-sched.outstandingTasks:
-		{
-			// This actually works, surprisingly enough
-			// In order to add multi-task constraints, we need to know what tasks are related to one another
-			// and then bucket them appropriately
-
-			// Right now, it fills up individual hosts
-			// This is "good enough" (IMHO) for the  demo
-			log.Infof("Got asked to schedule outstanding task: %v\n", request)
-			for key, offer := range outstandingOffers {
-				tmpResources := offer.Resources
-				var resourceAsk *mesos.Resource
-				var success bool
-				asks := []*mesos.Resource{}
-				for _, filter := range request.Filters {
-					tmpResources, resourceAsk, success = filter(tmpResources)
-					if !success {
-						break
-					}
-					asks = append(asks, resourceAsk)
-				}
-				if success {
-					// The new reduced version of the resources
-					outstandingOffers[key].Resources = tmpResources
-					request.TaskInfo.SlaveId = outstandingOffers[key].SlaveId
-					request.TaskInfo.Resources = asks
-					launchPlan[key] = append(launchPlan[key], request)
-				} else {
-					request.replyChannel <- false
-				}
-
-			}
-
-		}
-	default:
-		{
-			offerIDs := []*mesos.OfferID{}
-			tasks := []*mesos.TaskInfo{}
-			for offerID, launchPlanTasks := range launchPlan {
-				offerIDs = append(offerIDs, outstandingOffers[offerID].Id)
-				for _, task := range launchPlanTasks {
-					sched.subscriptionLock.Lock()
-					sched.targetTasksSubs[task.TaskInfo.TaskId.GetValue()] = task.TargetTask
-					sched.subscriptionLock.Unlock()
-					task.replyChannel <- true
-					tasks = append(tasks, task.TaskInfo)
-				}
-			}
-			log.Infof("Launching %v task(s) using offerID(s): %v\n", len(tasks), offerIDs)
-			sched.driver.LaunchTasks(offerIDs, tasks, &mesos.Filters{RefuseSeconds: proto.Float64(OFFER_INTERVAL)})
-			log.Info("No outstanding tasks")
-			return
-		}
-	}
-}
-}
-*/
-/*
-func (sched *SchedulerCore) SchedulingLoop() {
-for {
-	select {
-	case offers := <-sched.resourceOffers:
-		sched.handleResourceOffers(offers.offers)
-	// This number is chosen
-	case <-time.After(time.Duration(3*OFFER_INTERVAL) * time.Second):
-		{
-			log.Info("No resource offers received")
-			select {
-			case request := <-sched.outstandingTasks:
-				{
-					log.Info("received outstanding tasks during no offer period: ", request)
-					request.replyChannel <- false
-				}
-			default:
-				log.Info("Received no outstanding tasks during no offer period")
-			}
-		}
-
-	}
-}
-*/
-/*
-func (sched *SchedulerCore) handleSubChange(subChange taskStateSubscribe) {
-	log.Info("Changing subscription: ", subChange)
-	sched.subscriptionLock.Lock()
-	defer sched.subscriptionLock.Unlock()
-	switch subChange.subscriptionChangeType {
-	case subscribe:
-		{
-			// This should trigger a reconcilation
-			_, assigned := sched.targetTasksSubs[subChange.taskID]
-			if assigned {
-				panic("Only one task be assigned to a task ID at a time")
-			} else {
-				sched.targetTasksSubs[subChange.taskID] = subChange.targetTask
-				sched.TriggerReconcilation(subChange.taskID)
-			}
-		}
-	case unsubscribe:
-		{
-			delete(sched.targetTasksSubs, subChange.taskID)
-		}
-	}
-}
-*/
-/*
-func (sched *SchedulerCore) MesosLoop() {
-	initialRegistration := <-sched.registered
-	log.Info("Scheduler routine registered: ", initialRegistration.frameworkId, initialRegistration.masterInfo)
-
-	go sched.SchedulingLoop()
-	for {
-		select {
-		case msg := <-sched.reregistered:
-			{
-				log.Info("Scheduler routine reregistered: ", msg.masterInfo)
-			}
-		case msg := <-sched.statusUpdate:
-			{
-				sched.handleStatusUpdate(msg)
-			}
-		case subChange := <-sched.taskStateSubscribe:
-			{
-				sched.handleSubChange(subChange)
-
-			}
-		}
-	}
-}
-*/
-
-/*
-func (sched *SchedulerCore) TriggerReconcilation(taskID string) {
-	ts := mesos.TaskState_TASK_ERROR
-	task := &mesos.TaskStatus{
-		TaskId:  &mesos.TaskID{Value: proto.String(taskID)},
-		State:   &ts,
-		SlaveId: &mesos.SlaveID{Value: proto.String("")}, // Slave ID isn't required
-	}
-	taskStatuses := []*mesos.TaskStatus{task}
-	sched.driver.ReconcileTasks(taskStatuses)
-}
-*/
 
 // This is an add cluster callback from the metadata manager
 func (sc *SchedulerCore) AddCluster(zkNode *metamgr.ZkNode) metamgr.MetadataManagerCluster {
@@ -250,14 +130,6 @@ func (sc SchedulerCore) NewCluster(zkNode *metamgr.ZkNode, name string) metamgr.
 
 func (sc *SchedulerCore) setupMetadataManager() {
 	sc.mgr.SetupFramework(sc.schedulerHTTPServer.URI, sc)
-	for _, cluster := range sc.clusters {
-		for _, riakNode := range cluster.nodes {
-			if riakNode.TaskStatus != nil {
-				log.Info("Populate FRN dict: %v -> %v", riakNode.TaskStatus.TaskId.GetValue(), riakNode)
-				sc.frnDict[riakNode.TaskStatus.TaskId.GetValue()] = riakNode
-			}
-		}
-	}
 }
 func (sc *SchedulerCore) Run(mesosMaster string) {
 	frameworkId := &mesos.FrameworkID{
@@ -288,25 +160,20 @@ func (sc *SchedulerCore) Run(mesosMaster string) {
 	if err != nil {
 		log.Error("Unable to create a SchedulerDriver ", err.Error())
 	}
+	sc.rServer = newReconciliationServer(driver)
+
 	sc.setupMetadataManager()
+
 	if stat, err := driver.Run(); err != nil {
 		log.Infof("Framework stopped with status %s and error: %s\n", stat.String(), err.Error())
 	}
 }
-func (sc *SchedulerCore) reconcileTasks(driver sched.SchedulerDriver) {
-	tasksToReconcile := []*mesos.TaskStatus{}
-	for _, cluster := range sc.clusters {
-		for _, riakNode := range cluster.nodes {
-			tasksToReconcile = append(tasksToReconcile, riakNode.GetTaskStatus())
-		}
-	}
-	driver.ReconcileTasks(tasksToReconcile)
-}
+
 func (sc *SchedulerCore) Registered(driver sched.SchedulerDriver, frameworkId *mesos.FrameworkID, masterInfo *mesos.MasterInfo) {
 	sc.lock.Lock()
 	defer sc.lock.Unlock()
 	log.Info("Framework registered")
-	sc.reconcileTasks(driver)
+	sc.rServer.enable()
 }
 
 func (sc *SchedulerCore) Reregistered(driver sched.SchedulerDriver, masterInfo *mesos.MasterInfo) {
@@ -315,7 +182,7 @@ func (sc *SchedulerCore) Reregistered(driver sched.SchedulerDriver, masterInfo *
 	//go NewTargetTask(*sched).Loop()
 	// We don't actually handle this correctly
 	log.Error("Framework reregistered")
-	sc.reconcileTasks(driver)
+	sc.rServer.enable()
 }
 func (sc *SchedulerCore) Disconnected(sched.SchedulerDriver) {
 	sc.lock.Lock()
@@ -331,59 +198,53 @@ func (sc *SchedulerCore) ResourceOffers(driver sched.SchedulerDriver, offers []*
 	executorUris = append(executorUris,
 		&mesos.CommandInfo_URI{Value: &(sc.schedulerHTTPServer.hostURI), Executable: proto.Bool(true)})
 	launchTasks := []*mesos.TaskInfo{}
+	toBeScheduled := []*FrameworkRiakNode{}
 	for _, cluster := range sc.clusters {
 		for _, riakNode := range cluster.nodes {
 			if riakNode.NeedsToBeScheduled() {
 				log.Infof("Adding Riak node for scheduling: %+v", riakNode)
 				// We need to schedule this task I guess?
-				riakNode.generation = riakNode.generation + 1
-				task_id := riakNode.NewID()
-				exec := &mesos.ExecutorInfo{
-					//No idea is this is the "right" way to do it, but I think so?
-					ExecutorId: util.NewExecutorID(task_id),
-					Name:       proto.String("Test Executor (Go)"),
-					Source:     proto.String("Riak Mesos Framework (Go)"),
-					Command: &mesos.CommandInfo{
-						Value:     proto.String(sc.schedulerHTTPServer.executorName),
-						Uris:      executorUris,
-						Shell:     proto.Bool(false),
-						Arguments: []string{sc.schedulerHTTPServer.executorName, "-taskid", task_id},
-					},
-				}
-
-				taskId := &mesos.TaskID{
-					Value: proto.String(task_id),
-				}
-				taskInfo := &mesos.TaskInfo{
-					Name:     proto.String(task_id),
-					TaskId:   taskId,
-					SlaveId:  offers[0].SlaveId,
-					Executor: exec,
-					Resources: []*mesos.Resource{
-						util.NewScalarResource("mem", 1),
-					},
-					Data: []byte{'h', 'e', 'l', 'l', 'o'},
-				}
-				ts := mesos.TaskState_TASK_ERROR
-				taskStatus := &mesos.TaskStatus{
-					TaskId:  &mesos.TaskID{Value: proto.String(task_id)},
-					State:   &ts,
-					SlaveId: &mesos.SlaveID{Value: proto.String("")}, // Slave ID isn't required
-				}
-				sc.frnDict[task_id] = riakNode
-				riakNode.CurrentState = riak_node_states.Starting
-				riakNode.TaskStatus = taskStatus
-				riakNode.Persist()
-				launchTasks = append(launchTasks, taskInfo)
+				toBeScheduled = append(toBeScheduled, riakNode)
 			}
 		}
 	}
+
+
+	// TODO: This currently fills in each Mesos node as much as possible
+	// Simply switching the outer and inner loops would result in spreading
+	// tasks across as many nodes as possible
+	// We either need to make this pluggalbe, or something? I don't know.
+
+	for _, offer := range offers {
+		resources := offer.Resources
+		for _, riakNode := range toBeScheduled {
+			var success bool
+			var ask []*mesos.Resource
+			resources, ask, success = riakNode.GetCombinedAsk()(resources)
+			if success {
+				taskInfo := riakNode.PrepareForLaunchAndGetNewTaskInfo(offer, ask)
+				sc.frnDict[riakNode.CurrentID()] = riakNode
+				launchTasks = append(launchTasks, taskInfo)
+				riakNode.Persist()
+			} else {
+				log.Error("Not enough resources to schedule RiakNode")
+			}
+
+		}
+	}
+
 	offerIDs := make([]*mesos.OfferID, len(offers))
 	for idx, offer := range offers {
 		offerIDs[idx] = offer.Id
 	}
 	log.Info("Launching Tasks: ", launchTasks)
-	driver.LaunchTasks(offerIDs, launchTasks, &mesos.Filters{RefuseSeconds: proto.Float64(OFFER_INTERVAL)})
+	status, err := driver.LaunchTasks(offerIDs, launchTasks, &mesos.Filters{RefuseSeconds: proto.Float64(OFFER_INTERVAL)})
+	if status != mesos.Status_DRIVER_RUNNING {
+		log.Fatal("Driver not running, while trying to launch tasks")
+	}
+	if err != nil {
+		log.Panic("Failed to launch tasks: ", err)
+	}
 }
 func (sc *SchedulerCore) StatusUpdate(driver sched.SchedulerDriver, status *mesos.TaskStatus) {
 	sc.lock.Lock()
@@ -431,48 +292,3 @@ func (sc *SchedulerCore) Error(driver sched.SchedulerDriver, err string) {
 	defer sc.lock.Unlock()
 	log.Info("Scheduler received error:", err)
 }
-
-// Old:
-
-/*
-
-// Private "internal" structs
-type registeredCast struct {
-	frameworkId *mesos.FrameworkID
-	masterInfo  *mesos.MasterInfo
-}
-type reregisteredCast struct {
-	masterInfo *mesos.MasterInfo
-}
-type statusUpdateCast struct {
-	status *mesos.TaskStatus
-}
-
-type SubscriptionChangeType int
-
-const (
-	subscribe   SubscriptionChangeType = iota
-	unsubscribe                        = iota
-)
-
-type taskStateSubscribe struct {
-	targetTask             *TargetTask
-	taskID                 string
-	subscriptionChangeType SubscriptionChangeType
-}
-
-type resourceOffers struct {
-	offers []*mesos.Offer
-}
-
-type resourceOffersRescinded struct {
-	offerId *mesos.OfferID
-}
-
-type scheduleTask struct {
-	TaskInfo     *mesos.TaskInfo
-	TargetTask   *TargetTask
-	Filters      []common.ResourceAsker
-	replyChannel chan bool
-}
-*/

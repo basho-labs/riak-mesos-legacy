@@ -47,7 +47,6 @@ func (frc *FrameworkRiakCluster) NewNode() metamgr.MetadataManagerNode {
 func (frc *FrameworkRiakCluster) AddNode(zkNode *metamgr.ZkNode) metamgr.MetadataManagerNode {
 	frc.sc.lock.Lock()
 	defer frc.sc.lock.Unlock()
-	log.Debug("Adding node: ", zkNode)
 	frn := NewFrameworkRiakNode()
 	frn.frc = frc
 	frn.zkNode = zkNode
@@ -55,7 +54,9 @@ func (frc *FrameworkRiakCluster) AddNode(zkNode *metamgr.ZkNode) metamgr.Metadat
 	if err != nil {
 		log.Panic("Error getting node: ", err)
 	}
+	frc.sc.frnDict[frn.GetTaskStatus().TaskId.GetValue()] = frn
 	frc.nodes[frn.UUID.String()] = frn
+	frc.sc.rServer.tasksToReconcile <- frn.GetTaskStatus()
 	return frn
 }
 func NewFrameworkRiakCluster() *FrameworkRiakCluster {
