@@ -1,13 +1,13 @@
 package framework
 
 import (
+	"encoding/json"
 	log "github.com/Sirupsen/logrus"
 	metamgr "github.com/basho/bletchley/metadata_manager"
 	"github.com/golang/protobuf/proto"
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	sched "github.com/mesos/mesos-go/scheduler"
 	"sync"
-	"encoding/json"
 )
 
 const (
@@ -16,32 +16,31 @@ const (
 
 type SchedulerCore struct {
 	// New:
-	lock         	*sync.Mutex
-	frameworkName	string
-	clusters		map[string]*FrameworkRiakCluster
+	lock                *sync.Mutex
+	frameworkName       string
+	clusters            map[string]*FrameworkRiakCluster
 	schedulerHTTPServer *SchedulerHTTPServer
 	// Old:
 	//driver              sched.SchedulerDriver
-	internalTaskStates  map[string]*mesos.TaskStatus
+	internalTaskStates map[string]*mesos.TaskStatus
 
 	//targetTasksSubs     map[string]*TargetTask
 	//driverConfig        *sched.DriverConfig
-	mgr                 *metamgr.MetadataManager
-	schedulerIpAddr     string
-
+	mgr             *metamgr.MetadataManager
+	schedulerIpAddr string
 }
 
-func NewSchedulerCore(schedulerHostname string, frameworkName string,  mgr *metamgr.MetadataManager, schedulerIpAddr string) *SchedulerCore {
+func NewSchedulerCore(schedulerHostname string, frameworkName string, mgr *metamgr.MetadataManager, schedulerIpAddr string) *SchedulerCore {
 	scheduler := &SchedulerCore{
-		lock: 			&sync.Mutex{},
-		frameworkName:  frameworkName,
-		schedulerIpAddr:     schedulerIpAddr,
-		clusters:			make(map[string]*FrameworkRiakCluster),
+		lock:            &sync.Mutex{},
+		frameworkName:   frameworkName,
+		schedulerIpAddr: schedulerIpAddr,
+		clusters:        make(map[string]*FrameworkRiakCluster),
 
 		// Old:
-		internalTaskStates:  make(map[string]*mesos.TaskStatus),
+		internalTaskStates: make(map[string]*mesos.TaskStatus),
 		//driverConfig:        nil,
-		mgr:                 mgr,
+		mgr: mgr,
 	}
 	scheduler.schedulerHTTPServer = ServeExecutorArtifact(scheduler, schedulerHostname)
 	//scheduler.driver = driver
@@ -226,9 +225,6 @@ func (sched *SchedulerCore) TriggerReconcilation(taskID string) {
 }
 */
 
-
-
-
 // This is an add cluster callback from the metadata manager
 func (sc *SchedulerCore) AddCluster(zkNode *metamgr.ZkNode) metamgr.MetadataManagerCluster {
 	sc.lock.Lock()
@@ -248,6 +244,7 @@ func (sc *SchedulerCore) GetCluster(name string) metamgr.MetadataManagerCluster 
 	defer sc.lock.Unlock()
 	return sc.clusters[name]
 }
+
 // Should basically just be a callback - DO NOT change state
 func (sc SchedulerCore) NewCluster(zkNode *metamgr.ZkNode, name string) metamgr.MetadataManagerCluster {
 	frc := &FrameworkRiakCluster{
@@ -358,7 +355,6 @@ func (sc *SchedulerCore) Error(driver sched.SchedulerDriver, err string) {
 	defer sc.lock.Unlock()
 	log.Info("Scheduler received error:", err)
 }
-
 
 // Old:
 

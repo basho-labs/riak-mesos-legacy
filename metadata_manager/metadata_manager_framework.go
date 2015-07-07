@@ -6,21 +6,20 @@ import (
 )
 
 type MetadataManagerFramework interface {
-	AddCluster(*ZkNode)		MetadataManagerCluster
-	GetCluster(string)		MetadataManagerCluster
-	NewCluster(*ZkNode, string)	MetadataManagerCluster
+	AddCluster(*ZkNode) MetadataManagerCluster
+	GetCluster(string) MetadataManagerCluster
+	NewCluster(*ZkNode, string) MetadataManagerCluster
 }
 type MetadataManagerCluster interface {
-	GetZkNode()			*ZkNode
-	AddNode(*ZkNode)	MetadataManagerNode
-	NewNode()           MetadataManagerNode
+	GetZkNode() *ZkNode
+	AddNode(*ZkNode) MetadataManagerNode
+	NewNode() MetadataManagerNode
 	Persist()
 }
 type MetadataManagerNode interface {
-	GetZkNode()			*ZkNode
+	GetZkNode() *ZkNode
 	Persist()
 }
-
 
 func (mgr *MetadataManager) CreateNode(cluster MetadataManagerCluster) MetadataManagerNode {
 	nodesNS := makeSubSpace(cluster.GetZkNode().ns, "nodes")
@@ -52,15 +51,16 @@ func (mgr *MetadataManager) SetupFramework(URI string, mmf MetadataManagerFramew
 		log.Panic(err)
 	}
 
-
 	clustersPath := makeSubSpace(mgr.namespace, "clusters")
 	mgr.CreateNSIfNotExists(clustersPath)
 	clusters, clustersEventChannel := mgr.getChildrenW(clustersPath)
 	go func() {
 		for clusterEvent := range clustersEventChannel {
-			switch (clusterEvent.Type) {
-                case zk.EventNodeChildrenChanged: log.Debugf("Cluster event received, and not yet implemented: %+v at path: %+v, state: %+v", clusterEvent, clusterEvent.Path, clusterEvent.State)
-				default: log.Debugf("Cluster event received, and not yet implemented: %+v", clusterEvent)
+			switch clusterEvent.Type {
+			case zk.EventNodeChildrenChanged:
+				log.Debugf("Cluster event received, and not yet implemented: %+v at path: %+v, state: %+v", clusterEvent, clusterEvent.Path, clusterEvent.State)
+			default:
+				log.Debugf("Cluster event received, and not yet implemented: %+v", clusterEvent)
 			}
 		}
 	}()

@@ -1,21 +1,18 @@
 package framework
 
-
-
 import (
+	"encoding/json"
 	log "github.com/Sirupsen/logrus"
 	metamgr "github.com/basho/bletchley/metadata_manager"
-	"encoding/json"
 	"github.com/satori/go.uuid"
 )
 
-
 type FrameworkRiakCluster struct {
-	sc 				*SchedulerCore
-	zkNode			*metamgr.ZkNode `json:"-"`
-	nodes			map[string]*FrameworkRiakNode `json:"-"`
+	sc     *SchedulerCore
+	zkNode *metamgr.ZkNode               `json:"-"`
+	nodes  map[string]*FrameworkRiakNode `json:"-"`
 	// Do not use direct access to properties!
-	Name			string
+	Name string
 }
 
 func (frc *FrameworkRiakCluster) GetNodes() map[string]*FrameworkRiakNode {
@@ -33,7 +30,6 @@ func (frc *FrameworkRiakCluster) Persist() {
 func (frc *FrameworkRiakCluster) GetZkNode() *metamgr.ZkNode {
 	return frc.zkNode
 }
-
 
 func (frc *FrameworkRiakCluster) NewNode() metamgr.MetadataManagerNode {
 	nodes := frc.zkNode.GetChild("nodes")
@@ -64,6 +60,6 @@ func (frc *FrameworkRiakCluster) AddNode(zkNode *metamgr.ZkNode) metamgr.Metadat
 }
 func NewFrameworkRiakCluster() *FrameworkRiakCluster {
 	return &FrameworkRiakCluster{
-		nodes:  make(map[string]*FrameworkRiakNode),
+		nodes: make(map[string]*FrameworkRiakNode),
 	}
 }

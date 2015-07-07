@@ -1,22 +1,20 @@
 package main
 
 import (
-
 	"flag"
 	log "github.com/Sirupsen/logrus"
 	"github.com/basho/bletchley/metadata_manager"
 	//"github.com/basho/bletchley/framework"
-	"os"
 	"fmt"
+	"os"
 )
 
-
 var (
-	zookeeperAddr     string
-	clusterName		  string
-	nodes			  int
-	FrameworkName     string
-	Cmd				  string
+	zookeeperAddr string
+	clusterName   string
+	nodes         int
+	FrameworkName string
+	Cmd           string
 )
 
 func init() {
@@ -27,7 +25,6 @@ func init() {
 	flag.StringVar(&Cmd, "command", "", "Command")
 	flag.Parse()
 
-
 	if Cmd == "" {
 		fmt.Println("Please specify command")
 		os.Exit(1)
@@ -37,20 +34,22 @@ func init() {
 
 func main() {
 
-	switch(Cmd) {
-		case "get-url": fmt.Println(get_url())
+	switch Cmd {
+	case "get-url":
+		fmt.Println(get_url())
 	}
 }
 func get_url() string {
 	mgr := metadata_manager.NewMetadataManager(FrameworkName, zookeeperAddr)
 	return string(mgr.GetRootNode().GetChild("uri").GetData())
 }
+
 /*
 if clusterName == "" {
 		fmt.Println("Please specify value for cluster name")
 		os.Exit(1)
 	}
- */
+*/
 /*		case "add-cluster": add_cluster()
 		case "add-node": add_node()
 		case "dump-cluster": dump_cluster()

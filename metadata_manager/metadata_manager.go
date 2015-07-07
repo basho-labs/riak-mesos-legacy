@@ -4,19 +4,19 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/samuel/go-zookeeper/zk"
 	// "github.com/golang/protobuf/proto"
+	"fmt"
 	"strings"
 	"sync"
 	"time"
-	"fmt"
 )
 
-
 type ZkNode struct {
-	mgr				*MetadataManager
-	stat			*zk.Stat
-	data			[]byte
-	ns				Namespace
+	mgr  *MetadataManager
+	stat *zk.Stat
+	data []byte
+	ns   Namespace
 }
+
 func (node *ZkNode) String() string {
 	return fmt.Sprintf("<%s> -> %v", node.ns.GetZKPath(), node.data)
 }
@@ -56,8 +56,8 @@ func (node *ZkNode) MakeEmptyChild(name string) *ZkNode {
 	}
 	ns := makeSubSpace(node.ns, name)
 	newNode := &ZkNode{
-		mgr:	node.mgr,
-		ns:		ns,
+		mgr: node.mgr,
+		ns:  ns,
 	}
 	return newNode
 }
@@ -68,7 +68,6 @@ func (node *ZkNode) MakeChild(name string) *ZkNode {
 	ns := makeSubSpace(node.ns, name)
 	return node.mgr.makeNode(ns)
 }
-
 
 func (node *ZkNode) MakeChildWithData(name string, data []byte) *ZkNode {
 	if strings.Contains(name, "/") {
@@ -112,8 +111,8 @@ func (baseNamespace) GetZKPath() string {
 }
 
 type SubNamespace struct {
-	parent     Namespace
-	component  string
+	parent    Namespace
+	component string
 }
 
 // Components are read-only, so not pointer-receiver
@@ -124,16 +123,16 @@ func (ns SubNamespace) GetZKPath() string {
 	return strings.Join(ns.GetComponents(), "/")
 }
 func makeSubSpace(ns Namespace, subSpaceName string) Namespace {
-	return SubNamespace{parent:ns, component:subSpaceName}
+	return SubNamespace{parent: ns, component: subSpaceName}
 }
 
 type MetadataManager struct {
-	framework		MetadataManagerFramework
+	framework     MetadataManagerFramework
 	frameworkName string
 	zkConn        *zk.Conn
 	namespace     Namespace
 	lock          *sync.Mutex
-	zkLock			zk.Lock
+	zkLock        zk.Lock
 }
 
 func (mgr *MetadataManager) setup() {
@@ -148,14 +147,14 @@ func NewMetadataManager(frameworkName string, zookeeperAddr string) *MetadataMan
 	bns := baseNamespace{}
 	ns := makeSubSpace(makeSubSpace(makeSubSpace(bns, "bletchley"), "frameworks"), frameworkName)
 	lockPath := makeSubSpace(ns, "lock")
-	zkLock := zk.NewLock(conn, lockPath.GetZKPath(),  zk.WorldACL(zk.PermAll))
+	zkLock := zk.NewLock(conn, lockPath.GetZKPath(), zk.WorldACL(zk.PermAll))
 
 	manager := &MetadataManager{
 		lock:          &sync.Mutex{},
 		frameworkName: frameworkName,
 		zkConn:        conn,
-		namespace: 	   ns,
-		zkLock:			*zkLock,
+		namespace:     ns,
+		zkLock:        *zkLock,
 	}
 
 	manager.setup()
@@ -199,8 +198,8 @@ func (mgr *MetadataManager) GetRootNode() *ZkNode {
 }
 
 func (mgr *MetadataManager) getChildrenW(ns Namespace) ([]*ZkNode, <-chan zk.Event) {
-	children, _, watchChan, err :=  mgr.zkConn.ChildrenW(ns.GetZKPath())
-	if err != nil{
+	children, _, watchChan, err := mgr.zkConn.ChildrenW(ns.GetZKPath())
+	if err != nil {
 		log.Panic(err)
 	}
 	result := make([]*ZkNode, len(children))
@@ -210,8 +209,8 @@ func (mgr *MetadataManager) getChildrenW(ns Namespace) ([]*ZkNode, <-chan zk.Eve
 	return result, watchChan
 }
 func (mgr *MetadataManager) getChildren(ns Namespace) []*ZkNode {
-	children, _, err :=  mgr.zkConn.Children(ns.GetZKPath())
-	if err != nil{
+	children, _, err := mgr.zkConn.Children(ns.GetZKPath())
+	if err != nil {
 		log.Panic(err)
 	}
 	result := make([]*ZkNode, len(children))
@@ -224,14 +223,14 @@ func (mgr *MetadataManager) getChildren(ns Namespace) []*ZkNode {
 func (mgr *MetadataManager) getNode(ns Namespace) *ZkNode {
 	// Namespaces are also nodes
 	data, stat, err := mgr.zkConn.Get(ns.GetZKPath())
-	if err != nil{
+	if err != nil {
 		log.Panic(err)
 	}
 	node := &ZkNode{
-		mgr:	mgr,
-		data:	data,
-		stat:	stat,
-		ns:		ns,
+		mgr:  mgr,
+		data: data,
+		stat: stat,
+		ns:   ns,
 	}
 	return node
 }
@@ -245,7 +244,6 @@ func (mgr *MetadataManager) makeNode(ns Namespace) *ZkNode {
 	}
 	return mgr.getNode(ns)
 }
-
 
 func (mgr *MetadataManager) makeNodeWithData(ns Namespace, data []byte) *ZkNode {
 	// Namespaces are also nodes

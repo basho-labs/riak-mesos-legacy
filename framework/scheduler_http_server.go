@@ -1,23 +1,23 @@
 package framework
 
 import (
+	"encoding/json"
 	"fmt"
 	log "github.com/Sirupsen/logrus"
+	"github.com/gorilla/mux"
 	"net"
 	"net/http"
 	"net/http/pprof"
 	"os"
 	"strconv"
-	"encoding/json"
-	"github.com/gorilla/mux"
 )
 
 type SchedulerHTTPServer struct {
-	sc			 *SchedulerCore
+	sc           *SchedulerCore
 	hostURI      string
 	riakURI      string
 	executorName string
-	URI			 string
+	URI          string
 }
 
 func parseIP(address string) net.IP {
@@ -51,7 +51,7 @@ func (schttp *SchedulerHTTPServer) createCluster(w http.ResponseWriter, r *http.
 	vars := mux.Vars(r)
 	clusterName := vars["cluster"]
 	_, assigned := schttp.sc.clusters[clusterName]
-	log.Info("CREATE CLUSTER: ", )
+	log.Info("CREATE CLUSTER: ")
 	if assigned {
 		w.WriteHeader(409)
 	} else {
@@ -113,7 +113,7 @@ func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *Schedul
 	//This is a HACK.
 	hostURI := fmt.Sprintf("http://%s:%d/%s", hostname, port, executorName)
 	riakURI := fmt.Sprintf("http://%s:%d/static/riak.tar.gz", hostname, port)
-	URI :=  fmt.Sprintf("http://%s:%d/", hostname, port)
+	URI := fmt.Sprintf("http://%s:%d/", hostname, port)
 	fs := http.FileServer(http.Dir("."))
 	//Info.Printf("Hosting artifact '%s' at '%s'", path, hostURI)
 	log.Println("Serving at HostURI: ", hostURI)
@@ -132,11 +132,11 @@ func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *Schedul
 	debugMux.Handle("/debug/pprof/symbol", http.HandlerFunc(pprof.Symbol))
 
 	schttp := &SchedulerHTTPServer{
-		sc:		sc,
-		hostURI: hostURI,
-		riakURI: riakURI,
+		sc:           sc,
+		hostURI:      hostURI,
+		riakURI:      riakURI,
 		executorName: "./" + executorName,
-		URI: URI,
+		URI:          URI,
 	}
 	router.HandleFunc("/clusters", schttp.serveClusters)
 	router.Methods("POST", "PUT").Path("/clusters/{cluster}").HandlerFunc(schttp.createCluster)
