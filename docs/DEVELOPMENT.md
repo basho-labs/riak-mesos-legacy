@@ -46,6 +46,9 @@ go get github.com/kr/pretty
 go get github.com/kr/text
 go get github.com/Sirupsen/logrus
 go get -u github.com/jteeuwen/go-bindata/...
+go get github.com/campoy/jsonenums
+go get golang.org/x/tools/cmd/stringer
+go get github.com/gorilla/mux
 ```
 
 Setup initial directories
