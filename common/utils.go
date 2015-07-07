@@ -32,6 +32,11 @@ func AskForMemory(memory float64) ResourceAsker {
 
 }
 
+func AskForDisk(disk float64) ResourceAsker {
+	return AskForScalar("disk", disk)
+
+}
+
 type intarray []int64
 
 func (a intarray) Len() int           { return len(a) }
