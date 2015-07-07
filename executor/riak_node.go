@@ -31,7 +31,7 @@ func (riakNode *RiakNode) Loop() {
 	if err != nil {
 		log.Panic("Got error", err)
 	}
-	time.Sleep(10 * time.Second)
+	time.Sleep(1000 * time.Second)
 	finStatus := &mesos.TaskStatus{
 		TaskId: riakNode.taskInfo.GetTaskId(),
 		State:  mesos.TaskState_TASK_FINISHED.Enum(),

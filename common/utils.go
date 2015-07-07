@@ -7,7 +7,9 @@ import (
 )
 
 // The new value for the resource, the ask, and whether or not the ask was accomodated - the ask may be nil if it wasn't accomodated
-type ResourceAsker (func([]*mesos.Resource) ([]*mesos.Resource, *mesos.Resource, bool))
+type ResourceAsker (func([]*mesos.Resource) (remaining []*mesos.Resource, ask *mesos.Resource, success bool))
+type CombinedResourceAsker (func([]*mesos.Resource) (remaining []*mesos.Resource, ask []*mesos.Resource, success bool))
+
 
 func AskForScalar(resourceName string, askSize float64) ResourceAsker {
 	return func(resources []*mesos.Resource) ([]*mesos.Resource, *mesos.Resource, bool) {
@@ -30,6 +32,10 @@ func AskForCPU(cpuAsk float64) ResourceAsker {
 func AskForMemory(memory float64) ResourceAsker {
 	return AskForScalar("mem", memory)
 
+}
+
+func AskForDisk(disk float64) ResourceAsker {
+	return AskForScalar("disk", disk)
 }
 
 type intarray []int64
