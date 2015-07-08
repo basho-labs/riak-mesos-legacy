@@ -11,7 +11,7 @@ created by the Framework.
 
 ### Client Interaction
 
-![Client Interaction](https://raw.githubusercontent.com/basho-labs/riak-mesos/master/docs/RiakMesosControlFrame.png)
+![Client Interaction](RiakMesosControlFrame.png)
 
 Due to the nature of Apache Mesos and the potential for Riak nodes to come and
 go on a regular basis, client applications using a Mesos based cluster must
