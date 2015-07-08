@@ -4,6 +4,8 @@
 Vagrant.configure(2) do |config|
   config.vm.box = "ubuntu/trusty64"
 
+  config.vm.hostname = "ubuntu"
+
   # Riak Explorer
   config.vm.network "forwarded_port", guest: 9000, host: 9000
 
@@ -35,6 +37,7 @@ Vagrant.configure(2) do |config|
     # Host communication
     HOSTMACHINE=`netstat -rn | grep "^0.0.0.0 " | cut -d " " -f10`
     echo "$HOSTMACHINE	33.33.33.1" >> /etc/hosts
+    echo "127.0.0.1	ubuntu" >> /etc/hosts
 
     # Mesos
     apt-key adv --keyserver keyserver.ubuntu.com --recv E56151BF
@@ -55,13 +58,7 @@ Vagrant.configure(2) do |config|
     service mesos-master restart
     service mesos-slave restart
     service marathon restart
-    MASTER=$(mesos-resolve `cat /etc/mesos/zk` 2>/dev/null)
-    mesos-execute --master=$MASTER --name="cluster-test" --command="sleep 5"
-
-    # Go
-    if [ ! -f go1.4.2.linux-amd64.tar.gz ]; then
-        curl -O https://storage.googleapis.com/golang/go1.4.2.linux-amd64.tar.gz
-    fi
-    tar -C /usr/local -xzf go1.4.2.linux-amd64.tar.gz
+    # MASTER=$(mesos-resolve `cat /etc/mesos/zk` 2>/dev/null)
+    # mesos-execute --master=$MASTER --name="cluster-test" --command="sleep 5"
   SHELL
 end

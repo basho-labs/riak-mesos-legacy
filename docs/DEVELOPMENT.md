@@ -76,6 +76,7 @@ Add the following to your `/etc/hosts` file:
 
 ```
 127.0.0.1	33.33.33.1
+33.33.33.2  ubuntu
 ```
 
 Start and connect to the Vagrant VM
