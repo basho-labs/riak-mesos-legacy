@@ -42,6 +42,8 @@ go get github.com/tools/godep
 go get -u github.com/jteeuwen/go-bindata/...
 go get github.com/campoy/jsonenums
 go get golang.org/x/tools/cmd/stringer
+go get -u github.com/golang/lint/golint
+go get golang.org/x/tools/cmd/goimports
 ```
 
 Setup riak-mesos and mesos-go
