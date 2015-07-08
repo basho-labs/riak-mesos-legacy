@@ -140,7 +140,7 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(offer *mesos.Off
 	// THIS IS A MUTATING CALL
 
 	if frn.CurrentState != riak_node_states.Shutdown {
-		panic("Generate Task Info while node is up")
+		log.Panic("Trying to generate Task Info while node is up")
 	}
 	frn.Generation = frn.Generation + 1
 	frn.TaskStatus = nil
