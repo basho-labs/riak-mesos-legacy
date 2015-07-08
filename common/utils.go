@@ -10,7 +10,6 @@ import (
 type ResourceAsker (func([]*mesos.Resource) (remaining []*mesos.Resource, ask *mesos.Resource, success bool))
 type CombinedResourceAsker (func([]*mesos.Resource) (remaining []*mesos.Resource, ask []*mesos.Resource, success bool))
 
-
 func AskForScalar(resourceName string, askSize float64) ResourceAsker {
 	return func(resources []*mesos.Resource) ([]*mesos.Resource, *mesos.Resource, bool) {
 		newResources := make([]*mesos.Resource, len(resources))

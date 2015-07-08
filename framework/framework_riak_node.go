@@ -23,8 +23,8 @@ type FrameworkRiakNode struct {
 	CurrentState     riak_node_states.State
 	TaskStatus       *mesos.TaskStatus
 	Generation       int
-	LastTaskInfo	 *mesos.TaskInfo
-	LastOfferUsed	 *mesos.Offer
+	LastTaskInfo     *mesos.TaskInfo
+	LastOfferUsed    *mesos.Offer
 }
 
 func NewFrameworkRiakNode() *FrameworkRiakNode {
