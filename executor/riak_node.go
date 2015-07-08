@@ -58,6 +58,8 @@ func (riakNode *RiakNode) Run() {
 }
 
 func (riakNode *RiakNode) finish() {
+	riakNode.executor.lock.Lock()
+	defer riakNode.executor.lock.Unlock()
 	runStatus := &mesos.TaskStatus{
 		TaskId: riakNode.taskInfo.GetTaskId(),
 		State:  mesos.TaskState_TASK_FINISHED.Enum(),
