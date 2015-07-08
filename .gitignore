@@ -8,3 +8,4 @@ framework/riak_node_states/state_*
 *_darwin_amd64
 *_linux_amd64
 .DS_Store
+Godeps/_workspace
