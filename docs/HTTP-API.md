@@ -1,8 +1,8 @@
-# Riak Mesos Control Frame
+# Riak Mesos HTTP API
 
 ## Overview
 
-The Control Frame is a component within the Riak Mesos Framework. It's primary
+The HTTP API is a component within the Riak Mesos Framework. It's primary
 responsibility is to receive input from users and act on that input by
 interacting with other components in the Framework to control a Riak cluster
 created by the Framework.
@@ -19,17 +19,16 @@ be kept up to date on the cluster's current state. Instead of requiring this
 intelligence to be built into Riak client libraries, a small `Director`
 application can run alongside HAProxy as well as the client application.
 
-The Director will communicate with the Control Frame via Zookeeper and the
-Control Frame will keep the Director up to date with Riak cluster changes. The
-Director in turn will update a local HAProxy configuration with the currently
-known Riak node ip addresses.
+The Director will communicate with the HTTP API via Zookeeper to keep up to date
+with Riak cluster changes. The Director in turn will update a local HAProxy
+configuration with the currently known Riak node ip addresses.
 
 This way, the entire Riak cluster is accessible to client applications by
 communicating through the local HAProxy.
 
 ### API Requirements
 
-The Control Frame must provide an external API with the following functionality:
+The HTTP API must provide an external API with the following functionality:
 
 #### Cluster Management
 
