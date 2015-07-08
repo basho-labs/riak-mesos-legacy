@@ -205,6 +205,7 @@ func (sc *SchedulerCore) ResourceOffers(driver sched.SchedulerDriver, offers []*
 		}
 	}
 
+	// Issue https://github.com/basho-labs/riak-mesos/issues/11
 	// TODO: This currently fills in each Mesos node as much as possible
 	// Simply switching the outer and inner loops would result in spreading
 	// tasks across as many nodes as possible
