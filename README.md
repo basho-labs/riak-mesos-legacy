@@ -5,7 +5,7 @@
 For initial setup of development environment, please follow the directions in
 [DEVELOPMENT.md](https://github.com/basho-labs/riak-mesos/tree/master/docs/DEVELOPMENT.md).
 
-Build the Framework
+### Build the Framework
 
 ```
 cd $GOPATH/src/github.com/basho-labs/riak-mesos
@@ -14,7 +14,7 @@ cd bin
 go generate ../... && gox -osarch="linux/amd64" -osarch=darwin/amd64 ../...
 ```
 
-## Running the Framework
+### Running the Framework
 
 Mac OS X
 
