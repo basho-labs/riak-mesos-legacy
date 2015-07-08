@@ -8,11 +8,13 @@ FRAMEWORK_IP       ?= "33.33.33.1"
 MESOS_MASTER       ?= "zk://33.33.33.2:2181/mesos"
 ZOOKEEPER          ?= "33.33.33.2:2181"
 
-.PHONY: deps build doc fmt lint run test vendor_clean vendor_get vendor_update vet
+.PHONY: all deps build doc fmt lint run test vet
 
-default: build
+all: build
 
 deps:
+	cd riak_explorer/data && $(MAKE)
+	cd executor/data && $(MAKE)
 	godep restore
 
 build: deps vet

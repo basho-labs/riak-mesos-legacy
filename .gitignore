@@ -9,3 +9,5 @@ framework/riak_node_states/state_*
 *_linux_amd64
 .DS_Store
 Godeps/_workspace
+executor/data/*.tar.gz
+riak_explorer/data/*.tar.gz
