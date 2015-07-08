@@ -8,7 +8,7 @@ FRAMEWORK_IP       ?= "33.33.33.1"
 MESOS_MASTER       ?= "zk://33.33.33.2:2181/mesos"
 ZOOKEEPER          ?= "33.33.33.2:2181"
 
-.PHONY: all deps build doc fmt lint run test vet
+.PHONY: all deps build rebuild doc fmt lint run test vet
 
 all: build
 
@@ -19,6 +19,9 @@ deps:
 
 build: deps vet
 	cd bin && go generate ../... && gox -osarch="linux/amd64" -osarch=darwin/amd64 ../...
+
+rebuild: vet
+	cd bin && gox -osarch="linux/amd64" -osarch=darwin/amd64 ../...
 
 run:
 	bin/$(SCHEDULER) -master=$(MESOS_MASTER) -zk=$(ZOOKEEPER) -ip=$(FRAMEWORK_IP) -name=$(FRAMEWORK_NAME) -hostname=$(FRAMEWORK_HOSTNAME)
