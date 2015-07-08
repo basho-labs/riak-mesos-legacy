@@ -68,6 +68,10 @@ func (frn *FrameworkRiakNode) CurrentID() string {
 	return fmt.Sprintf("%s-%s-%d", frn.frc.Name, frn.UUID.String(), frn.Generation)
 }
 
+func (frn *FrameworkRiakNode) ExecutorID() string {
+	return fmt.Sprintf("%s-%s", frn.frc.Name, frn.UUID.String())
+}
+
 func (frn *FrameworkRiakNode) GetZkNode() *metamgr.ZkNode {
 	return frn.zkNode
 }
@@ -149,14 +153,14 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(offer *mesos.Off
 
 	exec := &mesos.ExecutorInfo{
 		//No idea is this is the "right" way to do it, but I think so?
-		ExecutorId: util.NewExecutorID(frn.CurrentID()),
+		ExecutorId: util.NewExecutorID(frn.ExecutorID()),
 		Name:       proto.String("Test Executor (Go)"),
 		Source:     proto.String("Riak Mesos Framework (Go)"),
 		Command: &mesos.CommandInfo{
 			Value:     proto.String(frn.frc.sc.schedulerHTTPServer.executorName),
 			Uris:      executorUris,
 			Shell:     proto.Bool(false),
-			Arguments: []string{frn.frc.sc.schedulerHTTPServer.executorName, "-taskid", frn.CurrentID()},
+			Arguments: []string{frn.frc.sc.schedulerHTTPServer.executorName, "-logtostderr=true"},
 		},
 	}
 	taskId := &mesos.TaskID{

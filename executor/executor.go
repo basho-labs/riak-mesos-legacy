@@ -8,6 +8,9 @@ import (
 	exec "github.com/mesos/mesos-go/executor"
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	"os"
+	"os/signal"
+	"sync"
+	"syscall"
 )
 
 const (
@@ -15,29 +18,50 @@ const (
 )
 
 type ExecutorCore struct {
-	riakNode *RiakNode
-	Driver   exec.ExecutorDriver
+	lock      *sync.Mutex
+	riakNode  *RiakNode
+	Driver    exec.ExecutorDriver
+	execInfo  *mesos.ExecutorInfo
+	slaveInfo *mesos.SlaveInfo
+	fwInfo    *mesos.FrameworkInfo
 }
 
 func newExecutor() *ExecutorCore {
-	return &ExecutorCore{}
+	return &ExecutorCore{
+		lock: &sync.Mutex{},
+	}
 }
 
 func (exec *ExecutorCore) Registered(driver exec.ExecutorDriver, execInfo *mesos.ExecutorInfo, fwinfo *mesos.FrameworkInfo, slaveInfo *mesos.SlaveInfo) {
-	exec.Driver = driver
+	exec.lock.Lock()
+	defer exec.lock.Unlock()
 	fmt.Println("Registered Executor on slave ", slaveInfo.GetHostname())
+	log.Info("Executor Info: ", execInfo)
+	log.Info("Slave Info: ", slaveInfo)
+	log.Info("Framework Info: ", fwinfo)
+	exec.slaveInfo = slaveInfo
+	exec.execInfo = execInfo
+	exec.fwInfo = fwinfo
+
 }
 
 func (exec *ExecutorCore) Reregistered(driver exec.ExecutorDriver, slaveInfo *mesos.SlaveInfo) {
+	exec.lock.Lock()
+	defer exec.lock.Unlock()
 	exec.Driver = driver
 	fmt.Println("Re-registered Executor on slave ", slaveInfo.GetHostname())
+	exec.slaveInfo = slaveInfo
 }
 
 func (exec *ExecutorCore) Disconnected(exec.ExecutorDriver) {
+	exec.lock.Lock()
+	defer exec.lock.Unlock()
 	fmt.Println("Executor disconnected.")
 }
 
 func (exec *ExecutorCore) LaunchTask(driver exec.ExecutorDriver, taskInfo *mesos.TaskInfo) {
+	exec.lock.Lock()
+	defer exec.lock.Unlock()
 	fmt.Println("Launching task", taskInfo.GetName(), "with command", taskInfo.Command.GetValue())
 	os.Args[0] = fmt.Sprintf("executor - %s", taskInfo.TaskId.GetValue())
 
@@ -48,52 +72,32 @@ func (exec *ExecutorCore) LaunchTask(driver exec.ExecutorDriver, taskInfo *mesos
 	//
 	fmt.Println("Starting task")
 
+	if exec.riakNode != nil {
+		log.Fatalf("Task being started, twice, existing task: %+v, new task: %+v", exec.riakNode)
+	}
 	exec.riakNode = NewRiakNode(taskInfo, exec)
-	go exec.riakNode.Loop()
-	/*	select {
-				case <-time.After(time.Second * 120):
-					{
-						fmt.Println("Finishing task", taskInfo.GetName())
-						finStatus := &mesos.TaskStatus{
-							TaskId: taskInfo.GetTaskId(),
-							State:  mesos.TaskState_TASK_FINISHED.Enum(),
-						}
-						_, err = driver.SendStatusUpdate(finStatus)
-						if err != nil {
-							fmt.Println("Got error", err)
-						}
-						delete(exec.tasks, *taskInfo.TaskId.Value)
-						fmt.Println("Task finished", taskInfo.GetName())
-					}
-				case <-ch:
-					{
-						fmt.Println("Killing task", taskInfo.GetName())
-						finStatus := &mesos.TaskStatus{
-							TaskId: taskInfo.GetTaskId(),
-							State:  mesos.TaskState_TASK_KILLED.Enum(),
-						}
-						_, err = driver.SendStatusUpdate(finStatus)
-						if err != nil {
-							fmt.Println("Got error", err)
-						}
-						delete(exec.tasks, *taskInfo.TaskId.Value)
-						fmt.Println("Killed task", taskInfo.GetName())
-					}
-			}
-			time.Sleep(time.Second * 10)
-			driver.Stop()
-			time.Sleep(time.Second * 10)
-			os.Exit(0)
-		}
-		go lol()
-		fmt.Println("Scheduler continuing")        */
+	exec.riakNode.Run()
+
 }
 
 func (exec *ExecutorCore) KillTask(driver exec.ExecutorDriver, taskId *mesos.TaskID) {
+	exec.lock.Lock()
+	defer exec.lock.Unlock()
 	fmt.Println("Kill task")
+	runStatus := &mesos.TaskStatus{
+		TaskId: exec.riakNode.taskInfo.GetTaskId(),
+		State:  mesos.TaskState_TASK_KILLED.Enum(),
+	}
+	_, err := driver.SendStatusUpdate(runStatus)
+
+	if err != nil {
+		log.Panic("Got error", err)
+	}
 }
 
 func (exec *ExecutorCore) FrameworkMessage(driver exec.ExecutorDriver, msg string) {
+	exec.lock.Lock()
+	defer exec.lock.Unlock()
 	fmt.Println("Got framework message: ", msg)
 }
 
@@ -104,20 +108,24 @@ func (exec *ExecutorCore) Shutdown(driver exec.ExecutorDriver) {
 }
 
 func (exec *ExecutorCore) Error(driver exec.ExecutorDriver, err string) {
+	exec.lock.Lock()
+	defer exec.lock.Unlock()
 	fmt.Println("Got error message:", err)
 }
 
 func main() {
-
 	log.SetLevel(log.DebugLevel)
 	fmt.Println("Starting Example Executor (Go)")
-	fmt.Println("Args: ", os.Args)
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, syscall.SIGUSR1, syscall.SIGUSR2)
+
 	data, _ := Asset("data/stuff")
 	s := string(data)
 	fmt.Printf("data=%v\n", s)
 
+	executor := newExecutor()
 	dconfig := exec.DriverConfig{
-		Executor: newExecutor(),
+		Executor: executor,
 	}
 	driver, err := exec.NewMesosExecutorDriver(dconfig)
 
@@ -130,6 +138,20 @@ func main() {
 		fmt.Println("Got error:", err)
 		return
 	}
+	go signalWatcher(signals, executor)
+	executor.Driver = driver
 	fmt.Println("Executor process has started and running.")
 	driver.Join()
+}
+
+func signalWatcher(signals chan os.Signal, exec *ExecutorCore) {
+	for signal := range signals {
+		switch signal {
+		case syscall.SIGUSR1:
+			{
+				log.Info("Marking task as finished")
+				exec.riakNode.finish()
+			}
+		}
+	}
 }
