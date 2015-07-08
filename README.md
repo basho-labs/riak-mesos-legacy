@@ -5,10 +5,12 @@
 For initial setup of development environment, please follow the directions in
 [DEVELOPMENT.md](https://github.com/basho-labs/riak-mesos/tree/master/docs/DEVELOPMENT.md).
 
-Build Bletchley
+Build the Framework
 
 ```
-cd $GOPATH/src/github.com/basho-labs/riak-mesos/bin
+cd $GOPATH/src/github.com/basho-labs/riak-mesos
+godep restore
+cd bin
 go generate ../... && gox -osarch="linux/amd64" -osarch=darwin/amd64 ../...
 ```
 
