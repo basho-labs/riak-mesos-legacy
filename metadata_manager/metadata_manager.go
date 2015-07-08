@@ -145,7 +145,7 @@ func NewMetadataManager(frameworkName string, zookeeperAddr string) *MetadataMan
 		log.Panic(err)
 	}
 	bns := baseNamespace{}
-	ns := makeSubSpace(makeSubSpace(makeSubSpace(bns, "bletchley"), "frameworks"), frameworkName)
+	ns := makeSubSpace(makeSubSpace(makeSubSpace(bns, "riak"), "frameworks"), frameworkName)
 	lockPath := makeSubSpace(ns, "lock")
 	zkLock := zk.NewLock(conn, lockPath.GetZKPath(), zk.WorldACL(zk.PermAll))
 

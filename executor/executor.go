@@ -1,9 +1,10 @@
 package main
 
-//go:generate go-bindata -o bindata_generated.go data/
+//go:generate go-bindata -ignore=Makefile -o bindata_generated.go data/
 
 import (
 	"fmt"
+
 	log "github.com/Sirupsen/logrus"
 	exec "github.com/mesos/mesos-go/executor"
 	mesos "github.com/mesos/mesos-go/mesosproto"

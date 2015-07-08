@@ -34,45 +34,38 @@ export GOPATH=~/go/riak-mesos
 export PATH=$PATH:$GOPATH/bin
 ```
 
-Install Go tools
+Install Go CLI tools
 
 ```
 go get github.com/mitchellh/gox
 go get github.com/tools/godep
-go get github.com/satori/go.uuid
-go get -u github.com/golang/protobuf/proto
-go get github.com/golang/glog
-go get github.com/kr/pretty
-go get github.com/kr/text
-go get github.com/Sirupsen/logrus
 go get -u github.com/jteeuwen/go-bindata/...
 go get github.com/campoy/jsonenums
 go get golang.org/x/tools/cmd/stringer
-go get github.com/gorilla/mux
+go get -u github.com/golang/lint/golint
+go get golang.org/x/tools/cmd/goimports
 ```
 
-Setup initial directories
+Setup riak-mesos and mesos-go
 
 ```
+### Create src directories
 cd $GOPATH
 mkdir -p src/github.com/mesos
 mkdir -p src/github.com/basho
-```
-
-Download some deps
-
-```
+### Download
 cd $GOPATH/src/github.com/
 git clone git@github.com:basho-labs/riak-mesos.git basho-labs/riak-mesos
 git clone https://github.com/mesos/mesos-go.git mesos/mesos-go
-```
-
-Build Mesos
-
-```
+### Build Mesos Go
 cd $GOPATH/src/github.com/mesos/mesos-go
 godep restore
 go build ./...
+### Build Riak Mesos Framework
+cd $GOPATH/src/github.com/basho-labs/riak-mesos
+godep restore
+cd bin
+go generate ../... && gox -osarch="linux/amd64" -osarch=darwin/amd64 ../...
 ```
 
 ## Vagrant Setup

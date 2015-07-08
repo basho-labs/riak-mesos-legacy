@@ -1,8 +1,9 @@
 package metadata_manager
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestStub(t *testing.T) {
@@ -11,7 +12,7 @@ func TestStub(t *testing.T) {
 func TestNS(t *testing.T) {
 	assert := assert.New(t)
 	bns := baseNamespace{}
-	namespace := makeSubSpace(makeSubSpace(makeSubSpace(bns, "bletchley"), "frameworks"), "fakeFramework")
+	namespace := makeSubSpace(makeSubSpace(makeSubSpace(bns, "riak"), "frameworks"), "fakeFramework")
 
-	assert.Equal([]string{"", "bletchley", "frameworks", "fakeFramework"}, namespace.GetComponents())
+	assert.Equal([]string{"", "riak", "frameworks", "fakeFramework"}, namespace.GetComponents())
 }
