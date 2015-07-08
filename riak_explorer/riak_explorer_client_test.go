@@ -19,6 +19,9 @@ func maybeCommit(t *testing.T) {
 }
 
 func TestPing(t *testing.T) {
+	if !riakExplorerAlive() {
+		return
+	}
 	assert := assert.New(t)
 	client := NewRiakExplorerClient("localhost:9000")
 	resp, err := client.Ping()
@@ -27,10 +30,16 @@ func TestPing(t *testing.T) {
 }
 
 func TestJoin(t *testing.T) {
+	if !riakExplorerAlive() {
+		return
+	}
 	ensureJoined(t, "dev1@127.0.0.1", "dev2@127.0.0.1")
 }
 
 func TestLeave(t *testing.T) {
+	if !riakExplorerAlive() {
+		return
+	}
 	ensureJoined(t, "dev1@127.0.0.1", "dev2@127.0.0.1")
 	assert := assert.New(t)
 	client := NewRiakExplorerClient("localhost:9000")
@@ -59,6 +68,9 @@ func TestLeave(t *testing.T) {
 }
 
 func TestLeaveTarget(t *testing.T) {
+	if !riakExplorerAlive() {
+		return
+	}
 	ensureJoined(t, "dev1@127.0.0.1", "dev2@127.0.0.1")
 	assert := assert.New(t)
 	client := NewRiakExplorerClient("localhost:9000")
@@ -87,6 +99,9 @@ func TestLeaveTarget(t *testing.T) {
 }
 
 func TestForceRemove(t *testing.T) {
+	if !riakExplorerAlive() {
+		return
+	}
 	ensureJoined(t, "dev1@127.0.0.1", "dev2@127.0.0.1")
 	assert := assert.New(t)
 	client := NewRiakExplorerClient("localhost:9000")
@@ -113,6 +128,9 @@ func TestForceRemove(t *testing.T) {
 }
 
 func TestClear(t *testing.T) {
+	if !riakExplorerAlive() {
+		return
+	}
 	ensureJoined(t, "dev1@127.0.0.1", "dev2@127.0.0.1")
 	assert := assert.New(t)
 	client := NewRiakExplorerClient("localhost:9000")
@@ -138,6 +156,9 @@ func TestClear(t *testing.T) {
 }
 
 func TestReplace(t *testing.T) {
+	if !riakExplorerAlive() {
+		return
+	}
 	ensureJoined(t, "dev1@127.0.0.1", "dev2@127.0.0.1")
 	assert := assert.New(t)
 	client := NewRiakExplorerClient("localhost:9000")
@@ -176,6 +197,9 @@ func TestReplace(t *testing.T) {
 }
 
 func TestForceReplace(t *testing.T) {
+	if !riakExplorerAlive() {
+		return
+	}
 	ensureJoined(t, "dev1@127.0.0.1", "dev2@127.0.0.1")
 	assert := assert.New(t)
 	client := NewRiakExplorerClient("localhost:9000")
@@ -286,6 +310,12 @@ func waitForJoined(node1 string, node2 string) {
 
 	time.Sleep(1000 * time.Millisecond)
 	waitForJoined(node1, node2)
+}
+
+func riakExplorerAlive() bool {
+	client := NewRiakExplorerClient("localhost:9000")
+	resp, _ := client.Ping()
+	return resp.Ping.Message == "pong"
 }
 
 func ensureJoined(t *testing.T, node1 string, node2 string) {
