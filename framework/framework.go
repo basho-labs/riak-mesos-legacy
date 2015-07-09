@@ -1,7 +1,5 @@
 package main
 
-//go:generate go-bindata -ignore=Makefile -o bindata_generated.go data/
-
 import (
 	"flag"
 
