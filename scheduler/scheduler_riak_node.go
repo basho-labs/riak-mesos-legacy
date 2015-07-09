@@ -5,7 +5,7 @@ import (
 	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"github.com/basho-labs/riak-mesos/common"
-	"github.com/basho-labs/riak-mesos/framework/riak_node_states"
+	"github.com/basho-labs/riak-mesos/scheduler/riak_node_states"
 	metamgr "github.com/basho-labs/riak-mesos/metadata_manager"
 	"github.com/golang/protobuf/proto"
 	mesos "github.com/mesos/mesos-go/mesosproto"
