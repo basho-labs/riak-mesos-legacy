@@ -34,7 +34,7 @@ or
     -master=zk://33.33.33.2:2181/mesos \
     -zk=33.33.33.2:2181 \
     -name=riak-mesos-go3 \
-    -user=root \
+    -user=vagrant \
     -ip=33.33.33.1 \
     -hostname=33.33.33.1
 ```
