@@ -1,6 +1,6 @@
 // +build !rel
 
-package main
+package framework
 
 import (
 	"fmt"

@@ -80,6 +80,15 @@ func (schttp *SchedulerHTTPServer) serveNodes(w http.ResponseWriter, r *http.Req
 	json.NewEncoder(w).Encode(nodes)
 }
 
+type customServer struct {}
+func (customServer) ServeHTTP(w http.ResponseWriter, request *http.Request) {
+	log.Info("%v %s %s %s ? %s %s %s", request.Host, request.RemoteAddr, request.Method, request.URL.Path, request.URL.RawQuery, request.Proto, request.Header.Get("User-Agent"))
+	data, err := Asset("data/" + request.URL.Path)
+	if err != nil {
+		log.Panic(err)
+	}
+	w.Write(data)
+}
 func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *SchedulerHTTPServer {
 	ln, err := net.Listen("tcp", ":0")
 	if err != nil {
@@ -93,8 +102,6 @@ func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *Schedul
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	executorName := "executor"
 
 	var hostname string
 
@@ -111,19 +118,17 @@ func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *Schedul
 	//We need to ideally embed the executor into the scheduler
 	//And we need to intelligently choose / decompress the executor based upon the host OS
 	//This is a HACK.
-	hostURI := fmt.Sprintf("http://%s:%d/%s", hostname, port, executorName)
-	riakURI := fmt.Sprintf("http://%s:%d/static/riak.tar.gz", hostname, port)
+	hostURI := fmt.Sprintf("http://%s:%d/static/executor_linux_amd64", hostname, port)
+	riakURI := fmt.Sprintf("http://%s:%d/static/riak_linux_amd64.tar.gz", hostname, port)
 	URI := fmt.Sprintf("http://%s:%d/", hostname, port)
-	fs := http.FileServer(http.Dir("."))
 	//Info.Printf("Hosting artifact '%s' at '%s'", path, hostURI)
 	log.Println("Serving at HostURI: ", hostURI)
 
 	router := mux.NewRouter().StrictSlash(true)
-	router.HandleFunc("/executor", func(w http.ResponseWriter, request *http.Request) {
-		log.Printf("%v %s %s %s ? %s %s %s", request.Host, request.RemoteAddr, request.Method, request.URL.Path, request.URL.RawQuery, request.Proto, request.Header.Get("User-Agent"))
-		http.ServeFile(w, request, "./executor_linux_amd64")
-	})
-	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", fs))
+
+
+	// This rewrites /static/FOO -> FOO
+	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", customServer{}))
 	debugMux := http.NewServeMux()
 	router.PathPrefix("/debug").Handler(debugMux)
 	debugMux.Handle("/debug/pprof/", http.HandlerFunc(pprof.Index))
@@ -135,7 +140,7 @@ func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *Schedul
 		sc:           sc,
 		hostURI:      hostURI,
 		riakURI:      riakURI,
-		executorName: "./" + executorName,
+		executorName: "./executor_linux_amd64",
 		URI:          URI,
 	}
 	router.HandleFunc("/clusters", schttp.serveClusters)
