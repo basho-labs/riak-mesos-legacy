@@ -117,6 +117,7 @@ func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *Schedul
 	//Info.Printf("Hosting artifact '%s' at '%s'", path, hostURI)
 	log.Println("Serving at HostURI: ", hostURI)
 
+
 	router := mux.NewRouter().StrictSlash(true)
 
 	fs := http.FileServer(&assetfs.AssetFS{Asset: Asset, AssetDir: AssetDir, Prefix: ""})
@@ -144,7 +145,11 @@ func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *Schedul
 	router.Methods("POST").Path("/clusters/{cluster}/nodes").HandlerFunc(schttp.createNode)
 
 	//http.Serve(ln, newHandler())
-	go http.Serve(ln, router)
+	middleWare := http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
+		log.Infof("%v %s %s %s ? %s %s %s", request.Host, request.RemoteAddr, request.Method, request.URL.Path, request.URL.RawQuery, request.Proto, request.Header.Get("User-Agent"))
+		router.ServeHTTP(w, request)
+	})
+	go http.Serve(ln, middleWare)
 
 	return schttp
 }
