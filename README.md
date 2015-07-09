@@ -24,7 +24,7 @@ make run
 or
 
 ```
-./bin/scheduler_darwin_amd64 \
+./bin/framework_darwin_amd64 \
     -master=zk://33.33.33.2:2181/mesos \
     -zk=33.33.33.2:2181 \
     -name=riak-mesos-go3 \
@@ -49,7 +49,7 @@ ARCH=linux_amd64 make run
 or
 
 ```
-./bin/scheduler_linux_amd64 \
+./bin/framework_linux_amd64 \
     -master=zk://33.33.33.2:2181/mesos \
     -zk=33.33.33.2:2181 \
     -name=riak-mesos-go3 \

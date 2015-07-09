@@ -2,12 +2,13 @@ package framework
 
 import (
 	"encoding/json"
+	"sync"
+
 	log "github.com/Sirupsen/logrus"
 	metamgr "github.com/basho-labs/riak-mesos/metadata_manager"
 	"github.com/golang/protobuf/proto"
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	sched "github.com/mesos/mesos-go/scheduler"
-	"sync"
 
 	//"github.com/basho-labs/riak-mesos/common"
 	"time"

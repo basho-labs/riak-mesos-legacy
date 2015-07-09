@@ -1,6 +1,6 @@
 BASE_DIR            = $(shell pwd)
 ARCH               ?= darwin_amd64
-SCHEDULER          ?= scheduler_${ARCH}
+SCHEDULER          ?= framework_${ARCH}
 FRAMEWORK_NAME     ?= "riak-mesos-go3"
 # FRAMEWORK_HOSTNAME ?= "33.33.33.1"
 FRAMEWORK_HOSTNAME ?= ""
@@ -13,8 +13,7 @@ ZOOKEEPER          ?= "33.33.33.2:2181"
 all: build
 
 deps:
-	cd riak_explorer/data && $(MAKE)
-	cd executor/data && $(MAKE)
+	cd framework/data && $(MAKE)
 	godep restore
 
 build: deps vet
