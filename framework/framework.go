@@ -3,7 +3,6 @@ package main
 
 import (
 	"flag"
-
 	log "github.com/Sirupsen/logrus"
 	"github.com/basho-labs/riak-mesos/metadata_manager"
 	"github.com/basho-labs/riak-mesos/scheduler"
@@ -31,7 +30,7 @@ func init() {
 func main() {
 	log.SetLevel(log.DebugLevel)
 	mgr := metadata_manager.NewMetadataManager(FrameworkName, zookeeperAddr)
-	sched := framework.NewSchedulerCore(schedulerHostname, FrameworkName, mgr, schedulerIpAddr, user)
+	sched := scheduler.NewSchedulerCore(schedulerHostname, FrameworkName, mgr, schedulerIpAddr, user)
 	//go framework.NewTargetTask("golang-riak-task-a", sched, mgr).Loop()
 	//	go framework.NewTargetTask("golang-riak-task-b", sched, mgr).Loop()
 	//	go framework.NewTargetTask("golang-riak-task-c", sched, mgr).Loop()

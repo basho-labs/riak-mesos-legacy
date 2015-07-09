@@ -1,19 +1,5 @@
 // +build !rel
 
-package framework
+//go:generate go-bindata -ignore=Makefile -o bindata_generated.go -pkg=scheduler -prefix=data/ -debug data/
 
-import (
-	"fmt"
-	"io/ioutil"
-)
-
-// Asset reads the file at the abs path given
-func Asset(name string) ([]byte, error) {
-	dat, err := ioutil.ReadFile(name)
-
-	if err != nil {
-		return nil, fmt.Errorf("Asset %s can't read by error: %v", name, err)
-	}
-
-	return dat, nil
-}
+package scheduler

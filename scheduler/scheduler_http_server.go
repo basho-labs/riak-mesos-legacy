@@ -1,4 +1,4 @@
-package framework
+package scheduler
 
 import (
 	"encoding/json"
@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/pprof"
 	"os"
+	assetfs "github.com/elazarl/go-bindata-assetfs"
 	"strconv"
 
 	log "github.com/Sirupsen/logrus"
@@ -81,16 +82,6 @@ func (schttp *SchedulerHTTPServer) serveNodes(w http.ResponseWriter, r *http.Req
 	json.NewEncoder(w).Encode(nodes)
 }
 
-type customServer struct{}
-
-func (customServer) ServeHTTP(w http.ResponseWriter, request *http.Request) {
-	log.Info("%v %s %s %s ? %s %s %s", request.Host, request.RemoteAddr, request.Method, request.URL.Path, request.URL.RawQuery, request.Proto, request.Header.Get("User-Agent"))
-	data, err := Asset("data/" + request.URL.Path)
-	if err != nil {
-		log.Panic(err)
-	}
-	w.Write(data)
-}
 func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *SchedulerHTTPServer {
 	ln, err := net.Listen("tcp", ":0")
 	if err != nil {
@@ -126,10 +117,13 @@ func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *Schedul
 	//Info.Printf("Hosting artifact '%s' at '%s'", path, hostURI)
 	log.Println("Serving at HostURI: ", hostURI)
 
+
 	router := mux.NewRouter().StrictSlash(true)
 
+	fs := http.FileServer(&assetfs.AssetFS{Asset: Asset, AssetDir: AssetDir, Prefix: ""})
+
 	// This rewrites /static/FOO -> FOO
-	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", customServer{}))
+	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", fs))
 	debugMux := http.NewServeMux()
 	router.PathPrefix("/debug").Handler(debugMux)
 	debugMux.Handle("/debug/pprof/", http.HandlerFunc(pprof.Index))
@@ -151,7 +145,11 @@ func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *Schedul
 	router.Methods("POST").Path("/clusters/{cluster}/nodes").HandlerFunc(schttp.createNode)
 
 	//http.Serve(ln, newHandler())
-	go http.Serve(ln, router)
+	middleWare := http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
+		log.Infof("%v %s %s %s ? %s %s %s", request.Host, request.RemoteAddr, request.Method, request.URL.Path, request.URL.RawQuery, request.Proto, request.Header.Get("User-Agent"))
+		router.ServeHTTP(w, request)
+	})
+	go http.Serve(ln, middleWare)
 
 	return schttp
 }

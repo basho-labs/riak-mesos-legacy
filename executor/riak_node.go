@@ -17,8 +17,7 @@ type RiakNode struct {
 type templateData struct {
 	HTTPPort int64
 	PBPort   int64
-	NodeName string
-	HostName string
+	FullyQualifiedNodeName string
 }
 
 func NewRiakNode(taskInfo *mesos.TaskInfo, executor *ExecutorCore) *RiakNode {
@@ -45,8 +44,8 @@ func (riakNode *RiakNode) Run() {
 
 	// Populate template data from the MesosTask
 	vars := templateData{}
-	vars.NodeName = taskData.NodeName
-	vars.HostName = riakNode.executor.slaveInfo.GetHostname()
+	vars.FullyQualifiedNodeName = taskData.FullyQualifiedNodeName
+
 
 
 
