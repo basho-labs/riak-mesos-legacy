@@ -1,6 +1,6 @@
 package main
 
-//go:generate go-bindata -ignore=Makefile -o bindata_generated.go data/
+//go:generate go-bindata -ignore=Makefile -o bindata_generated.go -tags rel data/
 
 import (
 	"flag"

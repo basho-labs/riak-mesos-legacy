@@ -16,17 +16,13 @@ deps:
 	cd framework/data && $(MAKE)
 	godep restore
 
-rel_generate:
+generate:
 	go generate ./...
 
-rel: deps vet rel_generate
-	gox -osarch="linux/amd64" -osarch=darwin/amd64 -output="bin/{{.Dir}}_{{.OS}}_{{.Arch}}" ./...
+rel: deps vet
+	gox -tags rel -osarch="linux/amd64" -osarch=darwin/amd64 -output="bin/{{.Dir}}_{{.OS}}_{{.Arch}}" ./...
 
-dev_generate:
-	cp executor/_bindata_generated.go executor/bindata_generated.go
-	cp framework/_bindata_generated.go framework/bindata_generated.go
-
-dev: vet dev_generate
+dev: vet
 	gox -osarch="linux/amd64" -osarch=darwin/amd64 -output="bin/{{.Dir}}_{{.OS}}_{{.Arch}}" -tags=dev ./...
 
 run:
