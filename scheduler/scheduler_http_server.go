@@ -3,14 +3,15 @@ package scheduler
 import (
 	"encoding/json"
 	"fmt"
-	log "github.com/Sirupsen/logrus"
-	"github.com/gorilla/mux"
 	"net"
 	"net/http"
 	"net/http/pprof"
 	"os"
 	assetfs "github.com/elazarl/go-bindata-assetfs"
 	"strconv"
+
+	log "github.com/Sirupsen/logrus"
+	"github.com/gorilla/mux"
 )
 
 type SchedulerHTTPServer struct {
@@ -118,8 +119,8 @@ func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *Schedul
 
 	router := mux.NewRouter().StrictSlash(true)
 
-
 	fs := http.FileServer(&assetfs.AssetFS{Asset: Asset, AssetDir: AssetDir, Prefix: ""})
+
 	// This rewrites /static/FOO -> FOO
 	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", fs))
 	debugMux := http.NewServeMux()
