@@ -44,7 +44,7 @@ func (a intarray) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a intarray) Less(i, j int) bool { return a[i] < a[j] }
 
 // We assume the input is sorted
-func arrayToRanges(ports []int64) []*mesos.Value_Range {
+func ArrayToRanges(ports []int64) []*mesos.Value_Range {
 	sort.Sort(intarray(ports))
 	if len(ports) == 0 {
 		return []*mesos.Value_Range{}
@@ -63,7 +63,7 @@ func arrayToRanges(ports []int64) []*mesos.Value_Range {
 	}
 	return ret
 }
-func rangesToArray(ranges []*mesos.Value_Range) []int64 {
+func RangesToArray(ranges []*mesos.Value_Range) []int64 {
 	array := make([]int64, 0)
 	for _, mesosRange := range ranges {
 		temp := make([]int64, mesosRange.GetEnd()-mesosRange.GetBegin()+1)
@@ -83,13 +83,13 @@ func AskForPorts(portCount int) ResourceAsker {
 		copy(newResources, resources)
 		for idx, resource := range resources {
 			if resource.GetName() == "ports" {
-				ports := rangesToArray(resource.GetRanges().GetRange())
+				ports := RangesToArray(resource.GetRanges().GetRange())
 				// Now we have to see if there are N ports
 				if len(ports) >= portCount {
 					takingPorts := ports[:portCount]
 					leavingPorts := ports[portCount:]
-					newResources[idx] = util.NewRangesResource("ports", arrayToRanges(leavingPorts))
-					ask := util.NewRangesResource("ports", arrayToRanges(takingPorts))
+					newResources[idx] = util.NewRangesResource("ports", ArrayToRanges(leavingPorts))
+					ask := util.NewRangesResource("ports", ArrayToRanges(takingPorts))
 					return newResources, ask, true
 				}
 			}

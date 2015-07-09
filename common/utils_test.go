@@ -77,11 +77,11 @@ func TestGoodMemoryAsk(t *testing.T) {
 
 func TestArrayToRanges(t *testing.T) {
 	assert := assert.New(t)
-	assert.Equal(arrayToRanges([]int64{}), []*mesos.Value_Range{})
-	assert.Equal(arrayToRanges([]int64{1, 2, 3, 4}), []*mesos.Value_Range{util.NewValueRange(1, 4)})
-	assert.Equal(arrayToRanges([]int64{1, 2, 3, 4, 6, 7, 8}), []*mesos.Value_Range{util.NewValueRange(1, 4), util.NewValueRange(6, 8)})
-	assert.Equal(arrayToRanges([]int64{2, 3, 4, 6, 7, 8}), []*mesos.Value_Range{util.NewValueRange(2, 4), util.NewValueRange(6, 8)})
-	assert.Equal(arrayToRanges([]int64{1, 3, 5}), []*mesos.Value_Range{util.NewValueRange(1, 1), util.NewValueRange(3, 3), util.NewValueRange(5, 5)})
+	assert.Equal(ArrayToRanges([]int64{}), []*mesos.Value_Range{})
+	assert.Equal(ArrayToRanges([]int64{1, 2, 3, 4}), []*mesos.Value_Range{util.NewValueRange(1, 4)})
+	assert.Equal(ArrayToRanges([]int64{1, 2, 3, 4, 6, 7, 8}), []*mesos.Value_Range{util.NewValueRange(1, 4), util.NewValueRange(6, 8)})
+	assert.Equal(ArrayToRanges([]int64{2, 3, 4, 6, 7, 8}), []*mesos.Value_Range{util.NewValueRange(2, 4), util.NewValueRange(6, 8)})
+	assert.Equal(ArrayToRanges([]int64{1, 3, 5}), []*mesos.Value_Range{util.NewValueRange(1, 1), util.NewValueRange(3, 3), util.NewValueRange(5, 5)})
 }
 
 func TestGoodPortAsk(t *testing.T) {
