@@ -123,7 +123,7 @@ func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *Schedul
 		log.Printf("%v %s %s %s ? %s %s %s", request.Host, request.RemoteAddr, request.Method, request.URL.Path, request.URL.RawQuery, request.Proto, request.Header.Get("User-Agent"))
 		http.ServeFile(w, request, "./executor_linux_amd64")
 	})
-	router.Handle("/static/", http.StripPrefix("/static/", fs))
+	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", fs))
 	debugMux := http.NewServeMux()
 	router.PathPrefix("/debug").Handler(debugMux)
 	debugMux.Handle("/debug/pprof/", http.HandlerFunc(pprof.Index))

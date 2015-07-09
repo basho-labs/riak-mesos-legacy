@@ -172,6 +172,8 @@ func (sc *SchedulerCore) Registered(driver sched.SchedulerDriver, frameworkId *m
 	sc.lock.Lock()
 	defer sc.lock.Unlock()
 	log.Info("Framework registered")
+	log.Info("Framework ID: ", frameworkId)
+	log.Info("Master Info: ", masterInfo)
 	sc.rServer.enable()
 }
 
@@ -181,6 +183,7 @@ func (sc *SchedulerCore) Reregistered(driver sched.SchedulerDriver, masterInfo *
 	//go NewTargetTask(*sched).Loop()
 	// We don't actually handle this correctly
 	log.Error("Framework reregistered")
+	log.Info("Master Info: ", masterInfo)
 	sc.rServer.enable()
 }
 func (sc *SchedulerCore) Disconnected(sched.SchedulerDriver) {

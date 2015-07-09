@@ -5,6 +5,8 @@ import (
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	"os"
 	"text/template"
+	util "github.com/mesos/mesos-go/mesosutil"
+	"github.com/basho-labs/riak-mesos/common"
 )
 
 type RiakNode struct {
@@ -13,8 +15,8 @@ type RiakNode struct {
 }
 
 type templateData struct {
-	HTTPPort int
-	PBPort   int
+	HTTPPort int64
+	PBPort   int64
 	NodeName string
 	HostName string
 }
@@ -29,6 +31,8 @@ func (riakNode *RiakNode) Run() {
 
 	var err error
 	log.Info("Other hilarious facts: ", riakNode.taskInfo)
+
+	taskData, err := common.DeserializeTaskData(riakNode.taskInfo.Data)
 	data, err := Asset("data/riak.conf")
 	if err != nil {
 		log.Panic("Got error", err)
@@ -41,10 +45,36 @@ func (riakNode *RiakNode) Run() {
 
 	// Populate template data from the MesosTask
 	vars := templateData{}
-	_ = os.Stdout
-	_ = vars
-	_ = tmpl
-	//err = tmpl.Execute(os.Stdout, vars)
+	vars.NodeName = taskData.NodeName
+	vars.HostName = riakNode.executor.slaveInfo.GetHostname()
+
+
+
+	ports := make(chan int64)
+	go func() {
+		defer close(ports)
+		for _, resource := range util.FilterResources(riakNode.taskInfo.Resources, func(res *mesos.Resource) bool { return res.GetName() == "ports" }) {
+			for _, port := range common.RangesToArray(resource.GetRanges().GetRange()) {
+				ports <- port
+			}
+		}
+	}()
+
+	vars.HTTPPort = <-ports
+	vars.PBPort = <-ports
+
+	file, err := os.OpenFile("riak/etc/riak.conf", os.O_TRUNC|os.O_CREATE|os.O_RDWR, 0)
+
+	if err != nil {
+		log.Panic("Unable to open file: ", err)
+	}
+
+	err = tmpl.Execute(file, vars)
+
+	if err != nil {
+		log.Panic("Got error", err)
+	}
+
 
 	runStatus := &mesos.TaskStatus{
 		TaskId: riakNode.taskInfo.GetTaskId(),

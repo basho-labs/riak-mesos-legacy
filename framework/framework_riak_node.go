@@ -69,6 +69,10 @@ func (frn *FrameworkRiakNode) CurrentID() string {
 }
 
 func (frn *FrameworkRiakNode) ExecutorID() string {
+	return frn.CurrentID()
+}
+
+func (frn *FrameworkRiakNode) NodeName() string {
 	return fmt.Sprintf("%s-%s", frn.frc.Name, frn.UUID.String())
 }
 
@@ -147,9 +151,20 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(offer *mesos.Off
 	frn.CurrentState = riak_node_states.Starting
 	frn.LastOfferUsed = offer
 
-	executorUris := []*mesos.CommandInfo_URI{}
-	executorUris = append(executorUris,
-		&mesos.CommandInfo_URI{Value: &(frn.frc.sc.schedulerHTTPServer.hostURI), Executable: proto.Bool(true)})
+	executorUris := []*mesos.CommandInfo_URI{
+		&mesos.CommandInfo_URI{
+			Value: &(frn.frc.sc.schedulerHTTPServer.hostURI),
+			Executable: proto.Bool(true),
+		},
+		&mesos.CommandInfo_URI{
+			Value: &(frn.frc.sc.schedulerHTTPServer.riakURI),
+			Executable: proto.Bool(false),
+			Extract: proto.Bool(true),
+		},
+	}
+	//executorUris = append(executorUris,
+	//	&mesos.CommandInfo_URI{Value: &(frn.frc.sc.schedulerHTTPServer.hostURI), Executable: proto.Bool(true)})
+
 
 	exec := &mesos.ExecutorInfo{
 		//No idea is this is the "right" way to do it, but I think so?
@@ -160,19 +175,27 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(offer *mesos.Off
 			Value:     proto.String(frn.frc.sc.schedulerHTTPServer.executorName),
 			Uris:      executorUris,
 			Shell:     proto.Bool(false),
-			Arguments: []string{frn.frc.sc.schedulerHTTPServer.executorName, "-logtostderr=true"},
+			Arguments: []string{frn.frc.sc.schedulerHTTPServer.executorName, "-logtostderr=true", "-taskinfo", frn.CurrentID()},
+		},
+		Resources: []*mesos.Resource{
+			util.NewScalarResource("cpus", 0.01),
+			util.NewScalarResource("mem", 32),
 		},
 	}
 	taskId := &mesos.TaskID{
 		Value: proto.String(frn.CurrentID()),
 	}
+	t := common.TaskData{NodeName:frn.NodeName()}
+	taskData, err := t.Serialize()
+	if err != nil { log.Panic(err) }
+
 	taskInfo := &mesos.TaskInfo{
 		Name:      proto.String(frn.CurrentID()),
 		TaskId:    taskId,
 		SlaveId:   offer.SlaveId,
 		Executor:  exec,
 		Resources: resources,
-		Data:      []byte{'h', 'e', 'l', 'l', 'o'},
+		Data:      taskData,
 	}
 	frn.LastTaskInfo = taskInfo
 
