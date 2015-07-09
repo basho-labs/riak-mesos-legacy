@@ -2,6 +2,7 @@ BASE_DIR            = $(shell pwd)
 ARCH               ?= darwin_amd64
 SCHEDULER          ?= framework_${ARCH}
 FRAMEWORK_NAME     ?= "riak-mesos-go3"
+# FRAMEWORK_USER     ?= "vagrant"
 # FRAMEWORK_HOSTNAME ?= "33.33.33.1"
 FRAMEWORK_HOSTNAME ?= ""
 FRAMEWORK_IP       ?= "33.33.33.1"
@@ -20,13 +21,13 @@ generate:
 	go generate ./...
 
 rel: deps vet generate
-	gox -tags=rel -osarch="linux/amd64" -osarch=darwin/amd64 -output="bin/{{.Dir}}_{{.OS}}_{{.Arch}}" ./...
+	gox -tags=rel -osarch="linux/amd64" -osarch=darwin/amd64 ./...
 
 dev: vet generate
-	gox -tags=dev -osarch="linux/amd64" -osarch=darwin/amd64 -output="bin/{{.Dir}}_{{.OS}}_{{.Arch}}" ./...
+	cd bin && gox -tags=dev -osarch="linux/amd64" -osarch=darwin/amd64 ./...
 
 run:
-	bin/$(SCHEDULER) -master=$(MESOS_MASTER) -zk=$(ZOOKEEPER) -ip=$(FRAMEWORK_IP) -name=$(FRAMEWORK_NAME) -hostname=$(FRAMEWORK_HOSTNAME)
+	cd bin && ./$(SCHEDULER) -master=$(MESOS_MASTER) -zk=$(ZOOKEEPER) -ip=$(FRAMEWORK_IP) -name=$(FRAMEWORK_NAME) -hostname=$(FRAMEWORK_HOSTNAME) -user=$(FRAMEWORK_USER)
 
 test:
 	go test ./...
