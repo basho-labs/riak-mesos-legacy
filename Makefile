@@ -16,11 +16,18 @@ deps:
 	cd framework/data && $(MAKE)
 	godep restore
 
-build: deps vet
-	go generate ./... && gox -osarch="linux/amd64" -osarch=darwin/amd64 -output="bin/{{.Dir}}_{{.OS}}_{{.Arch}}" ./...
+rel_generate:
+	go generate ./...
 
-rebuild: vet
+rel: deps vet rel_generate
 	gox -osarch="linux/amd64" -osarch=darwin/amd64 -output="bin/{{.Dir}}_{{.OS}}_{{.Arch}}" ./...
+
+dev_generate:
+	cp executor/_bindata_generated.go executor/bindata_generated.go
+	cp framework/_bindata_generated.go framework/bindata_generated.go
+
+dev: vet dev_generate
+	gox -osarch="linux/amd64" -osarch=darwin/amd64 -output="bin/{{.Dir}}_{{.OS}}_{{.Arch}}" -tags=dev ./...
 
 run:
 	bin/$(SCHEDULER) -master=$(MESOS_MASTER) -zk=$(ZOOKEEPER) -ip=$(FRAMEWORK_IP) -name=$(FRAMEWORK_NAME) -hostname=$(FRAMEWORK_HOSTNAME)
