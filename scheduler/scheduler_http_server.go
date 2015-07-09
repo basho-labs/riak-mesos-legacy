@@ -82,7 +82,7 @@ func (schttp *SchedulerHTTPServer) serveNodes(w http.ResponseWriter, r *http.Req
 
 type customServer struct {}
 func (customServer) ServeHTTP(w http.ResponseWriter, request *http.Request) {
-	log.Info("%v %s %s %s ? %s %s %s", request.Host, request.RemoteAddr, request.Method, request.URL.Path, request.URL.RawQuery, request.Proto, request.Header.Get("User-Agent"))
+	log.Infof("%v %s %s %s ? %s %s %s", request.Host, request.RemoteAddr, request.Method, request.URL.Path, request.URL.RawQuery, request.Proto, request.Header.Get("User-Agent"))
 	data, err := Asset("data/" + request.URL.Path)
 	if err != nil {
 		log.Panic(err)
