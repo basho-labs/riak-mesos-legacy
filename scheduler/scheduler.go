@@ -1,6 +1,4 @@
-//go:generate go-bindata -ignore=Makefile -o bindata_generated.go -tags rel -pkg="framework" data/
-
-package framework
+package scheduler
 
 import (
 	"encoding/json"
@@ -198,7 +196,7 @@ func (sc *SchedulerCore) Disconnected(sched.SchedulerDriver) {
 func (sc *SchedulerCore) ResourceOffers(driver sched.SchedulerDriver, offers []*mesos.Offer) {
 	sc.lock.Lock()
 	defer sc.lock.Unlock()
-	log.Info("Received resource offers")
+	log.Info("Received resource offers: ", offers)
 	launchTasks := []*mesos.TaskInfo{}
 	toBeScheduled := []*FrameworkRiakNode{}
 	for _, cluster := range sc.clusters {

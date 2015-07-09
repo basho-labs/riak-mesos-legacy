@@ -29,7 +29,7 @@ func init() {
 func main() {
 	log.SetLevel(log.DebugLevel)
 	mgr := metadata_manager.NewMetadataManager(FrameworkName, zookeeperAddr)
-	sched := framework.NewSchedulerCore(schedulerHostname, FrameworkName, mgr, schedulerIpAddr)
+	sched := scheduler.NewSchedulerCore(schedulerHostname, FrameworkName, mgr, schedulerIpAddr)
 	//go framework.NewTargetTask("golang-riak-task-a", sched, mgr).Loop()
 	//	go framework.NewTargetTask("golang-riak-task-b", sched, mgr).Loop()
 	//	go framework.NewTargetTask("golang-riak-task-c", sched, mgr).Loop()

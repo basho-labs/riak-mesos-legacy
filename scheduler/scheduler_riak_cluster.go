@@ -1,4 +1,4 @@
-package framework
+package scheduler
 
 import (
 	"encoding/json"

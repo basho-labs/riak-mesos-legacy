@@ -1,4 +1,4 @@
-package framework
+package scheduler
 
 import (
 	"encoding/json"
@@ -11,6 +11,7 @@ import (
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	util "github.com/mesos/mesos-go/mesosutil"
 	"github.com/satori/go.uuid"
+	"strings"
 )
 
 // Next Status
@@ -25,6 +26,7 @@ type FrameworkRiakNode struct {
 	Generation       int
 	LastTaskInfo     *mesos.TaskInfo
 	LastOfferUsed    *mesos.Offer
+	TaskData		common.TaskData
 }
 
 func NewFrameworkRiakNode() *FrameworkRiakNode {
@@ -185,8 +187,17 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(offer *mesos.Off
 	taskId := &mesos.TaskID{
 		Value: proto.String(frn.CurrentID()),
 	}
-	t := common.TaskData{NodeName:frn.NodeName()}
-	taskData, err := t.Serialize()
+	nodename := frn.NodeName() + "@" + offer.GetHostname()
+
+	if !strings.Contains(offer.GetHostname(), ".") {
+		nodename = nodename + "."
+	}
+
+	taskData := common.TaskData{FullyQualifiedNodeName:nodename}
+	frn.TaskData = taskData
+
+	binTaskData, err := taskData.Serialize()
+
 	if err != nil { log.Panic(err) }
 
 	taskInfo := &mesos.TaskInfo{
@@ -195,7 +206,7 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(offer *mesos.Off
 		SlaveId:   offer.SlaveId,
 		Executor:  exec,
 		Resources: resources,
-		Data:      taskData,
+		Data:      binTaskData,
 	}
 	frn.LastTaskInfo = taskInfo
 

@@ -5,7 +5,7 @@ import (
 )
 
 type TaskData struct {
-	NodeName	string
+	FullyQualifiedNodeName	string
 }
 
 func (s *TaskData) Serialize() ([]byte, error) {
