@@ -3,13 +3,14 @@ package framework
 import (
 	"encoding/json"
 	"fmt"
-	log "github.com/Sirupsen/logrus"
-	"github.com/gorilla/mux"
 	"net"
 	"net/http"
 	"net/http/pprof"
 	"os"
 	"strconv"
+
+	log "github.com/Sirupsen/logrus"
+	"github.com/gorilla/mux"
 )
 
 type SchedulerHTTPServer struct {
@@ -80,7 +81,8 @@ func (schttp *SchedulerHTTPServer) serveNodes(w http.ResponseWriter, r *http.Req
 	json.NewEncoder(w).Encode(nodes)
 }
 
-type customServer struct {}
+type customServer struct{}
+
 func (customServer) ServeHTTP(w http.ResponseWriter, request *http.Request) {
 	log.Info("%v %s %s %s ? %s %s %s", request.Host, request.RemoteAddr, request.Method, request.URL.Path, request.URL.RawQuery, request.Proto, request.Header.Get("User-Agent"))
 	data, err := Asset("data/" + request.URL.Path)
@@ -125,7 +127,6 @@ func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *Schedul
 	log.Println("Serving at HostURI: ", hostURI)
 
 	router := mux.NewRouter().StrictSlash(true)
-
 
 	// This rewrites /static/FOO -> FOO
 	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", customServer{}))

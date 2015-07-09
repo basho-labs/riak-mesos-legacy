@@ -85,9 +85,10 @@ type SchedulerCore struct {
 	schedulerIpAddr     string
 	frnDict             map[string]*FrameworkRiakNode
 	rServer             *ReconcilationServer
+	user                string
 }
 
-func NewSchedulerCore(schedulerHostname string, frameworkName string, mgr *metamgr.MetadataManager, schedulerIpAddr string) *SchedulerCore {
+func NewSchedulerCore(schedulerHostname string, frameworkName string, mgr *metamgr.MetadataManager, schedulerIpAddr string, user string) *SchedulerCore {
 	scheduler := &SchedulerCore{
 		lock:            &sync.Mutex{},
 		frameworkName:   frameworkName,
@@ -95,6 +96,7 @@ func NewSchedulerCore(schedulerHostname string, frameworkName string, mgr *metam
 		clusters:        make(map[string]*FrameworkRiakCluster),
 		mgr:             mgr,
 		frnDict:         make(map[string]*FrameworkRiakNode),
+		user:            user,
 	}
 	scheduler.schedulerHTTPServer = ServeExecutorArtifact(scheduler, schedulerHostname)
 	return scheduler
@@ -138,14 +140,21 @@ func (sc *SchedulerCore) Run(mesosMaster string) {
 		Value: proto.String(sc.frameworkName),
 	}
 	// TODO: Get "Real" credentials here
+	var frameworkUser *string
+	if sc.user != "" {
+		frameworkUser = proto.String(sc.user)
+	}
 	cred := (*mesos.Credential)(nil)
 	bindingAddress := parseIP(sc.schedulerIpAddr)
 	fwinfo := &mesos.FrameworkInfo{
-		User:            proto.String("sargun"), // Mesos-go will fill in user.
-		Name:            proto.String("Test Framework (Go)"),
+		User:            frameworkUser,
+		Name:            proto.String("Riak Framework"),
 		Id:              frameworkId,
 		FailoverTimeout: proto.Float64(86400),
 	}
+
+	log.Info("Running scheduler with FrameworkInfo: ", fwinfo)
+
 	config := sched.DriverConfig{
 		Scheduler:      sc,
 		Framework:      fwinfo,

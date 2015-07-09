@@ -15,10 +15,16 @@ make build
 
 ### Usage
 
-##### Mac OS X
+#### Mac OS X
 
 ```
 make run
+```
+
+or when running scheduler on mac os x and Mesos on vagrant
+
+```
+FRAMEWORK_USER=vagrant FRAMEWORK_HOSTNAME=33.33.33.1 FRAMEWORK_NAME=riak-mesos-go3 make run
 ```
 
 or
@@ -28,11 +34,28 @@ or
     -master=zk://33.33.33.2:2181/mesos \
     -zk=33.33.33.2:2181 \
     -name=riak-mesos-go3 \
+    -user=vagrant \
     -ip=33.33.33.1 \
     -hostname=33.33.33.1
 ```
 
-##### Vagrant / Linux
+##### Find the Framework URL
+
+```
+./bin/tools_darwin_amd64 -zk=33.33.33.2:2181 -command=get-url -name=riak-mesos-go3
+```
+
+This should return something like `http://33.33.33.1:57139/`
+
+##### Add a node to a new cluster
+
+```
+curl -XPOST http://33.33.33.1:57173/clusters/mycluster
+curl -XPOST http://33.33.33.1:57173/clusters/mycluster/nodes
+```
+
+
+#### Vagrant / Linux
 
 Navigate to the shared directory:
 
@@ -43,7 +66,7 @@ cd /riak-mesos/src/github.com/basho-labs/riak-mesos
 Run the scheduler
 
 ```
-ARCH=linux_amd64 make run
+FRAMEWORK_USER=vagrant ARCH=linux_amd64 make run
 ```
 
 or
@@ -53,8 +76,10 @@ or
     -master=zk://33.33.33.2:2181/mesos \
     -zk=33.33.33.2:2181 \
     -name=riak-mesos-go3 \
+    -user=vagrant \
+    -ip=localhost \
     -hostname=33.33.33.2 \
-    -ip=localhost
+
 ```
 
 ## Architecture

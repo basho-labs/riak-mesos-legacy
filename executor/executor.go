@@ -117,7 +117,7 @@ func (exec *ExecutorCore) Error(driver exec.ExecutorDriver, err string) {
 
 func main() {
 	log.SetLevel(log.DebugLevel)
-	fmt.Println("Starting Example Executor (Go)")
+	fmt.Println("Starting Riak Executor")
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGUSR1, syscall.SIGUSR2)
 
