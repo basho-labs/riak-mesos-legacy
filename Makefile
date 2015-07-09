@@ -13,7 +13,7 @@ ZOOKEEPER          ?= "33.33.33.2:2181"
 all: build
 
 deps:
-	cd framework/data && $(MAKE)
+	cd scheduler/data && $(MAKE)
 	godep restore
 
 generate:
