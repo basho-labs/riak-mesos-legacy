@@ -10,3 +10,4 @@ scheduler/riak_node_states/state_*
 .DS_Store
 Godeps/_workspace
 framework/data/*.tar.gz
+scheduler/data/*.tar.gz
