@@ -8,27 +8,62 @@ FRAMEWORK_HOSTNAME ?= ""
 FRAMEWORK_IP       ?= "33.33.33.1"
 MESOS_MASTER       ?= "zk://33.33.33.2:2181/mesos"
 ZOOKEEPER          ?= "33.33.33.2:2181"
+FRAMEWORK_TARGET   ?= bin
+FRAMEWORK_PACKAGES ?= ../framework/... ../common/... ../metadata_manager/... ../riak_explorer/... ../scheduler/... ../tools/...
+EXECUTOR_TARGET    ?= scheduler/data
+EXECUTOR_PACKAGES  ?=
 
 .PHONY: all deps build rebuild doc fmt lint run test vet
 
 all: build
 
 deps:
-	cd scheduler/data && $(MAKE)
 	godep restore
+	cd scheduler/data && $(MAKE)
 
-generate:
-	go generate ./...
+build_executor:
+	go generate ./executor/...
+	gox \
+		-osarch="linux/amd64" \
+		-osarch="darwin/amd64" \
+		-output="$(EXECUTOR_TARGET)/{{.Dir}}_{{.OS}}_{{.Arch}}" \
+		-rebuild \
+		./executor/...
 
-rel: deps vet generate
-	cd bin && gox -tags=rel -osarch="linux/amd64" -osarch=darwin/amd64 ../scheduler ../tools
+rel: deps vet build_executor
+	go generate -tags=rel ./...
+	gox \
+		-tags=rel \
+		-osarch="linux/amd64" \
+		-osarch="darwin/amd64" \
+		-output="$(FRAMEWORK_TARGET)/{{.Dir}}_{{.OS}}_{{.Arch}}" \
+		-rebuild \
+		./framework/... ./tools/...
 
-dev: deps vet generate
-	# cd bin && gox -tags=dev -osarch="linux/amd64" -osarch=darwin/amd64 ../executor/...
-	cd bin && gox -tags=dev -osarch="linux/amd64" -osarch=darwin/amd64 ../...
+dev: deps vet build_executor
+	go generate -tags=dev ./...
+	gox \
+		-tags=dev \
+		-osarch="linux/amd64" \
+		-osarch="darwin/amd64" \
+		-output="$(FRAMEWORK_TARGET)/{{.Dir}}_{{.OS}}_{{.Arch}}" \
+		-rebuild \
+		./framework/... ./tools/...
+
+clean:
+	-rm bin/*_amd64
+	-rm scheduler/data/*_amd64
+	-rm scheduler/bindata_generated.go
+	-rm executor/bindata_generated.go
 
 run:
-	cd bin && ./$(SCHEDULER) -master=$(MESOS_MASTER) -zk=$(ZOOKEEPER) -ip=$(FRAMEWORK_IP) -name=$(FRAMEWORK_NAME) -hostname=$(FRAMEWORK_HOSTNAME) -user=$(FRAMEWORK_USER)
+	cd bin && ./$(SCHEDULER) \
+		-master=$(MESOS_MASTER) \
+		-zk=$(ZOOKEEPER) \
+		-ip=$(FRAMEWORK_IP) \
+		-name=$(FRAMEWORK_NAME) \
+		-hostname=$(FRAMEWORK_HOSTNAME) \
+		-user=$(FRAMEWORK_USER)
 
 test:
 	go test ./...
