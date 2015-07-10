@@ -24,7 +24,7 @@ make run
 or when running scheduler on mac os x and Mesos on vagrant
 
 ```
-FRAMEWORK_USER=vagrant FRAMEWORK_HOSTNAME=33.33.33.1 FRAMEWORK_NAME=riak-mesos-go3 make run
+FUSR=vagrant FHST=33.33.33.1 FNAM=riak-mesos-go3 make run
 ```
 
 or
@@ -39,10 +39,12 @@ or
     -hostname=33.33.33.1
 ```
 
-##### Find the Framework URL
+##### Find the Framework URL and add a node
 
 ```
-./bin/tools_darwin_amd64 -zk=33.33.33.2:2181 -command=get-url -name=riak-mesos-go3
+FRAMEURL= `./bin/tools_darwin_amd64 -zk=33.33.33.2:2181 -command=get-url -name=riak-mesos-go3`
+curl -XPOST ${FRAMEURL}clusters/mycluster
+curl -XPOST ${FRAMEURL}clusters/mycluster/nodes
 ```
 
 This should return something like `http://33.33.33.1:57139/`
@@ -66,7 +68,7 @@ cd /riak-mesos/src/github.com/basho-labs/riak-mesos
 Run the scheduler
 
 ```
-FRAMEWORK_USER=vagrant ARCH=linux_amd64 make run
+FUSR=vagrant ARCH=linux_amd64 make run
 ```
 
 or
