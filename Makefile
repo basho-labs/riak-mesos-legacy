@@ -9,9 +9,7 @@ FRAMEWORK_IP       ?= "33.33.33.1"
 MESOS_MASTER       ?= "zk://33.33.33.2:2181/mesos"
 ZOOKEEPER          ?= "33.33.33.2:2181"
 FRAMEWORK_TARGET   ?= bin
-FRAMEWORK_PACKAGES ?= ../framework/... ../common/... ../metadata_manager/... ../riak_explorer/... ../scheduler/... ../tools/...
 EXECUTOR_TARGET    ?= scheduler/data
-EXECUTOR_PACKAGES  ?=
 
 .PHONY: all deps build rebuild doc fmt lint run test vet
 
