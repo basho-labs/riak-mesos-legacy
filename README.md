@@ -42,7 +42,7 @@ or
 ##### Find the Framework URL and add a node
 
 ```
-FRAMEURL= `./bin/tools_darwin_amd64 -zk=33.33.33.2:2181 -command=get-url -name=riak-mesos-go3`
+FRAMEURL=`./bin/tools_darwin_amd64 -zk=33.33.33.2:2181 -command=get-url -name=riak-mesos-go3`
 curl -XPOST ${FRAMEURL}clusters/mycluster
 curl -XPOST ${FRAMEURL}clusters/mycluster/nodes
 ```

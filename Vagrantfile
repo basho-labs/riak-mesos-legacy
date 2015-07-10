@@ -4,15 +4,6 @@
 Vagrant.configure(2) do |config|
   config.vm.box = "ubuntu/trusty64"
 
-  config.vm.hostname = "ubuntu"
-
-  # Riak Explorer
-  config.vm.network "forwarded_port", guest: 9000, host: 9000
-
-  # Riak
-  config.vm.network "forwarded_port", guest: 8098, host: 8098
-  config.vm.network "forwarded_port", guest: 8087, host: 8087
-
   # Marathon
   config.vm.network "forwarded_port", guest: 8080, host: 8080
 
@@ -25,40 +16,39 @@ Vagrant.configure(2) do |config|
   # zookeeper
   config.vm.network "forwarded_port", guest: 2181, host:2181
 
-  config.vm.network "private_network", ip: "33.33.33.2", auto_config: false
+  config.vm.network "private_network", ip: "33.33.33.2"
 
-  config.vm.synced_folder "./../../../../", "/riak-mesos"
+  config.vm.hostname = "ubuntu.local"
 
   config.vm.provider "virtualbox" do |vb|
     vb.memory = "2048"
   end
 
-  config.vm.provision "shell", inline: <<-SHELL
+  $script = <<-SCRIPT
     # Host communication
     HOSTMACHINE=`netstat -rn | grep "^0.0.0.0 " | cut -d " " -f10`
     echo "$HOSTMACHINE	33.33.33.1" >> /etc/hosts
-    echo "127.0.0.1	ubuntu" >> /etc/hosts
-
-    # Mesos
-    apt-key adv --keyserver keyserver.ubuntu.com --recv E56151BF
     DISTRO=$(lsb_release -is | tr '[:upper:]' '[:lower:]')
     CODENAME=$(lsb_release -cs)
     echo "deb http://repos.mesosphere.io/${DISTRO} ${CODENAME} main" | \
-      tee /etc/apt/sources.list.d/mesosphere.list
+    tee /etc/apt/sources.list.d/mesosphere.list
+    # Mesos
+    apt-key adv --keyserver keyserver.ubuntu.com --recv E56151BF
     apt-get -y update
     apt-get -y install mesos marathon
-
-    echo "33.33.33.2" > /etc/mesos-master/hostname
+    chown -R zookeeper /var/lib/zookeeper
+    chgrp -R zookeeper /var/lib/zookeeper
+    echo "ubuntu.local" > /etc/mesos-master/hostname
     echo "33.33.33.2" > /etc/mesos-master/ip
-
-    echo "33.33.33.2" > /etc/mesos-slave/hostname
+    echo "ubuntu.local" > /etc/mesos-slave/hostname
     echo "33.33.33.2" > /etc/mesos-slave/ip
-
     service zookeeper restart
     service mesos-master restart
     service mesos-slave restart
     service marathon restart
     # MASTER=$(mesos-resolve `cat /etc/mesos/zk` 2>/dev/null)
     # mesos-execute --master=$MASTER --name="cluster-test" --command="sleep 5"
-  SHELL
+  SCRIPT
+
+  config.vm.provision "shell", inline: $script
 end
