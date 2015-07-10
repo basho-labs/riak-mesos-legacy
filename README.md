@@ -10,7 +10,13 @@ For initial setup of development environment, please follow the directions in
 Download dependencies and build the platform specific executables
 
 ```
-make build
+make dev
+```
+
+To build a complete framework package with embedded executor and riak packages:
+
+```
+make rel
 ```
 
 ### Usage
