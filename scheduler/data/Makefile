@@ -1,15 +1,18 @@
-.PHONY: all
+BASE_DIR            = $(shell pwd)
 
-all: riak_linux_amd64.tar.gz riak_darwin_amd64.tar.gz riak_explorer_darwin_amd64.tar.gz riak_explorer_linux_amd64.tar.gz
+### System Architecture
+FARC     ?= darwin_amd64
+EARC      ?= linux_amd64
 
-riak_explorer_darwin_amd64.tar.gz:
-	curl -O http://riak-tools.s3.amazonaws.com/riak_explorer_darwin_amd64.tar.gz
+.PHONY: all testing
 
-riak_explorer_linux_amd64.tar.gz:
-	curl -O http://riak-tools.s3.amazonaws.com/riak_explorer_linux_amd64.tar.gz
+all: riak_$(EARC).tar.gz riak_explorer_$(FARC).tar.gz
+
+riak_explorer_$(FARC).tar.gz:
+	curl -O http://riak-tools.s3.amazonaws.com/riak_explorer_$(FARC).tar.gz
 
 riak_darwin_amd64.tar.gz:
-	curl -O http://s3.amazonaws.com/downloads.basho.com/riak/2.1/2.1.1/osx/10.8/riak-2.1.1-OSX-x86_64.tar.gz -o riak_darwin_amd64.tar.gz
+	curl -O http://s3.amazonaws.com/downloads.basho.com/riak/2.1/2.1.1/osx/10.8/riak-2.1.1-OSX-x86_64.tar.gz -o $(BASE_DIR)/riak_darwin_amd64.tar.gz
 
 riak_linux_amd64.tar.gz:
 	curl -O http://riak-tools.s3.amazonaws.com/riak_linux_amd64.tar.gz
