@@ -53,8 +53,6 @@ curl -XPOST ${FRAMEURL}clusters/mycluster
 curl -XPOST ${FRAMEURL}clusters/mycluster/nodes
 ```
 
-This should return something like `http://33.33.33.1:57139/`
-
 ##### Add a node to a new cluster
 
 ```
