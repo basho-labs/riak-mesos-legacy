@@ -66,7 +66,7 @@ curl -XPOST http://33.33.33.1:57173/clusters/mycluster/nodes
 Navigate to the shared directory:
 
 ```
-cd /riak-mesos/src/github.com/basho-labs/riak-mesos
+cd /vagrant
 ```
 
 Run the scheduler
