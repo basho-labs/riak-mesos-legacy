@@ -1,61 +1,70 @@
 BASE_DIR            = $(shell pwd)
-ARCH               ?= darwin_amd64
-SCHEDULER          ?= framework_${ARCH}
-FRAMEWORK_NAME     ?= "riak-mesos-go3"
-# FRAMEWORK_USER     ?= "vagrant"
-# FRAMEWORK_HOSTNAME ?= "33.33.33.1"
-FRAMEWORK_HOSTNAME ?= ""
-FRAMEWORK_IP       ?= "33.33.33.1"
+
+### System Architecture
+FRAMEWORK_ARCH     ?= darwin_amd64
+EXECUTOR_ARCH      ?= linux_amd64
+FRAMEWORK_GOX_ARCH ?= "darwin/amd64"
+EXECUTOR_GOX_ARCH ?= "linux/amd64"
+
+### Binary locations
+FRAMEWORK_TARGET   ?= $(BASE_DIR)/bin
+EXECUTOR_TARGET    ?= $(BASE_DIR)/scheduler/data
+
+### Framework Run Arguments
 MESOS_MASTER       ?= "zk://33.33.33.2:2181/mesos"
 ZOOKEEPER          ?= "33.33.33.2:2181"
-FRAMEWORK_TARGET   ?= bin
-EXECUTOR_TARGET    ?= scheduler/data
+FRAMEWORK_IP       ?= "33.33.33.1"
+FRAMEWORK_NAME     ?= "riak-mesos-go3"
+FRAMEWORK_HOSTNAME ?= ""
+FRAMEWORK_USER     ?= ""
+# FRAMEWORK_HOSTNAME ?= "33.33.33.1"
+# FRAMEWORK_USER     ?= "vagrant"
 
-.PHONY: all deps build_executor rel dev clean run test vet lint fmt
+.PHONY: all deps clean_deps build_executor rel dev clean run test vet lint fmt
 
 all: dev
 
 deps:
 	godep restore
-	cd scheduler/data && $(MAKE)
+	cd $(BASE_DIR)/scheduler/data && $(MAKE)
+
+clean_deps:
+	rm $(BASE_DIR)/scheduler/data/*.tar.gz
 
 build_executor:
 	go generate ./executor/...
 	gox \
-		-osarch="linux/amd64" \
-		-osarch="darwin/amd64" \
+		-osarch=$(EXECUTOR_GOX_ARCH) \
 		-output="$(EXECUTOR_TARGET)/{{.Dir}}_{{.OS}}_{{.Arch}}" \
 		-rebuild \
 		./executor/...
 
-rel: deps vet build_executor
+rel: clean deps vet build_executor
 	go generate -tags=rel ./...
 	gox \
 		-tags=rel \
-		-osarch="linux/amd64" \
-		-osarch="darwin/amd64" \
+		-osarch=$(FRAMEWORK_GOX_ARCH) \
 		-output="$(FRAMEWORK_TARGET)/{{.Dir}}_{{.OS}}_{{.Arch}}" \
 		-rebuild \
 		./framework/... ./tools/...
 
-dev: deps vet build_executor
+dev: clean deps vet build_executor
 	go generate -tags=dev ./...
 	gox \
 		-tags=dev \
-		-osarch="linux/amd64" \
-		-osarch="darwin/amd64" \
+		-osarch=$(FRAMEWORK_GOX_ARCH) \
 		-output="$(FRAMEWORK_TARGET)/{{.Dir}}_{{.OS}}_{{.Arch}}" \
 		-rebuild \
 		./framework/... ./tools/...
 
 clean:
-	-rm bin/*_amd64
-	-rm scheduler/data/*_amd64
-	-rm scheduler/bindata_generated.go
-	-rm executor/bindata_generated.go
+	-rm $(BASE_DIR)/bin/*_amd64
+	-rm $(BASE_DIR)/scheduler/data/*_amd64
+	-rm $(BASE_DIR)/scheduler/bindata_generated.go
+	-rm $(BASE_DIR)/executor/bindata_generated.go
 
 run:
-	cd bin && ./$(SCHEDULER) \
+	cd $(BASE_DIR)/bin && ./framework_$(FRAMEWORK_ARCH) \
 		-master=$(MESOS_MASTER) \
 		-zk=$(ZOOKEEPER) \
 		-ip=$(FRAMEWORK_IP) \
