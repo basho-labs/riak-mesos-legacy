@@ -7,11 +7,13 @@ import (
 	"text/template"
 	util "github.com/mesos/mesos-go/mesosutil"
 	"github.com/basho-labs/riak-mesos/common"
+	"encoding/binary"
 )
 
 type RiakNode struct {
 	executor *ExecutorCore
 	taskInfo *mesos.TaskInfo
+	generation	uint64
 }
 
 type templateData struct {
@@ -84,6 +86,23 @@ func (riakNode *RiakNode) Run() {
 	if err != nil {
 		log.Panic("Got error", err)
 	}
+}
+
+func (riakNode *RiakNode) next() {
+	riakNode.executor.lock.Lock()
+	defer riakNode.executor.lock.Unlock()
+	bin := make([]byte, 4)
+	binary.PutUvarint(bin, riakNode.generation)
+	runStatus := &mesos.TaskStatus{
+		TaskId: riakNode.taskInfo.GetTaskId(),
+		State:  mesos.TaskState_TASK_RUNNING.Enum(),
+		Data: bin,
+	}
+	_, err := riakNode.executor.Driver.SendStatusUpdate(runStatus)
+	if err != nil {
+		log.Panic("Got error", err)
+	}
+	riakNode.generation = riakNode.generation + 1
 }
 
 func (riakNode *RiakNode) finish() {
