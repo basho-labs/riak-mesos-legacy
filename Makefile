@@ -11,9 +11,9 @@ ZOOKEEPER          ?= "33.33.33.2:2181"
 FRAMEWORK_TARGET   ?= bin
 EXECUTOR_TARGET    ?= scheduler/data
 
-.PHONY: all deps build rebuild doc fmt lint run test vet
+.PHONY: all deps build_executor rel dev clean run test vet lint fmt
 
-all: build
+all: dev
 
 deps:
 	godep restore
