@@ -1,13 +1,13 @@
 package main
 
 import (
-	log "github.com/Sirupsen/logrus"
-	mesos "github.com/mesos/mesos-go/mesosproto"
 	"os"
 	"text/template"
-	util "github.com/mesos/mesos-go/mesosutil"
+	log "github.com/Sirupsen/logrus"
 	"github.com/basho-labs/riak-mesos/common"
 	"encoding/binary"
+	mesos "github.com/mesos/mesos-go/mesosproto"
+	util "github.com/mesos/mesos-go/mesosutil"
 )
 
 type RiakNode struct {
@@ -17,8 +17,8 @@ type RiakNode struct {
 }
 
 type templateData struct {
-	HTTPPort int64
-	PBPort   int64
+	HTTPPort               int64
+	PBPort                 int64
 	FullyQualifiedNodeName string
 }
 
@@ -48,9 +48,6 @@ func (riakNode *RiakNode) Run() {
 	vars := templateData{}
 	vars.FullyQualifiedNodeName = taskData.FullyQualifiedNodeName
 
-
-
-
 	ports := make(chan int64)
 	go func() {
 		defer close(ports)
@@ -75,7 +72,6 @@ func (riakNode *RiakNode) Run() {
 	if err != nil {
 		log.Panic("Got error", err)
 	}
-
 
 	runStatus := &mesos.TaskStatus{
 		TaskId: riakNode.taskInfo.GetTaskId(),
