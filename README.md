@@ -10,7 +10,13 @@ For initial setup of development environment, please follow the directions in
 Download dependencies and build the platform specific executables
 
 ```
-make build
+make dev
+```
+
+To build a complete framework package with embedded executor and riak packages:
+
+```
+make rel
 ```
 
 ### Usage
@@ -42,12 +48,10 @@ or
 ##### Find the Framework URL and add a node
 
 ```
-FRAMEURL= `./bin/tools_darwin_amd64 -zk=33.33.33.2:2181 -command=get-url -name=riak-mesos-go3`
+FRAMEURL=`./bin/tools_darwin_amd64 -zk=33.33.33.2:2181 -command=get-url -name=riak-mesos-go3`
 curl -XPOST ${FRAMEURL}clusters/mycluster
 curl -XPOST ${FRAMEURL}clusters/mycluster/nodes
 ```
-
-This should return something like `http://33.33.33.1:57139/`
 
 ##### Add a node to a new cluster
 
@@ -62,7 +66,7 @@ curl -XPOST http://33.33.33.1:57173/clusters/mycluster/nodes
 Navigate to the shared directory:
 
 ```
-cd /riak-mesos/src/github.com/basho-labs/riak-mesos
+cd /vagrant
 ```
 
 Run the scheduler

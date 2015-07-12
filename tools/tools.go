@@ -2,31 +2,31 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"os"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/basho-labs/riak-mesos/metadata_manager"
-	//"github.com/basho-labs/riak-mesos/framework"
-	"fmt"
-	"os"
 )
 
 var (
 	zookeeperAddr string
 	clusterName   string
 	nodes         int
-	FrameworkName string
-	Cmd           string
+	frameworkName string
+	cmd           string
+	client        *SchedulerHTTPClient
 )
 
 func init() {
 	flag.StringVar(&zookeeperAddr, "zk", "33.33.33.2:2181", "Zookeeper")
 	flag.StringVar(&clusterName, "cluster-name", "", "Name of new cluster")
 	flag.IntVar(&nodes, "nodes", 1, "Nodes in new cluster")
-	flag.StringVar(&FrameworkName, "name", "riak-mesos-go3", "Framework Instance Name")
-	flag.StringVar(&Cmd, "command", "", "Command")
+	flag.StringVar(&frameworkName, "name", "riak-mesos-go3", "Framework Instance Name")
+	flag.StringVar(&cmd, "command", "", "Command")
 	flag.Parse()
 
-	if Cmd == "" {
+	if cmd == "" {
 		fmt.Println("Please specify command")
 		os.Exit(1)
 	}
@@ -35,51 +35,52 @@ func init() {
 
 func main() {
 
-	switch Cmd {
-	case "get-url":
-		fmt.Println(get_url())
+	if cmd == "get-url" {
+		fmt.Println(getURL())
+		os.Exit(1)
+	}
+
+	client = NewSchedulerHTTPClient(getURL())
+
+	switch cmd {
+	case "get-clusters":
+		respond(client.GetClusters())
+	case "get-cluster":
+		requireClusterName()
+		respond(client.GetCluster(clusterName))
+	case "create-cluster":
+		requireClusterName()
+		respond(client.CreateCluster(clusterName))
+	case "delete-cluster":
+		requireClusterName()
+		respond(client.DeleteCluster(clusterName))
+	case "get-nodes":
+		requireClusterName()
+		respond(client.GetNodes(clusterName))
+	case "add-node":
+	case "add-nodes":
+		requireClusterName()
+		for i := 1; i <= nodes; i++ {
+			respond(client.AddNode(clusterName))
+		}
 	}
 }
-func get_url() string {
-	mgr := metadata_manager.NewMetadataManager(FrameworkName, zookeeperAddr)
+
+func respond(val string, err error) {
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(val)
+}
+
+func getURL() string {
+	mgr := metadata_manager.NewMetadataManager(frameworkName, zookeeperAddr)
 	return string(mgr.GetRootNode().GetChild("uri").GetData())
 }
 
-/*
-if clusterName == "" {
+func requireClusterName() {
+	if clusterName == "" {
 		fmt.Println("Please specify value for cluster name")
 		os.Exit(1)
 	}
-*/
-/*		case "add-cluster": add_cluster()
-		case "add-node": add_node()
-		case "dump-cluster": dump_cluster()
-	}
 }
-
-func add_cluster() {
-	mgr := metadata_manager.NewMetadataManager(FrameworkName, zookeeperAddr)
-	root_node := mgr.GetRootNode()
-	framework.NewFrameworkRiakCluster(root_node, clusterName)
-}
-
-func dump_cluster() {
-	mgr := metadata_manager.NewMetadataManager(FrameworkName, zookeeperAddr)
-	root_node := mgr.GetRootNode()
-	clusters := root_node.GetChild("clusters")
-	cluster := clusters.GetChild(clusterName)
-	frc := framework.FrameworkRiakClusterFromZKNode(cluster)
-	fmt.Printf("Cluster: %s\n", frc.Name)
-	for key, node := range frc.GetNodes() {
-		fmt.Printf("\tNode: %s -> %+v\n", key, node)
-	}
-
-}
-func add_node() {
-	mgr := metadata_manager.NewMetadataManager(FrameworkName, zookeeperAddr)
-	root_node := mgr.GetRootNode()
-	clusters := root_node.GetChild("clusters")
-	cluster := clusters.GetChild(clusterName)
-	framework.FrameworkRiakClusterFromZKNode(cluster).AddNode()
-}
-*/

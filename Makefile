@@ -20,7 +20,7 @@ FUSR  ?= ""
 # FHST ?= "33.33.33.1"
 # FUSR     ?= "vagrant"
 
-.PHONY: all deps clean_deps build_executor rel dev clean run test vet lint fmt
+.PHONY: all deps clean_deps build_executor rel dev clean run install-dcos-cli test vet lint fmt
 
 all: dev
 
@@ -71,6 +71,15 @@ run:
 		-name=$(FNAM) \
 		-hostname=$(FHST) \
 		-user=$(FUSR)
+
+install-dcos-cli:
+	mkdir -p $(BASE_DIR)/bin/dcos
+	cd $(BASE_DIR)/bin/dcos && \
+		sudo pip install virtualenv && \
+		curl -O https://downloads.mesosphere.io/dcos-cli/install.sh && \
+		sudo /bin/bash install.sh . http://33.33.33.2
+	echo "\n\nPlease run the following command to finish installation:\n\nsource $(BASE_DIR)/bin/dcos/bin/env-setup\n"
+
 
 test:
 	go test ./...
