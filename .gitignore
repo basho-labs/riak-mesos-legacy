@@ -11,3 +11,7 @@ scheduler/riak_node_states/state_*
 Godeps/_workspace
 framework/data/*.tar.gz
 scheduler/data/*.tar.gz
+scheduler/cluster_state/clusterstate_jsonenums.go
+scheduler/cluster_state/clusterstate_string.go
+scheduler/process_state/processstate_jsonenums.go
+scheduler/process_state/processstate_string.go
