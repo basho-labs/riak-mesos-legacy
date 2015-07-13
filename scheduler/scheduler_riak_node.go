@@ -5,7 +5,7 @@ import (
 	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"github.com/basho-labs/riak-mesos/common"
-	"github.com/basho-labs/riak-mesos/scheduler/riak_node_states"
+	"github.com/basho-labs/riak-mesos/scheduler/process_state"
 	metamgr "github.com/basho-labs/riak-mesos/metadata_manager"
 	"github.com/golang/protobuf/proto"
 	mesos "github.com/mesos/mesos-go/mesosproto"
@@ -20,20 +20,20 @@ type FrameworkRiakNode struct {
 	frc              *FrameworkRiakCluster `json:"-"`
 	zkNode           *metamgr.ZkNode       `json:"-"`
 	UUID             uuid.UUID
-	DestinationState riak_node_states.State
-	CurrentState     riak_node_states.State
+	DestinationState process_state.ProcessState
+	CurrentState     process_state.ProcessState
 	TaskStatus       *mesos.TaskStatus
 	Generation       int
 	LastTaskInfo     *mesos.TaskInfo
 	LastOfferUsed    *mesos.Offer
-	TaskData		common.TaskData
+	TaskData		 common.TaskData
 }
 
 func NewFrameworkRiakNode() *FrameworkRiakNode {
 	return &FrameworkRiakNode{
 		// We can assume this for now? I think
-		DestinationState: riak_node_states.Started,
-		CurrentState:     riak_node_states.Unknown,
+		DestinationState: process_state.Started,
+		CurrentState:     process_state.Unknown,
 		Generation:       0,
 	}
 }
@@ -49,16 +49,18 @@ func (frn *FrameworkRiakNode) NeedsToBeScheduled() bool {
 	// Poor man's FSM:
 	// TODO: Fill out rest of possible states
 	switch frn.DestinationState {
-	case riak_node_states.Started:
+	case process_state.Started:
 		{
 			switch frn.CurrentState {
-			case riak_node_states.Started:
+			case process_state.Started:
 				return false
-			case riak_node_states.Unknown:
+			case process_state.Unknown:
 				return false
-			case riak_node_states.Starting:
+			case process_state.Starting:
 				return false
-			case riak_node_states.Shutdown:
+			case process_state.Shutdown:
+				return true
+			case process_state.Failed:
 				return true
 			}
 		}
@@ -83,28 +85,34 @@ func (frn *FrameworkRiakNode) GetZkNode() *metamgr.ZkNode {
 }
 
 func (frn *FrameworkRiakNode) handleStatusUpdate(statusUpdate *mesos.TaskStatus) {
+	// TODO: Check the task ID in the TaskStatus to make sure it matches our current task
+
 	// Poor man's FSM event handler
 	frn.TaskStatus = statusUpdate
 	switch *statusUpdate.State.Enum() {
 	case mesos.TaskState_TASK_STAGING:
-		frn.CurrentState = riak_node_states.Starting
+		frn.CurrentState = process_state.Starting
 	case mesos.TaskState_TASK_STARTING:
-		frn.CurrentState = riak_node_states.Starting
+		frn.CurrentState = process_state.Starting
 	case mesos.TaskState_TASK_RUNNING:
-		frn.CurrentState = riak_node_states.Started
+		{
+			frn.CurrentState = process_state.Started
+		}
 	case mesos.TaskState_TASK_FINISHED:
-		frn.CurrentState = riak_node_states.Shutdown
+		frn.CurrentState = process_state.Shutdown
 	case mesos.TaskState_TASK_FAILED:
-		frn.CurrentState = riak_node_states.Shutdown
+		frn.CurrentState = process_state.Failed
+
+	// Maybe? -- Not entirely sure.
 	case mesos.TaskState_TASK_KILLED:
-		frn.CurrentState = riak_node_states.Shutdown
+		frn.CurrentState = process_state.Shutdown
 
 	// These two could actually appear if the task is running -- we should better handle
 	// status updates in these two scenarios
 	case mesos.TaskState_TASK_LOST:
-		frn.CurrentState = riak_node_states.Shutdown
+		frn.CurrentState = process_state.Failed
 	case mesos.TaskState_TASK_ERROR:
-		frn.CurrentState = riak_node_states.Shutdown
+		frn.CurrentState = process_state.Failed
 	default:
 		log.Fatal("Received unknown status update")
 	}
@@ -145,12 +153,12 @@ func (frn *FrameworkRiakNode) GetCombinedAsk() common.CombinedResourceAsker {
 func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(offer *mesos.Offer, resources []*mesos.Resource) *mesos.TaskInfo {
 	// THIS IS A MUTATING CALL
 
-	if frn.CurrentState != riak_node_states.Shutdown {
+	if frn.CurrentState != process_state.Shutdown && frn.CurrentState != process_state.Failed {
 		log.Panic("Trying to generate Task Info while node is up")
 	}
 	frn.Generation = frn.Generation + 1
 	frn.TaskStatus = nil
-	frn.CurrentState = riak_node_states.Starting
+	frn.CurrentState = process_state.Starting
 	frn.LastOfferUsed = offer
 
 	executorUris := []*mesos.CommandInfo_URI{

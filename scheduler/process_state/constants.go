@@ -1,27 +1,19 @@
-package riak_node_states
+package process_state
 
 //go:generate jsonenums -type=ProcessState
 //go:generate stringer -type=ProcessState
 
 type ProcessState int
 
+// Although we use JsonEnums / Stringer to prevent serializing values with just ints
+// It's wise not to rely on that, and only add enum values _at the end_ --
+// Also, never retire an enum, otherwise legacy JSON may fail to deserialize properly
 const (
-	ProcessStateUnknown ProcessState = 0
-	ProcessStateStarting = 1
-	ProcessStateStarted = 2
-	ProcessStateShuttingDown = 3
-	ProcessStateShutdown = 4
-
-	Unknown = 0
-	Starting = 1
-	Started = 2
-	ShuttingDown = 3
-	Shutdown = 4
-
+	Unknown ProcessState = iota
+	Starting
+	Started
+	ShuttingDown
+	Shutdown
+	Failed
 )
 
-type RiakClusterState int
-
-const (
-	RiakClusterStateEmpty RiakClusterState = iota
-)

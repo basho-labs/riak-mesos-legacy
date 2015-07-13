@@ -37,12 +37,14 @@ type ReconcilationServer struct {
 }
 
 func (rServer *ReconcilationServer) enable() {
+	log.Info("Reconcilation process enabled")
 	rServer.lock.Lock()
 	defer rServer.lock.Unlock()
 	rServer.enabled = true
 }
 
 func (rServer *ReconcilationServer) disable() {
+	log.Info("Reconcilation process disabled")
 	rServer.lock.Lock()
 	defer rServer.lock.Unlock()
 	rServer.enabled = true
