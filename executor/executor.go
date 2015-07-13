@@ -74,6 +74,17 @@ func (exec *ExecutorCore) LaunchTask(driver exec.ExecutorDriver, taskInfo *mesos
 	//
 	fmt.Println("Starting task")
 
+
+	runStatus := &mesos.TaskStatus{
+		TaskId: taskInfo.TaskId,
+		State:  mesos.TaskState_TASK_STARTING.Enum(),
+	}
+	_, err := driver.SendStatusUpdate(runStatus)
+
+	if err != nil {
+		log.Panic("Got error", err)
+	}
+
 	if exec.riakNode != nil {
 		log.Fatalf("Task being started, twice, existing task: %+v, new task: %+v", exec.riakNode)
 	}
@@ -153,6 +164,11 @@ func signalWatcher(signals chan os.Signal, exec *ExecutorCore) {
 			{
 				log.Info("Marking task as finished")
 				exec.riakNode.finish()
+			}
+		case syscall.SIGUSR2:
+			{
+				log.Info("Marking task as finished")
+				exec.riakNode.next()
 			}
 		}
 	}
