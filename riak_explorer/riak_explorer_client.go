@@ -56,10 +56,31 @@ type JoinType struct {
 	Links Links `json:"links"`
 }
 
-// Join instructs fromNode to join toNode's cluster
+// Join instructs fromNode to join toNode's cluster immediately
 func (client *RiakExplorerClient) Join(fromNode string, toNode string) (JoinType, error) {
 	var m JoinType
 	commandURI := fmt.Sprintf("control/nodes/%s/join/%s", fromNode, toNode)
+	v, err := client.doGet(commandURI)
+	if err != nil {
+		return m, err
+	}
+	json.Unmarshal(v, &m)
+	return m, nil
+}
+
+// StagedJoinType is the expected result struct of a join request
+type StagedJoinType struct {
+	StagedJoin struct {
+		Success string `json:"success"`
+		Error   string `json:"error"`
+	} `json:"staged-join"`
+	Links Links `json:"links"`
+}
+
+// StagedJoin instructs fromNode to stage a join toNode's cluster
+func (client *RiakExplorerClient) StagedJoin(fromNode string, toNode string) (StagedJoinType, error) {
+	var m StagedJoinType
+	commandURI := fmt.Sprintf("control/nodes/%s/staged-join/%s", fromNode, toNode)
 	v, err := client.doGet(commandURI)
 	if err != nil {
 		return m, err
@@ -77,10 +98,10 @@ type LeaveType struct {
 	Links Links `json:"links"`
 }
 
-// Leave instructs node to leave its current cluster
-func (client *RiakExplorerClient) Leave(node string) (LeaveType, error) {
+// Leave instructs leavingNode to leave stayingNode's cluster immediately
+func (client *RiakExplorerClient) Leave(stayingNode string, leavingNode string) (LeaveType, error) {
 	var m LeaveType
-	commandURI := fmt.Sprintf("control/nodes/%s/leave", node)
+	commandURI := fmt.Sprintf("control/nodes/%s/leave/%s", stayingNode, leavingNode)
 	v, err := client.doGet(commandURI)
 	if err != nil {
 		return m, err
@@ -89,10 +110,31 @@ func (client *RiakExplorerClient) Leave(node string) (LeaveType, error) {
 	return m, nil
 }
 
-// LeaveTarget instructs leavingNode to leave stayingNode's cluster
-func (client *RiakExplorerClient) LeaveTarget(stayingNode string, leavingNode string) (LeaveType, error) {
-	var m LeaveType
-	commandURI := fmt.Sprintf("control/nodes/%s/leave/%s", stayingNode, leavingNode)
+// StagedLeaveType is the expected result struct of a leave request
+type StagedLeaveType struct {
+	StagedLeave struct {
+		Success string `json:"success"`
+		Error   string `json:"error"`
+	} `json:"staged-leave"`
+	Links Links `json:"links"`
+}
+
+// StagedLeave instructs node to stage a leave from its current cluster
+func (client *RiakExplorerClient) StagedLeave(node string) (StagedLeaveType, error) {
+	var m StagedLeaveType
+	commandURI := fmt.Sprintf("control/nodes/%s/staged-leave", node)
+	v, err := client.doGet(commandURI)
+	if err != nil {
+		return m, err
+	}
+	json.Unmarshal(v, &m)
+	return m, nil
+}
+
+// StagedLeaveTarget instructs leavingNode to stage a leave stayingNode's cluster
+func (client *RiakExplorerClient) StagedLeaveTarget(stayingNode string, leavingNode string) (StagedLeaveType, error) {
+	var m StagedLeaveType
+	commandURI := fmt.Sprintf("control/nodes/%s/staged-leave/%s", stayingNode, leavingNode)
 	v, err := client.doGet(commandURI)
 	if err != nil {
 		return m, err
@@ -110,7 +152,7 @@ type ForceRemoveType struct {
 	Links Links `json:"links"`
 }
 
-// ForceRemove instructs leavingNode to leave stayingNode's cluster
+// ForceRemove instructs leavingNode to leave stayingNode's cluster immediately
 func (client *RiakExplorerClient) ForceRemove(stayingNode string, leavingNode string) (ForceRemoveType, error) {
 	var m ForceRemoveType
 	commandURI := fmt.Sprintf("control/nodes/%s/force-remove/%s", stayingNode, leavingNode)
@@ -131,10 +173,31 @@ type ReplaceType struct {
 	Links Links `json:"links"`
 }
 
-// Replace instructs fromNode to replace oldNode with newNode
+// Replace instructs fromNode to replace oldNode with newNode immediately
 func (client *RiakExplorerClient) Replace(fromNode string, oldNode string, newNode string) (ReplaceType, error) {
 	var m ReplaceType
 	commandURI := fmt.Sprintf("control/nodes/%s/replace/%s/%s", fromNode, oldNode, newNode)
+	v, err := client.doGet(commandURI)
+	if err != nil {
+		return m, err
+	}
+	json.Unmarshal(v, &m)
+	return m, nil
+}
+
+// StagedReplaceType is the expected result struct of a replace request
+type StagedReplaceType struct {
+	StagedReplace struct {
+		Success string `json:"success"`
+		Error   string `json:"error"`
+	} `json:"staged-replace"`
+	Links Links `json:"links"`
+}
+
+// StagedReplace instructs fromNode to stage a replace for oldNode with newNode
+func (client *RiakExplorerClient) StagedReplace(fromNode string, oldNode string, newNode string) (StagedReplaceType, error) {
+	var m StagedReplaceType
+	commandURI := fmt.Sprintf("control/nodes/%s/staged-replace/%s/%s", fromNode, oldNode, newNode)
 	v, err := client.doGet(commandURI)
 	if err != nil {
 		return m, err
