@@ -6,6 +6,9 @@ import (
 
 type TaskData struct {
 	FullyQualifiedNodeName	string
+	Zookeepers				[]string
+	ClusterName				string
+	NodeID					string
 }
 
 func (s *TaskData) Serialize() ([]byte, error) {
@@ -18,3 +21,4 @@ func DeserializeTaskData(data []byte) (TaskData, error) {
 	err := json.Unmarshal(data, &t)
 	return t, err
 }
+

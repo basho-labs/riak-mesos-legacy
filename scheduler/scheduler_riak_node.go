@@ -77,7 +77,7 @@ func (frn *FrameworkRiakNode) ExecutorID() string {
 }
 
 func (frn *FrameworkRiakNode) NodeName() string {
-	return fmt.Sprintf("%s-%s", frn.frc.Name, frn.UUID.String())
+	return fmt.Sprintf("%s-%s-%d", frn.frc.Name, frn.UUID.String(), frn.Generation)
 }
 
 func (frn *FrameworkRiakNode) GetZkNode() *metamgr.ZkNode {
@@ -93,9 +93,12 @@ func (frn *FrameworkRiakNode) handleStatusUpdate(statusUpdate *mesos.TaskStatus)
 	case mesos.TaskState_TASK_STAGING:
 		frn.CurrentState = process_state.Starting
 	case mesos.TaskState_TASK_STARTING:
-		frn.CurrentState = process_state.Starting
+		{
+			frn.CurrentState = process_state.Starting
+		}
 	case mesos.TaskState_TASK_RUNNING:
 		{
+			frn.frc.Trigger()
 			frn.CurrentState = process_state.Started
 		}
 	case mesos.TaskState_TASK_FINISHED:
@@ -201,7 +204,12 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(offer *mesos.Off
 		nodename = nodename + "."
 	}
 
-	taskData := common.TaskData{FullyQualifiedNodeName:nodename}
+	taskData := common.TaskData{
+		FullyQualifiedNodeName:nodename,
+		Zookeepers:frn.frc.sc.zookeepers,
+		ClusterName:frn.frc.Name,
+		NodeID:frn.UUID.String(),
+	}
 	frn.TaskData = taskData
 
 	binTaskData, err := taskData.Serialize()

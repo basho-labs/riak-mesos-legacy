@@ -9,6 +9,7 @@ type ClusterState int
 // It's wise not to rely on that, and only add enum values _at the end_ --
 // Also, never retire an enum, otherwise legacy JSON may fail to deserialize properly
 
+/*
 const (
 	Unknown ClusterState = iota
 	Alone
@@ -19,6 +20,13 @@ const (
 	Leaving
 	Left
 	Failed
+)
+*/
+
+const (
+	Unknown ClusterState = iota
+	Empty
+	Joined
 )
 
 // A node goes Alone -> Looking -> Joined -> Leaving -> Left

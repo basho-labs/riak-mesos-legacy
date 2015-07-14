@@ -23,7 +23,7 @@ type MetadataManagerNode interface {
 
 func (mgr *MetadataManager) CreateNode(cluster MetadataManagerCluster) MetadataManagerNode {
 	nodesNS := makeSubSpace(cluster.GetZkNode().ns, "nodes")
-	mgr.CreateNSIfNotExists(nodesNS)
+	mgr.CreateNSIfNotExists(nodesNS, false)
 	node := cluster.NewNode()
 	node.Persist()
 	cluster.AddNode(node.GetZkNode())
@@ -31,7 +31,7 @@ func (mgr *MetadataManager) CreateNode(cluster MetadataManagerCluster) MetadataM
 }
 func (mgr *MetadataManager) CreateCluster(name string) MetadataManagerCluster {
 	clustersNS := makeSubSpace(mgr.namespace, "clusters")
-	mgr.CreateNSIfNotExists(clustersNS)
+	mgr.CreateNSIfNotExists(clustersNS, false)
 	newClusterNS := makeSubSpace(clustersNS, name)
 	node := &ZkNode{mgr: mgr, ns: newClusterNS}
 	cluster := mgr.framework.NewCluster(node, name)
@@ -52,7 +52,7 @@ func (mgr *MetadataManager) SetupFramework(URI string, mmf MetadataManagerFramew
 	}
 
 	clustersPath := makeSubSpace(mgr.namespace, "clusters")
-	mgr.CreateNSIfNotExists(clustersPath)
+	mgr.CreateNSIfNotExists(clustersPath, false)
 	clusters, clustersEventChannel := mgr.getChildrenW(clustersPath)
 	go func() {
 		for clusterEvent := range clustersEventChannel {
@@ -67,7 +67,7 @@ func (mgr *MetadataManager) SetupFramework(URI string, mmf MetadataManagerFramew
 	for _, clusterZKNode := range clusters {
 		cluster := mmf.AddCluster(clusterZKNode)
 		nodesPath := makeSubSpace(clusterZKNode.ns, "nodes")
-		mgr.CreateNSIfNotExists(nodesPath)
+		mgr.CreateNSIfNotExists(nodesPath, false)
 		nodes, nodeEventChannel := mgr.getChildrenW(nodesPath)
 		go func() {
 			for nodeEvent := range nodeEventChannel {

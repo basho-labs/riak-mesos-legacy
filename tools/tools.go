@@ -74,7 +74,7 @@ func respond(val string, err error) {
 }
 
 func getURL() string {
-	mgr := metadata_manager.NewMetadataManager(frameworkName, zookeeperAddr)
+	mgr := metadata_manager.NewMetadataManager(frameworkName, []string{zookeeperAddr})
 	return string(mgr.GetRootNode().GetChild("uri").GetData())
 }
 

@@ -19,6 +19,11 @@ func (frc *FrameworkRiakCluster) GetNodes() map[string]*FrameworkRiakNode {
 	return frc.nodes
 }
 
+func (frc *FrameworkRiakCluster) Trigger() {
+	// Go through all of the Riak Nodes
+	// See if they are running
+
+}
 func (frc *FrameworkRiakCluster) Persist() {
 	data, err := json.Marshal(frc)
 	if err != nil {

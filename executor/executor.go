@@ -4,12 +4,10 @@ package main
 
 import (
 	"fmt"
-
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
-
 	log "github.com/Sirupsen/logrus"
 	exec "github.com/mesos/mesos-go/executor"
 	mesos "github.com/mesos/mesos-go/mesosproto"
@@ -44,7 +42,6 @@ func (exec *ExecutorCore) Registered(driver exec.ExecutorDriver, execInfo *mesos
 	exec.slaveInfo = slaveInfo
 	exec.execInfo = execInfo
 	exec.fwInfo = fwinfo
-
 }
 
 func (exec *ExecutorCore) Reregistered(driver exec.ExecutorDriver, slaveInfo *mesos.SlaveInfo) {

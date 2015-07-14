@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"text/template"
+	metamgr "github.com/basho-labs/riak-mesos/metadata_manager"
 	"time"
 )
 
@@ -21,6 +22,8 @@ type RiakNode struct {
 	finishChan chan interface{}
 	waitChan   chan interface{}
 	running		bool
+	metadataManager        *metamgr.MetadataManager
+	taskData	common.TaskData
 }
 
 type templateData struct {
@@ -31,12 +34,21 @@ type templateData struct {
 }
 
 func NewRiakNode(taskInfo *mesos.TaskInfo, executor *ExecutorCore) *RiakNode {
+	taskData, err := common.DeserializeTaskData(taskInfo.Data)
+	if err != nil {
+		log.Panic("Got error", err)
+	}
+
+	log.Infof("Deserialized task data: %+v", taskData)
+	mgr := metamgr.NewMetadataManager(executor.fwInfo.GetId().GetValue(), taskData.Zookeepers)
 	return &RiakNode{
 		executor:   executor,
 		taskInfo:   taskInfo,
 		finishChan: make(chan interface{}, 1),
 		waitChan:   make(chan interface{}, 1),
 		running:	false,
+		metadataManager: mgr,
+		taskData:   taskData,
 	}
 }
 
@@ -68,6 +80,7 @@ func (riakNode *RiakNode) waitLoop() {
 		process.Env = append(os.Environ(), homevar)
 		err = process.Run()
 		if err != nil {
+			log.Info("Error pinging Riak: ", err)
 			riakNode.waitChan<-nil
 			break
 		}
@@ -88,6 +101,7 @@ func (riakNode *RiakNode) runLoop() {
 	select {
 	case <-riakNode.waitChan:
 		{
+			log.Info("Riak Died, failing")
 			// Just in case, cleanup
 			// This means the node died :(
 			runStatus = &mesos.TaskStatus{
@@ -101,6 +115,7 @@ func (riakNode *RiakNode) runLoop() {
 		}
 	case <-riakNode.finishChan:
 		{
+			log.Info("Finish channel says to shut down Riak")
 			riakNode.shutdownRiak()
 			runStatus = &mesos.TaskStatus{
 				TaskId: riakNode.taskInfo.GetTaskId(),
@@ -118,7 +133,7 @@ func (riakNode *RiakNode) runLoop() {
 
 }
 func (riakNode *RiakNode) configureRiak() {
-	taskData, err := common.DeserializeTaskData(riakNode.taskInfo.Data)
+
 	data, err := Asset("data/riak.conf")
 	if err != nil {
 		log.Panic("Got error", err)
@@ -131,7 +146,7 @@ func (riakNode *RiakNode) configureRiak() {
 
 	// Populate template data from the MesosTask
 	vars := templateData{}
-	vars.FullyQualifiedNodeName = taskData.FullyQualifiedNodeName
+	vars.FullyQualifiedNodeName = riakNode.taskData.FullyQualifiedNodeName
 
 	ports := make(chan int64)
 	go func() {
@@ -190,7 +205,32 @@ func (riakNode *RiakNode) Run() {
 		if err != nil {
 			log.Panic("Got error", err)
 		}
+		// Shutdown:
+		time.Sleep(15 * time.Minute)
+		log.Info("Shutting down due to GC, after failing to bring up Riak node")
+		riakNode.executor.Driver.Stop()
 	} else {
+		rootNode := riakNode.metadataManager.GetRootNode()
+
+		clustersNode := rootNode.GetChild("clusters")
+		clusterNode := clustersNode.GetChild(riakNode.taskData.ClusterName)
+
+		clusterNode.CreateChildIfNotExists("coordinator")
+		coordinator := clusterNode.GetChild("coordinator")
+		coordinator.CreateChildIfNotExists("coordinatedNodes")
+		coordinatedNodes := coordinator.GetChild("coordinatedNodes")
+
+		lock := coordinator.GetLock()
+		lock.Lock()
+		// Do cluster joiny stuff
+		children := coordinatedNodes.GetChildren()
+		log.Info("Coordinator Children: ", children)
+		if len(children) > 0 {
+			// We should join the children here
+			// TODO: Waiting on https://github.com/basho-labs/riak-mesos/issues/25
+		}
+
+		lock.Unlock()
 		runStatus := &mesos.TaskStatus{
 			TaskId: riakNode.taskInfo.GetTaskId(),
 			State:  mesos.TaskState_TASK_RUNNING.Enum(),

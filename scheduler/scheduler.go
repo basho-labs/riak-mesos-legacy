@@ -64,7 +64,7 @@ func (rServer *ReconcilationServer) loop() {
 				if rServer.enabled {
 					rServer.lock.Unlock()
 					if len(tasksToReconcile) > 0 {
-						log.Info("Reconciling tasks")
+						log.Info("Reconciling tasks: ", tasksToReconcile)
 						rServer.driver.ReconcileTasks(tasksToReconcile)
 						tasksToReconcile = []*mesos.TaskStatus{}
 					}
@@ -86,9 +86,11 @@ type SchedulerCore struct {
 	frnDict             map[string]*FrameworkRiakNode
 	rServer             *ReconcilationServer
 	user                string
+	zookeepers			[]string
 }
 
-func NewSchedulerCore(schedulerHostname string, frameworkName string, mgr *metamgr.MetadataManager, schedulerIpAddr string, user string) *SchedulerCore {
+func NewSchedulerCore(schedulerHostname string, frameworkName string, zookeepers []string, schedulerIpAddr string, user string) *SchedulerCore {
+	mgr := metamgr.NewMetadataManager(frameworkName, zookeepers)
 	scheduler := &SchedulerCore{
 		lock:            &sync.Mutex{},
 		frameworkName:   frameworkName,
@@ -97,6 +99,7 @@ func NewSchedulerCore(schedulerHostname string, frameworkName string, mgr *metam
 		mgr:             mgr,
 		frnDict:         make(map[string]*FrameworkRiakNode),
 		user:            user,
+		zookeepers:      zookeepers,
 	}
 	scheduler.schedulerHTTPServer = ServeExecutorArtifact(scheduler, schedulerHostname)
 	return scheduler

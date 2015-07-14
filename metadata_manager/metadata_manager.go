@@ -23,6 +23,10 @@ func (node *ZkNode) String() string {
 func (node *ZkNode) GetData() []byte {
 	return node.data
 }
+func (node *ZkNode) GetLock() *zk.Lock {
+	zkLock := zk.NewLock(node.mgr.zkConn, node.ns.GetZKPath(), zk.WorldACL(zk.PermAll))
+	return zkLock
+}
 func (node *ZkNode) SetData(data []byte) {
 	var err error
 	log.Info("Persisting data")
@@ -85,12 +89,14 @@ func (node *ZkNode) GetChild(name string) *ZkNode {
 	return node.mgr.getNode(ns)
 }
 
+
+
 func (node *ZkNode) CreateChildIfNotExists(name string) {
 	if strings.Contains(name, "/") {
 		panic("Error, name of subnode cannot contain /")
 	}
 	ns := makeSubSpace(node.ns, name)
-	node.mgr.CreateNSIfNotExists(ns)
+	node.mgr.CreateNSIfNotExists(ns, false)
 }
 
 type Namespace interface {
@@ -136,11 +142,11 @@ type MetadataManager struct {
 }
 
 func (mgr *MetadataManager) setup() {
-	mgr.CreateNSIfNotExists(mgr.namespace)
+	mgr.CreateNSIfNotExists(mgr.namespace, false)
 }
 
-func NewMetadataManager(frameworkName string, zookeeperAddr string) *MetadataManager {
-	conn, _, err := zk.Connect([]string{zookeeperAddr}, time.Second)
+func NewMetadataManager(frameworkName string, zookeepers []string) *MetadataManager {
+	conn, _, err := zk.Connect(zookeepers, time.Second)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -160,32 +166,37 @@ func NewMetadataManager(frameworkName string, zookeeperAddr string) *MetadataMan
 	manager.setup()
 	return manager
 }
-func (mgr *MetadataManager) createPathIfNotExists(path string) {
+func (mgr *MetadataManager) createPathIfNotExists(path string, ephemeral bool) {
 	splitString := strings.Split(path, "/")
 	for idx := range splitString {
 		if idx == 0 {
 			continue
 		}
-		mgr.createIfNotExists(strings.Join(splitString[0:idx+1], "/"))
+		mgr.createIfNotExists(strings.Join(splitString[0:idx+1], "/"), ephemeral)
 	}
 }
 
-func (mgr *MetadataManager) CreateNSIfNotExists(ns Namespace) {
+func (mgr *MetadataManager) CreateNSIfNotExists(ns Namespace, ephemeral bool) {
 	components := ns.GetComponents()
 	for idx := range components {
 		if idx == 0 {
 			continue
 		}
-		mgr.createIfNotExists(strings.Join(components[0:idx+1], "/"))
+		mgr.createIfNotExists(strings.Join(components[0:idx+1], "/"), ephemeral)
 	}
 }
-func (mgr *MetadataManager) createIfNotExists(path string) {
+func (mgr *MetadataManager) createIfNotExists(path string, ephemeral bool) {
 	exists, _, err := mgr.zkConn.Exists(path)
 	if err != nil {
 		log.Panic(err)
 	}
 	if !exists {
-		_, err := mgr.zkConn.Create(path, nil, 0, zk.WorldACL(zk.PermAll))
+		var err error
+		if ephemeral {
+			_, err = mgr.zkConn.Create(path, nil, zk.FlagEphemeral, zk.WorldACL(zk.PermAll))
+		} else {
+			_, err = mgr.zkConn.Create(path, nil, 0, zk.WorldACL(zk.PermAll))
+		}
 		if err != nil {
 			log.Panic(err)
 		}
