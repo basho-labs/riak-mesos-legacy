@@ -5,25 +5,25 @@ import (
 	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"github.com/basho-labs/riak-mesos/common"
+	metamgr "github.com/basho-labs/riak-mesos/metadata_manager"
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	util "github.com/mesos/mesos-go/mesosutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"text/template"
-	metamgr "github.com/basho-labs/riak-mesos/metadata_manager"
 	"time"
 )
 
 type RiakNode struct {
-	executor   *ExecutorCore
-	taskInfo   *mesos.TaskInfo
-	generation uint64
-	finishChan chan interface{}
-	waitChan   chan interface{}
-	running		bool
-	metadataManager        *metamgr.MetadataManager
-	taskData	common.TaskData
+	executor        *ExecutorCore
+	taskInfo        *mesos.TaskInfo
+	generation      uint64
+	finishChan      chan interface{}
+	waitChan        chan interface{}
+	running         bool
+	metadataManager *metamgr.MetadataManager
+	taskData        common.TaskData
 }
 
 type templateData struct {
@@ -42,13 +42,13 @@ func NewRiakNode(taskInfo *mesos.TaskInfo, executor *ExecutorCore) *RiakNode {
 	log.Infof("Deserialized task data: %+v", taskData)
 	mgr := metamgr.NewMetadataManager(executor.fwInfo.GetId().GetValue(), taskData.Zookeepers)
 	return &RiakNode{
-		executor:   executor,
-		taskInfo:   taskInfo,
-		finishChan: make(chan interface{}, 1),
-		waitChan:   make(chan interface{}, 1),
-		running:	false,
+		executor:        executor,
+		taskInfo:        taskInfo,
+		finishChan:      make(chan interface{}, 1),
+		waitChan:        make(chan interface{}, 1),
+		running:         false,
 		metadataManager: mgr,
-		taskData:   taskData,
+		taskData:        taskData,
 	}
 }
 
@@ -81,10 +81,10 @@ func (riakNode *RiakNode) waitLoop() {
 		err = process.Run()
 		if err != nil {
 			log.Info("Error pinging Riak: ", err)
-			riakNode.waitChan<-nil
+			riakNode.waitChan <- nil
 			break
 		}
-		<- time.After(10 * time.Second)
+		<-time.After(10 * time.Second)
 	}
 }
 func (riakNode *RiakNode) runLoop() {
@@ -192,7 +192,6 @@ func (riakNode *RiakNode) Run() {
 	homevar := fmt.Sprintf("HOME=%s", home)
 	process.Env = append(os.Environ(), homevar)
 	err = process.Run()
-
 
 	if err != nil {
 		log.Error("Could not start Riak: ", err)

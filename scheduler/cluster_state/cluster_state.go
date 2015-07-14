@@ -32,7 +32,6 @@ const (
 // A node goes Alone -> Looking -> Joined -> Leaving -> Left
 // We can technically transition a node from Left -> Alone, but I don't think that's ever neccessary
 
-
 // When a node is added, it _should_ start in the alone phase until the cluster is activated
 // At this point, we transition all Alone members to Looking
 

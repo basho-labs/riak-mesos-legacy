@@ -86,7 +86,7 @@ type SchedulerCore struct {
 	frnDict             map[string]*FrameworkRiakNode
 	rServer             *ReconcilationServer
 	user                string
-	zookeepers			[]string
+	zookeepers          []string
 }
 
 func NewSchedulerCore(schedulerHostname string, frameworkName string, zookeepers []string, schedulerIpAddr string, user string) *SchedulerCore {

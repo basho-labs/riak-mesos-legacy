@@ -16,4 +16,3 @@ const (
 	Shutdown
 	Failed
 )
-

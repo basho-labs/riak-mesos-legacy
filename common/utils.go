@@ -3,14 +3,15 @@ package common
 import (
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	util "github.com/mesos/mesos-go/mesosutil"
-	"sort"
 	"math/rand"
+	"sort"
 	"time"
 )
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
 }
+
 // The new value for the resource, the ask, and whether or not the ask was accomodated - the ask may be nil if it wasn't accomodated
 type ResourceAsker (func([]*mesos.Resource) (remaining []*mesos.Resource, ask *mesos.Resource, success bool))
 type CombinedResourceAsker (func([]*mesos.Resource) (remaining []*mesos.Resource, ask []*mesos.Resource, success bool))

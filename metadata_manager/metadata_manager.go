@@ -89,8 +89,6 @@ func (node *ZkNode) GetChild(name string) *ZkNode {
 	return node.mgr.getNode(ns)
 }
 
-
-
 func (node *ZkNode) CreateChildIfNotExists(name string) {
 	if strings.Contains(name, "/") {
 		panic("Error, name of subnode cannot contain /")

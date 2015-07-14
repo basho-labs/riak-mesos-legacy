@@ -5,8 +5,8 @@ import (
 	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"github.com/basho-labs/riak-mesos/common"
-	"github.com/basho-labs/riak-mesos/scheduler/process_state"
 	metamgr "github.com/basho-labs/riak-mesos/metadata_manager"
+	"github.com/basho-labs/riak-mesos/scheduler/process_state"
 	"github.com/golang/protobuf/proto"
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	util "github.com/mesos/mesos-go/mesosutil"
@@ -26,7 +26,7 @@ type FrameworkRiakNode struct {
 	Generation       int
 	LastTaskInfo     *mesos.TaskInfo
 	LastOfferUsed    *mesos.Offer
-	TaskData		 common.TaskData
+	TaskData         common.TaskData
 }
 
 func NewFrameworkRiakNode() *FrameworkRiakNode {
@@ -166,18 +166,17 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(offer *mesos.Off
 
 	executorUris := []*mesos.CommandInfo_URI{
 		&mesos.CommandInfo_URI{
-			Value: &(frn.frc.sc.schedulerHTTPServer.hostURI),
+			Value:      &(frn.frc.sc.schedulerHTTPServer.hostURI),
 			Executable: proto.Bool(true),
 		},
 		&mesos.CommandInfo_URI{
-			Value: &(frn.frc.sc.schedulerHTTPServer.riakURI),
+			Value:      &(frn.frc.sc.schedulerHTTPServer.riakURI),
 			Executable: proto.Bool(false),
-			Extract: proto.Bool(true),
+			Extract:    proto.Bool(true),
 		},
 	}
 	//executorUris = append(executorUris,
 	//	&mesos.CommandInfo_URI{Value: &(frn.frc.sc.schedulerHTTPServer.hostURI), Executable: proto.Bool(true)})
-
 
 	exec := &mesos.ExecutorInfo{
 		//No idea is this is the "right" way to do it, but I think so?
@@ -205,16 +204,18 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(offer *mesos.Off
 	}
 
 	taskData := common.TaskData{
-		FullyQualifiedNodeName:nodename,
-		Zookeepers:frn.frc.sc.zookeepers,
-		ClusterName:frn.frc.Name,
-		NodeID:frn.UUID.String(),
+		FullyQualifiedNodeName: nodename,
+		Zookeepers:             frn.frc.sc.zookeepers,
+		ClusterName:            frn.frc.Name,
+		NodeID:                 frn.UUID.String(),
 	}
 	frn.TaskData = taskData
 
 	binTaskData, err := taskData.Serialize()
 
-	if err != nil { log.Panic(err) }
+	if err != nil {
+		log.Panic(err)
+	}
 
 	taskInfo := &mesos.TaskInfo{
 		Name:      proto.String(frn.CurrentID()),

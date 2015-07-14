@@ -4,13 +4,13 @@ package main
 
 import (
 	"fmt"
+	log "github.com/Sirupsen/logrus"
+	exec "github.com/mesos/mesos-go/executor"
+	mesos "github.com/mesos/mesos-go/mesosproto"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
-	log "github.com/Sirupsen/logrus"
-	exec "github.com/mesos/mesos-go/executor"
-	mesos "github.com/mesos/mesos-go/mesosproto"
 )
 
 const (
@@ -173,7 +173,9 @@ func signalWatcher(signals chan os.Signal, exec *ExecutorCore) {
 					var status syscall.WaitStatus
 					var rusage syscall.Rusage
 					pid, _ := syscall.Wait4(-1, &status, syscall.WNOHANG, &rusage)
-					if pid <= 0 { break }
+					if pid <= 0 {
+						break
+					}
 					log.Infof("Handled SIGCHLD for PID: %d, Waitstatus: %+v, Rusage: %+v", pid, status, rusage)
 
 				}

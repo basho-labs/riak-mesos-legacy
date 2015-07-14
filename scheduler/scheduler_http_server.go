@@ -3,11 +3,11 @@ package scheduler
 import (
 	"encoding/json"
 	"fmt"
+	assetfs "github.com/elazarl/go-bindata-assetfs"
 	"net"
 	"net/http"
 	"net/http/pprof"
 	"os"
-	assetfs "github.com/elazarl/go-bindata-assetfs"
 	"strconv"
 
 	log "github.com/Sirupsen/logrus"
@@ -116,7 +116,6 @@ func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *Schedul
 	URI := fmt.Sprintf("http://%s:%d/", hostname, port)
 	//Info.Printf("Hosting artifact '%s' at '%s'", path, hostURI)
 	log.Println("Serving at HostURI: ", hostURI)
-
 
 	router := mux.NewRouter().StrictSlash(true)
 
