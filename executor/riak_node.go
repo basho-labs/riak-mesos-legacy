@@ -112,6 +112,9 @@ func (riakNode *RiakNode) runLoop() {
 			}
 		}
 	}
+	time.Sleep(15 * time.Minute)
+	log.Info("Shutting down")
+	riakNode.executor.Driver.Stop()
 
 }
 func (riakNode *RiakNode) configureRiak() {

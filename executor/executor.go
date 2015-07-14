@@ -74,7 +74,6 @@ func (exec *ExecutorCore) LaunchTask(driver exec.ExecutorDriver, taskInfo *mesos
 	//
 	fmt.Println("Starting task")
 
-
 	runStatus := &mesos.TaskStatus{
 		TaskId: taskInfo.TaskId,
 		State:  mesos.TaskState_TASK_STARTING.Enum(),
@@ -130,7 +129,7 @@ func main() {
 	log.SetLevel(log.DebugLevel)
 	fmt.Println("Starting Riak Executor")
 	signals := make(chan os.Signal, 1)
-	signal.Notify(signals, syscall.SIGUSR1, syscall.SIGUSR2)
+	signal.Notify(signals, syscall.SIGUSR1, syscall.SIGUSR2, syscall.SIGCHLD)
 
 	data, _ := Asset("data/stuff")
 	s := string(data)
@@ -169,6 +168,18 @@ func signalWatcher(signals chan os.Signal, exec *ExecutorCore) {
 			{
 				log.Info("Marking task as finished")
 				exec.riakNode.next()
+			}
+		case syscall.SIGCHLD:
+			{
+				log.Info("Got SIGCHLD")
+				for {
+					var status syscall.WaitStatus
+					var rusage syscall.Rusage
+					pid, _ := syscall.Wait4(-1, &status, syscall.WNOHANG, &rusage)
+					if pid <= 0 { break }
+					log.Infof("Handled SIGCHLD for PID: %d, Waitstatus: %+v, Rusage: %+v", pid, status, rusage)
+
+				}
 			}
 		}
 	}
