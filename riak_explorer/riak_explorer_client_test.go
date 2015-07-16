@@ -27,8 +27,8 @@ func TestJoin(t *testing.T) {
 // 	assert.Equal("", resp.Leave.Error)
 // 	assert.Equal("ok", resp.Leave.Success)
 //
-// 	var nodeStatuses []NodeStatusType
-// 	nodeStatuses = append(nodeStatuses, NodeStatusType{ID: "dev1@127.0.0.1", Status: "valid", RingPercentage: 100, PendingPercentage: 0})
+// 	var nodeStatuses []NodeStatusReply
+// 	nodeStatuses = append(nodeStatuses, NodeStatusReply{ID: "dev1@127.0.0.1", Status: "valid", RingPercentage: 100, PendingPercentage: 0})
 // 	assertStatusNodes(t, nodeStatuses)
 // 	assertStatusCounts(t, 0, 0, 0, 0, 1)
 //
@@ -57,9 +57,9 @@ func TestReplace(t *testing.T) {
 	assert.Equal("", replaceResp.Replace.Error)
 	assert.Equal("ok", replaceResp.Replace.Success)
 
-	var nodeStatuses []NodeStatusType
-	nodeStatuses = append(nodeStatuses, NodeStatusType{ID: "dev1@127.0.0.1", Status: "valid", RingPercentage: 50, PendingPercentage: 0})
-	nodeStatuses = append(nodeStatuses, NodeStatusType{ID: "dev3@127.0.0.1", Status: "valid", RingPercentage: 50, PendingPercentage: 0})
+	var nodeStatuses []NodeStatusReply
+	nodeStatuses = append(nodeStatuses, NodeStatusReply{ID: "dev1@127.0.0.1", Status: "valid", RingPercentage: 50, PendingPercentage: 0})
+	nodeStatuses = append(nodeStatuses, NodeStatusReply{ID: "dev3@127.0.0.1", Status: "valid", RingPercentage: 50, PendingPercentage: 0})
 	assertStatusNodes(t, nodeStatuses)
 	assertStatusCounts(t, 0, 0, 0, 0, 2)
 
@@ -84,9 +84,9 @@ func ensureJoined(t *testing.T, node1 string, node2 string) {
 
 	waitForJoined(node1, node2)
 
-	var nodeStatuses []NodeStatusType
-	nodeStatuses = append(nodeStatuses, NodeStatusType{ID: node1, Status: "valid", RingPercentage: 50, PendingPercentage: 0})
-	nodeStatuses = append(nodeStatuses, NodeStatusType{ID: node2, Status: "valid", RingPercentage: 50, PendingPercentage: 0})
+	var nodeStatuses []NodeStatusReply
+	nodeStatuses = append(nodeStatuses, NodeStatusReply{ID: node1, Status: "valid", RingPercentage: 50, PendingPercentage: 0})
+	nodeStatuses = append(nodeStatuses, NodeStatusReply{ID: node2, Status: "valid", RingPercentage: 50, PendingPercentage: 0})
 	assertStatusNodes(t, nodeStatuses)
 	assertStatusCounts(t, 0, 0, 0, 0, 2)
 
@@ -135,17 +135,17 @@ func ensureJoined(t *testing.T, node1 string, node2 string) {
 // 	assert.Equal("", resp.StagedLeave.Error)
 // 	assert.Equal("ok", resp.StagedLeave.Success)
 //
-// 	var nodeChanges []NodeChangeType
-// 	nodeChanges = append(nodeChanges, NodeChangeType{Node: "dev2@127.0.0.1", Action: "leave", Target: ""})
+// 	var nodeChanges []NodeChangeReply
+// 	nodeChanges = append(nodeChanges, NodeChangeReply{Node: "dev2@127.0.0.1", Action: "leave", Target: ""})
 // 	assertPlan(t, nodeChanges)
 //
 // 	maybeCommit(t)
 //
 // 	// Status doesn't change until after commit when performing leave
 // 	if commitChanges {
-// 		var nodeStatuses []NodeStatusType
-// 		nodeStatuses = append(nodeStatuses, NodeStatusType{ID: "dev2@127.0.0.1", Status: "leaving", RingPercentage: 50, PendingPercentage: 0})
-// 		nodeStatuses = append(nodeStatuses, NodeStatusType{ID: "dev1@127.0.0.1", Status: "valid", RingPercentage: 50, PendingPercentage: 100})
+// 		var nodeStatuses []NodeStatusReply
+// 		nodeStatuses = append(nodeStatuses, NodeStatusReply{ID: "dev2@127.0.0.1", Status: "leaving", RingPercentage: 50, PendingPercentage: 0})
+// 		nodeStatuses = append(nodeStatuses, NodeStatusReply{ID: "dev1@127.0.0.1", Status: "valid", RingPercentage: 50, PendingPercentage: 100})
 // 		assertStatusNodes(t, nodeStatuses)
 // 		assertStatusCounts(t, 0, 0, 0, 1, 1)
 // 	}
@@ -166,17 +166,17 @@ func ensureJoined(t *testing.T, node1 string, node2 string) {
 // 	assert.Equal("", resp.StagedLeave.Error)
 // 	assert.Equal("ok", resp.StagedLeave.Success)
 //
-// 	var nodeChanges []NodeChangeType
-// 	nodeChanges = append(nodeChanges, NodeChangeType{Node: "dev2@127.0.0.1", Action: "leave", Target: ""})
+// 	var nodeChanges []NodeChangeReply
+// 	nodeChanges = append(nodeChanges, NodeChangeReply{Node: "dev2@127.0.0.1", Action: "leave", Target: ""})
 // 	assertPlan(t, nodeChanges)
 //
 // 	maybeCommit(t)
 //
 // 	// Status doesn't change until after commit when performing leave
 // 	if commitChanges {
-// 		var nodeStatuses []NodeStatusType
-// 		nodeStatuses = append(nodeStatuses, NodeStatusType{ID: "dev2@127.0.0.1", Status: "leaving", RingPercentage: 50, PendingPercentage: 0})
-// 		nodeStatuses = append(nodeStatuses, NodeStatusType{ID: "dev1@127.0.0.1", Status: "valid", RingPercentage: 50, PendingPercentage: 100})
+// 		var nodeStatuses []NodeStatusReply
+// 		nodeStatuses = append(nodeStatuses, NodeStatusReply{ID: "dev2@127.0.0.1", Status: "leaving", RingPercentage: 50, PendingPercentage: 0})
+// 		nodeStatuses = append(nodeStatuses, NodeStatusReply{ID: "dev1@127.0.0.1", Status: "valid", RingPercentage: 50, PendingPercentage: 100})
 // 		assertStatusNodes(t, nodeStatuses)
 // 		assertStatusCounts(t, 0, 0, 0, 1, 1)
 // 	}
@@ -197,15 +197,15 @@ func ensureJoined(t *testing.T, node1 string, node2 string) {
 // 	assert.Equal("", resp.ForceRemove.Error)
 // 	assert.Equal("ok", resp.ForceRemove.Success)
 //
-// 	var nodeChanges []NodeChangeType
-// 	nodeChanges = append(nodeChanges, NodeChangeType{Node: "dev2@127.0.0.1", Action: "remove", Target: ""})
+// 	var nodeChanges []NodeChangeReply
+// 	nodeChanges = append(nodeChanges, NodeChangeReply{Node: "dev2@127.0.0.1", Action: "remove", Target: ""})
 // 	assertPlan(t, nodeChanges)
 //
 // 	maybeCommit(t)
 //
 // 	if commitChanges {
-// 		var nodeStatuses []NodeStatusType
-// 		nodeStatuses = append(nodeStatuses, NodeStatusType{ID: "dev1@127.0.0.1", Status: "valid", RingPercentage: 100, PendingPercentage: 0})
+// 		var nodeStatuses []NodeStatusReply
+// 		nodeStatuses = append(nodeStatuses, NodeStatusReply{ID: "dev1@127.0.0.1", Status: "valid", RingPercentage: 100, PendingPercentage: 0})
 // 		assertStatusNodes(t, nodeStatuses)
 // 		assertStatusCounts(t, 0, 0, 0, 0, 1)
 // 	}
@@ -226,15 +226,15 @@ func ensureJoined(t *testing.T, node1 string, node2 string) {
 // 	assert.Equal("", resp.StagedLeave.Error)
 // 	assert.Equal("ok", resp.StagedLeave.Success)
 //
-// 	var nodeChanges []NodeChangeType
-// 	nodeChanges = append(nodeChanges, NodeChangeType{Node: "dev2@127.0.0.1", Action: "leave", Target: ""})
+// 	var nodeChanges []NodeChangeReply
+// 	nodeChanges = append(nodeChanges, NodeChangeReply{Node: "dev2@127.0.0.1", Action: "leave", Target: ""})
 // 	assertPlan(t, nodeChanges)
 //
 // 	assertClear(t)
 //
-// 	var nodeStatuses []NodeStatusType
-// 	nodeStatuses = append(nodeStatuses, NodeStatusType{ID: "dev1@127.0.0.1", Status: "valid", RingPercentage: 50, PendingPercentage: 0})
-// 	nodeStatuses = append(nodeStatuses, NodeStatusType{ID: "dev2@127.0.0.1", Status: "valid", RingPercentage: 50, PendingPercentage: 0})
+// 	var nodeStatuses []NodeStatusReply
+// 	nodeStatuses = append(nodeStatuses, NodeStatusReply{ID: "dev1@127.0.0.1", Status: "valid", RingPercentage: 50, PendingPercentage: 0})
+// 	nodeStatuses = append(nodeStatuses, NodeStatusReply{ID: "dev2@127.0.0.1", Status: "valid", RingPercentage: 50, PendingPercentage: 0})
 // 	assertStatusNodes(t, nodeStatuses)
 // 	assertStatusCounts(t, 0, 0, 0, 0, 2)
 //
@@ -263,18 +263,18 @@ func ensureJoined(t *testing.T, node1 string, node2 string) {
 // 	assert.Equal("", replaceResp.StagedReplace.Error)
 // 	assert.Equal("ok", replaceResp.StagedReplace.Success)
 //
-// 	var nodeChanges []NodeChangeType
-// 	nodeChanges = append(nodeChanges, NodeChangeType{Node: "dev2@127.0.0.1", Action: "replace", Target: "dev3@127.0.0.1"})
-// 	nodeChanges = append(nodeChanges, NodeChangeType{Node: "dev3@127.0.0.1", Action: "join", Target: ""})
+// 	var nodeChanges []NodeChangeReply
+// 	nodeChanges = append(nodeChanges, NodeChangeReply{Node: "dev2@127.0.0.1", Action: "replace", Target: "dev3@127.0.0.1"})
+// 	nodeChanges = append(nodeChanges, NodeChangeReply{Node: "dev3@127.0.0.1", Action: "join", Target: ""})
 // 	assertPlan(t, nodeChanges)
 //
 // 	maybeCommit(t)
 //
 // 	if commitChanges {
-// 		var nodeStatuses []NodeStatusType
-// 		nodeStatuses = append(nodeStatuses, NodeStatusType{ID: "dev2@127.0.0.1", Status: "leaving", RingPercentage: 50, PendingPercentage: 0})
-// 		nodeStatuses = append(nodeStatuses, NodeStatusType{ID: "dev1@127.0.0.1", Status: "valid", RingPercentage: 50, PendingPercentage: 50})
-// 		nodeStatuses = append(nodeStatuses, NodeStatusType{ID: "dev3@127.0.0.1", Status: "valid", RingPercentage: 0, PendingPercentage: 50})
+// 		var nodeStatuses []NodeStatusReply
+// 		nodeStatuses = append(nodeStatuses, NodeStatusReply{ID: "dev2@127.0.0.1", Status: "leaving", RingPercentage: 50, PendingPercentage: 0})
+// 		nodeStatuses = append(nodeStatuses, NodeStatusReply{ID: "dev1@127.0.0.1", Status: "valid", RingPercentage: 50, PendingPercentage: 50})
+// 		nodeStatuses = append(nodeStatuses, NodeStatusReply{ID: "dev3@127.0.0.1", Status: "valid", RingPercentage: 0, PendingPercentage: 50})
 // 		assertStatusNodes(t, nodeStatuses)
 // 		assertStatusCounts(t, 0, 0, 0, 1, 2)
 // 	}
@@ -300,17 +300,17 @@ func ensureJoined(t *testing.T, node1 string, node2 string) {
 // 	assert.Equal("", replaceResp.ForceReplace.Error)
 // 	assert.Equal("ok", replaceResp.ForceReplace.Success)
 //
-// 	var nodeChanges []NodeChangeType
-// 	nodeChanges = append(nodeChanges, NodeChangeType{Node: "dev2@127.0.0.1", Action: "force_replace", Target: "dev4@127.0.0.1"})
-// 	nodeChanges = append(nodeChanges, NodeChangeType{Node: "dev4@127.0.0.1", Action: "join", Target: ""})
+// 	var nodeChanges []NodeChangeReply
+// 	nodeChanges = append(nodeChanges, NodeChangeReply{Node: "dev2@127.0.0.1", Action: "force_replace", Target: "dev4@127.0.0.1"})
+// 	nodeChanges = append(nodeChanges, NodeChangeReply{Node: "dev4@127.0.0.1", Action: "join", Target: ""})
 // 	assertPlan(t, nodeChanges)
 //
 // 	maybeCommit(t)
 //
 // 	if commitChanges {
-// 		var nodeStatuses []NodeStatusType
-// 		nodeStatuses = append(nodeStatuses, NodeStatusType{ID: "dev1@127.0.0.1", Status: "valid", RingPercentage: 50, PendingPercentage: 0})
-// 		nodeStatuses = append(nodeStatuses, NodeStatusType{ID: "dev4@127.0.0.1", Status: "valid", RingPercentage: 50, PendingPercentage: 0})
+// 		var nodeStatuses []NodeStatusReply
+// 		nodeStatuses = append(nodeStatuses, NodeStatusReply{ID: "dev1@127.0.0.1", Status: "valid", RingPercentage: 50, PendingPercentage: 0})
+// 		nodeStatuses = append(nodeStatuses, NodeStatusReply{ID: "dev4@127.0.0.1", Status: "valid", RingPercentage: 50, PendingPercentage: 0})
 // 		assertStatusNodes(t, nodeStatuses)
 // 		assertStatusCounts(t, 0, 0, 0, 0, 2)
 // 	}
@@ -318,7 +318,7 @@ func ensureJoined(t *testing.T, node1 string, node2 string) {
 // 	assertRingReady(t)
 // }
 //
-// func assertPlan(t *testing.T, changes []NodeChangeType) {
+// func assertPlan(t *testing.T, changes []NodeChangeReply) {
 // 	assert := assert.New(t)
 // 	client := NewRiakExplorerClient("localhost:9000")
 // 	resp, err := client.Plan("dev1@127.0.0.1")
@@ -364,14 +364,14 @@ func ensureJoined(t *testing.T, node1 string, node2 string) {
 //
 // 	time.Sleep(1000 * time.Millisecond)
 //
-// 	var nodeStatuses []NodeStatusType
-// 	nodeStatuses = append(nodeStatuses, NodeStatusType{ID: node2, Status: "joining", RingPercentage: 0, PendingPercentage: 0})
-// 	nodeStatuses = append(nodeStatuses, NodeStatusType{ID: node1, Status: "valid", RingPercentage: 100, PendingPercentage: 0})
+// 	var nodeStatuses []NodeStatusReply
+// 	nodeStatuses = append(nodeStatuses, NodeStatusReply{ID: node2, Status: "joining", RingPercentage: 0, PendingPercentage: 0})
+// 	nodeStatuses = append(nodeStatuses, NodeStatusReply{ID: node1, Status: "valid", RingPercentage: 100, PendingPercentage: 0})
 // 	assertStatusNodes(t, nodeStatuses)
 // 	assertStatusCounts(t, 0, 0, 1, 0, 1)
 //
-// 	var nodeChanges []NodeChangeType
-// 	nodeChanges = append(nodeChanges, NodeChangeType{Node: node2, Action: "join", Target: ""})
+// 	var nodeChanges []NodeChangeReply
+// 	nodeChanges = append(nodeChanges, NodeChangeReply{Node: node2, Action: "join", Target: ""})
 // 	assertPlan(t, nodeChanges)
 //
 // 	assertCommit(t)
@@ -394,7 +394,7 @@ func assertStatusCounts(t *testing.T, down int, exiting int, joining int, leavin
 	assert.Equal(valid, resp.Status.Valid)
 }
 
-func assertStatusNodes(t *testing.T, nodes []NodeStatusType) {
+func assertStatusNodes(t *testing.T, nodes []NodeStatusReply) {
 	assert := assert.New(t)
 	client := NewRiakExplorerClient("localhost:9000")
 	resp, err := client.Status("dev1@127.0.0.1")
@@ -416,9 +416,9 @@ func isJoined(node1 string, node2 string) bool {
 	client := NewRiakExplorerClient("localhost:9000")
 
 	statusResp, _ := client.Status(node1)
-	var alreadyJoined []NodeStatusType
-	alreadyJoined = append(alreadyJoined, NodeStatusType{ID: node1, Status: "valid", RingPercentage: 50, PendingPercentage: 0})
-	alreadyJoined = append(alreadyJoined, NodeStatusType{ID: node2, Status: "valid", RingPercentage: 50, PendingPercentage: 0})
+	var alreadyJoined []NodeStatusReply
+	alreadyJoined = append(alreadyJoined, NodeStatusReply{ID: node1, Status: "valid", RingPercentage: 50, PendingPercentage: 0})
+	alreadyJoined = append(alreadyJoined, NodeStatusReply{ID: node2, Status: "valid", RingPercentage: 50, PendingPercentage: 0})
 	return testStatusEq(statusResp.Status.Nodes, alreadyJoined)
 }
 
@@ -437,7 +437,7 @@ func riakExplorerAlive() bool {
 	return resp.Ping.Message == "pong"
 }
 
-func testStatusEq(a, b []NodeStatusType) bool {
+func testStatusEq(a, b []NodeStatusReply) bool {
 	if len(a) != len(b) {
 		return false
 	}

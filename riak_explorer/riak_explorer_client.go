@@ -27,8 +27,8 @@ func NewRiakExplorerClient(host string) *RiakExplorerClient {
 	return c
 }
 
-// PingType is the expected result struct of a ping request
-type PingType struct {
+// PingReply is the expected result struct of a ping request
+type PingReply struct {
 	Ping struct {
 		ID      string `json:"id"`
 		Message string `json:"message"`
@@ -37,8 +37,8 @@ type PingType struct {
 }
 
 // Ping provides general health information about Riak Explorer
-func (client *RiakExplorerClient) Ping() (PingType, error) {
-	var m PingType
+func (client *RiakExplorerClient) Ping() (PingReply, error) {
+	var m PingReply
 	v, err := client.doGet("explore/ping")
 	if err != nil {
 		return m, err
@@ -47,8 +47,8 @@ func (client *RiakExplorerClient) Ping() (PingType, error) {
 	return m, nil
 }
 
-// JoinType is the expected result struct of a join request
-type JoinType struct {
+// JoinReply is the expected result struct of a join request
+type JoinReply struct {
 	Join struct {
 		Success string `json:"success"`
 		Error   string `json:"error"`
@@ -57,8 +57,8 @@ type JoinType struct {
 }
 
 // Join instructs fromNode to join toNode's cluster immediately
-func (client *RiakExplorerClient) Join(fromNode string, toNode string) (JoinType, error) {
-	var m JoinType
+func (client *RiakExplorerClient) Join(fromNode string, toNode string) (JoinReply, error) {
+	var m JoinReply
 	commandURI := fmt.Sprintf("control/nodes/%s/join/%s", fromNode, toNode)
 	v, err := client.doGet(commandURI)
 	if err != nil {
@@ -68,8 +68,8 @@ func (client *RiakExplorerClient) Join(fromNode string, toNode string) (JoinType
 	return m, nil
 }
 
-// StagedJoinType is the expected result struct of a join request
-type StagedJoinType struct {
+// StagedJoinReply is the expected result struct of a join request
+type StagedJoinReply struct {
 	StagedJoin struct {
 		Success string `json:"success"`
 		Error   string `json:"error"`
@@ -78,8 +78,8 @@ type StagedJoinType struct {
 }
 
 // StagedJoin instructs fromNode to stage a join toNode's cluster
-func (client *RiakExplorerClient) StagedJoin(fromNode string, toNode string) (StagedJoinType, error) {
-	var m StagedJoinType
+func (client *RiakExplorerClient) StagedJoin(fromNode string, toNode string) (StagedJoinReply, error) {
+	var m StagedJoinReply
 	commandURI := fmt.Sprintf("control/nodes/%s/staged-join/%s", fromNode, toNode)
 	v, err := client.doGet(commandURI)
 	if err != nil {
@@ -89,8 +89,8 @@ func (client *RiakExplorerClient) StagedJoin(fromNode string, toNode string) (St
 	return m, nil
 }
 
-// LeaveType is the expected result struct of a leave request
-type LeaveType struct {
+// LeaveReply is the expected result struct of a leave request
+type LeaveReply struct {
 	Leave struct {
 		Success string `json:"success"`
 		Error   string `json:"error"`
@@ -99,8 +99,8 @@ type LeaveType struct {
 }
 
 // Leave instructs leavingNode to leave stayingNode's cluster immediately
-func (client *RiakExplorerClient) Leave(stayingNode string, leavingNode string) (LeaveType, error) {
-	var m LeaveType
+func (client *RiakExplorerClient) Leave(stayingNode string, leavingNode string) (LeaveReply, error) {
+	var m LeaveReply
 	commandURI := fmt.Sprintf("control/nodes/%s/leave/%s", stayingNode, leavingNode)
 	v, err := client.doGet(commandURI)
 	if err != nil {
@@ -110,8 +110,8 @@ func (client *RiakExplorerClient) Leave(stayingNode string, leavingNode string) 
 	return m, nil
 }
 
-// StagedLeaveType is the expected result struct of a leave request
-type StagedLeaveType struct {
+// StagedLeaveReply is the expected result struct of a leave request
+type StagedLeaveReply struct {
 	StagedLeave struct {
 		Success string `json:"success"`
 		Error   string `json:"error"`
@@ -120,8 +120,8 @@ type StagedLeaveType struct {
 }
 
 // StagedLeave instructs node to stage a leave from its current cluster
-func (client *RiakExplorerClient) StagedLeave(node string) (StagedLeaveType, error) {
-	var m StagedLeaveType
+func (client *RiakExplorerClient) StagedLeave(node string) (StagedLeaveReply, error) {
+	var m StagedLeaveReply
 	commandURI := fmt.Sprintf("control/nodes/%s/staged-leave", node)
 	v, err := client.doGet(commandURI)
 	if err != nil {
@@ -132,8 +132,8 @@ func (client *RiakExplorerClient) StagedLeave(node string) (StagedLeaveType, err
 }
 
 // StagedLeaveTarget instructs leavingNode to stage a leave stayingNode's cluster
-func (client *RiakExplorerClient) StagedLeaveTarget(stayingNode string, leavingNode string) (StagedLeaveType, error) {
-	var m StagedLeaveType
+func (client *RiakExplorerClient) StagedLeaveTarget(stayingNode string, leavingNode string) (StagedLeaveReply, error) {
+	var m StagedLeaveReply
 	commandURI := fmt.Sprintf("control/nodes/%s/staged-leave/%s", stayingNode, leavingNode)
 	v, err := client.doGet(commandURI)
 	if err != nil {
@@ -143,8 +143,8 @@ func (client *RiakExplorerClient) StagedLeaveTarget(stayingNode string, leavingN
 	return m, nil
 }
 
-// ForceRemoveType is the expected result struct of a force remove request
-type ForceRemoveType struct {
+// ForceRemoveReply is the expected result struct of a force remove request
+type ForceRemoveReply struct {
 	ForceRemove struct {
 		Success string `json:"success"`
 		Error   string `json:"error"`
@@ -153,8 +153,8 @@ type ForceRemoveType struct {
 }
 
 // ForceRemove instructs leavingNode to leave stayingNode's cluster immediately
-func (client *RiakExplorerClient) ForceRemove(stayingNode string, leavingNode string) (ForceRemoveType, error) {
-	var m ForceRemoveType
+func (client *RiakExplorerClient) ForceRemove(stayingNode string, leavingNode string) (ForceRemoveReply, error) {
+	var m ForceRemoveReply
 	commandURI := fmt.Sprintf("control/nodes/%s/force-remove/%s", stayingNode, leavingNode)
 	v, err := client.doGet(commandURI)
 	if err != nil {
@@ -164,8 +164,8 @@ func (client *RiakExplorerClient) ForceRemove(stayingNode string, leavingNode st
 	return m, nil
 }
 
-// ReplaceType is the expected result struct of a replace request
-type ReplaceType struct {
+// ReplaceReply is the expected result struct of a replace request
+type ReplaceReply struct {
 	Replace struct {
 		Success string `json:"success"`
 		Error   string `json:"error"`
@@ -174,8 +174,8 @@ type ReplaceType struct {
 }
 
 // Replace instructs fromNode to replace oldNode with newNode immediately
-func (client *RiakExplorerClient) Replace(fromNode string, oldNode string, newNode string) (ReplaceType, error) {
-	var m ReplaceType
+func (client *RiakExplorerClient) Replace(fromNode string, oldNode string, newNode string) (ReplaceReply, error) {
+	var m ReplaceReply
 	commandURI := fmt.Sprintf("control/nodes/%s/replace/%s/%s", fromNode, oldNode, newNode)
 	v, err := client.doGet(commandURI)
 	if err != nil {
@@ -185,8 +185,8 @@ func (client *RiakExplorerClient) Replace(fromNode string, oldNode string, newNo
 	return m, nil
 }
 
-// StagedReplaceType is the expected result struct of a replace request
-type StagedReplaceType struct {
+// StagedReplaceReply is the expected result struct of a replace request
+type StagedReplaceReply struct {
 	StagedReplace struct {
 		Success string `json:"success"`
 		Error   string `json:"error"`
@@ -195,8 +195,8 @@ type StagedReplaceType struct {
 }
 
 // StagedReplace instructs fromNode to stage a replace for oldNode with newNode
-func (client *RiakExplorerClient) StagedReplace(fromNode string, oldNode string, newNode string) (StagedReplaceType, error) {
-	var m StagedReplaceType
+func (client *RiakExplorerClient) StagedReplace(fromNode string, oldNode string, newNode string) (StagedReplaceReply, error) {
+	var m StagedReplaceReply
 	commandURI := fmt.Sprintf("control/nodes/%s/staged-replace/%s/%s", fromNode, oldNode, newNode)
 	v, err := client.doGet(commandURI)
 	if err != nil {
@@ -206,8 +206,8 @@ func (client *RiakExplorerClient) StagedReplace(fromNode string, oldNode string,
 	return m, nil
 }
 
-// ForceReplaceType is the expected result struct of a replace request
-type ForceReplaceType struct {
+// ForceReplaceReply is the expected result struct of a replace request
+type ForceReplaceReply struct {
 	ForceReplace struct {
 		Success string `json:"success"`
 		Error   string `json:"error"`
@@ -216,8 +216,8 @@ type ForceReplaceType struct {
 }
 
 // ForceReplace instructs fromNode to replace oldNode with newNode
-func (client *RiakExplorerClient) ForceReplace(fromNode string, oldNode string, newNode string) (ForceReplaceType, error) {
-	var m ForceReplaceType
+func (client *RiakExplorerClient) ForceReplace(fromNode string, oldNode string, newNode string) (ForceReplaceReply, error) {
+	var m ForceReplaceReply
 	commandURI := fmt.Sprintf("control/nodes/%s/force-replace/%s/%s", fromNode, oldNode, newNode)
 	v, err := client.doGet(commandURI)
 	if err != nil {
@@ -227,25 +227,25 @@ func (client *RiakExplorerClient) ForceReplace(fromNode string, oldNode string, 
 	return m, nil
 }
 
-// NodeChangeType is the expected result struct of a plan request
-type NodeChangeType struct {
+// NodeChangeReply is the expected result struct of a plan request
+type NodeChangeReply struct {
 	Node   string `json:"node"`
 	Action string `json:"action"`
 	Target string `json:"target"`
 }
 
-// PlanType is the expected result struct of a plan request
-type PlanType struct {
+// PlanReply is the expected result struct of a plan request
+type PlanReply struct {
 	Plan struct {
-		Changes []NodeChangeType `json:"changes"`
-		Error   string           `json:"error"`
+		Changes []NodeChangeReply `json:"changes"`
+		Error   string            `json:"error"`
 	} `json:"plan"`
 	Links Links `json:"links"`
 }
 
 // Plan instructs node to perform a cluster plan changes
-func (client *RiakExplorerClient) Plan(node string) (PlanType, error) {
-	var m PlanType
+func (client *RiakExplorerClient) Plan(node string) (PlanReply, error) {
+	var m PlanReply
 	commandURI := fmt.Sprintf("control/nodes/%s/plan", node)
 	v, err := client.doGet(commandURI)
 	if err != nil {
@@ -255,8 +255,8 @@ func (client *RiakExplorerClient) Plan(node string) (PlanType, error) {
 	return m, nil
 }
 
-// CommitType is the expected result struct of a commit request
-type CommitType struct {
+// CommitReply is the expected result struct of a commit request
+type CommitReply struct {
 	Commit struct {
 		Success string `json:"success"`
 		Error   string `json:"error"`
@@ -265,8 +265,8 @@ type CommitType struct {
 }
 
 // Commit instructs node to commit its current planned cluster changes
-func (client *RiakExplorerClient) Commit(node string) (CommitType, error) {
-	var m CommitType
+func (client *RiakExplorerClient) Commit(node string) (CommitReply, error) {
+	var m CommitReply
 	commandURI := fmt.Sprintf("control/nodes/%s/commit", node)
 	v, err := client.doGet(commandURI)
 	if err != nil {
@@ -276,8 +276,8 @@ func (client *RiakExplorerClient) Commit(node string) (CommitType, error) {
 	return m, nil
 }
 
-// ClearType is the expected result struct of a clear request
-type ClearType struct {
+// ClearReply is the expected result struct of a clear request
+type ClearReply struct {
 	Clear struct {
 		Success string `json:"success"`
 		Error   string `json:"error"`
@@ -286,8 +286,8 @@ type ClearType struct {
 }
 
 // Clear instructs node to clear its current planned cluster changes
-func (client *RiakExplorerClient) Clear(node string) (ClearType, error) {
-	var m ClearType
+func (client *RiakExplorerClient) Clear(node string) (ClearReply, error) {
+	var m ClearReply
 	commandURI := fmt.Sprintf("control/nodes/%s/clear", node)
 	v, err := client.doGet(commandURI)
 	if err != nil {
@@ -297,30 +297,30 @@ func (client *RiakExplorerClient) Clear(node string) (ClearType, error) {
 	return m, nil
 }
 
-// NodeStatusType contains data about each node in a status request
-type NodeStatusType struct {
+// NodeStatusReply contains data about each node in a status request
+type NodeStatusReply struct {
 	ID                string  `json:"id"`
 	Status            string  `json:"status"`
 	RingPercentage    float32 `json:"ring_percentage"`
 	PendingPercentage float32 `json:"pending_percentage"`
 }
 
-// StatusType is the expected result struct of a status request
-type StatusType struct {
+// StatusReply is the expected result struct of a status request
+type StatusReply struct {
 	Status struct {
-		Nodes   []NodeStatusType `json:"nodes"`
-		Valid   int              `json:"valid"`
-		Leaving int              `json:"leaving"`
-		Exiting int              `json:"exiting"`
-		Joining int              `json:"joining"`
-		Down    int              `json:"down"`
+		Nodes   []NodeStatusReply `json:"nodes"`
+		Valid   int               `json:"valid"`
+		Leaving int               `json:"leaving"`
+		Exiting int               `json:"exiting"`
+		Joining int               `json:"joining"`
+		Down    int               `json:"down"`
 	} `json:"status"`
 	Links Links `json:"links"`
 }
 
 // Status instructs node to status its current cluster
-func (client *RiakExplorerClient) Status(node string) (StatusType, error) {
-	var m StatusType
+func (client *RiakExplorerClient) Status(node string) (StatusReply, error) {
+	var m StatusReply
 	commandURI := fmt.Sprintf("control/nodes/%s/status", node)
 	v, err := client.doGet(commandURI)
 	if err != nil {
@@ -330,8 +330,8 @@ func (client *RiakExplorerClient) Status(node string) (StatusType, error) {
 	return m, nil
 }
 
-// RingReadyType is the expected result struct of a ringReady request
-type RingReadyType struct {
+// RingReadyReply is the expected result struct of a ringReady request
+type RingReadyReply struct {
 	RingReady struct {
 		Ready bool     `json:"ready"`
 		Nodes []string `json:"nodes"`
@@ -341,8 +341,8 @@ type RingReadyType struct {
 }
 
 // RingReady instructs node to ringReady its current cluster
-func (client *RiakExplorerClient) RingReady(node string) (RingReadyType, error) {
-	var m RingReadyType
+func (client *RiakExplorerClient) RingReady(node string) (RingReadyReply, error) {
+	var m RingReadyReply
 	commandURI := fmt.Sprintf("control/nodes/%s/ringready", node)
 	v, err := client.doGet(commandURI)
 	if err != nil {
