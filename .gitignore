@@ -9,7 +9,8 @@ scheduler/riak_node_states/state_*
 *_linux_amd64
 .DS_Store
 Godeps/_workspace
-framework/data/*.tar.gz
+riak_explorer/data/*.tar.gz
+riak_explorer/data/*.tar
 scheduler/data/*.tar.gz
 scheduler/cluster_state/clusterstate_jsonenums.go
 scheduler/cluster_state/clusterstate_string.go
