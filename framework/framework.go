@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/basho-labs/riak-mesos/scheduler"
 )
@@ -29,9 +30,6 @@ func main() {
 	log.SetLevel(log.DebugLevel)
 
 	sched := scheduler.NewSchedulerCore(schedulerHostname, FrameworkName, []string{zookeeperAddr}, schedulerIpAddr, user)
-	//go framework.NewTargetTask("golang-riak-task-a", sched, mgr).Loop()
-	//	go framework.NewTargetTask("golang-riak-task-b", sched, mgr).Loop()
-	//	go framework.NewTargetTask("golang-riak-task-c", sched, mgr).Loop()
 	sched.Run(mesosMaster)
 
 }
