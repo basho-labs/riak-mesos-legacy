@@ -23,7 +23,7 @@ func init() {
 	flag.StringVar(&clusterName, "cluster-name", "", "Name of new cluster")
 	flag.IntVar(&nodes, "nodes", 1, "Nodes in new cluster")
 	flag.StringVar(&frameworkName, "name", "riak-mesos-go3", "Framework Instance Name")
-	flag.StringVar(&cmd, "command", "", "Command")
+	flag.StringVar(&cmd, "command", "get-url", "get-url, get-clusters, get-cluster, create-cluster, delete-cluster, get-nodes, add-node, add-nodes")
 	flag.Parse()
 
 	if cmd == "" {
