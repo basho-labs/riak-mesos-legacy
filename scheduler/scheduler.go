@@ -82,19 +82,19 @@ type SchedulerCore struct {
 	clusters            map[string]*FrameworkRiakCluster
 	schedulerHTTPServer *SchedulerHTTPServer
 	mgr                 *metamgr.MetadataManager
-	schedulerIpAddr     string
+	schedulerIPAddr     string
 	frnDict             map[string]*FrameworkRiakNode
 	rServer             *ReconcilationServer
 	user                string
 	zookeepers          []string
 }
 
-func NewSchedulerCore(schedulerHostname string, frameworkName string, zookeepers []string, schedulerIpAddr string, user string) *SchedulerCore {
+func NewSchedulerCore(schedulerHostname string, frameworkName string, zookeepers []string, schedulerIPAddr string, user string) *SchedulerCore {
 	mgr := metamgr.NewMetadataManager(frameworkName, zookeepers)
 	scheduler := &SchedulerCore{
 		lock:            &sync.Mutex{},
 		frameworkName:   frameworkName,
-		schedulerIpAddr: schedulerIpAddr,
+		schedulerIPAddr: schedulerIPAddr,
 		clusters:        make(map[string]*FrameworkRiakCluster),
 		mgr:             mgr,
 		frnDict:         make(map[string]*FrameworkRiakNode),
@@ -148,7 +148,7 @@ func (sc *SchedulerCore) Run(mesosMaster string) {
 		frameworkUser = proto.String(sc.user)
 	}
 	cred := (*mesos.Credential)(nil)
-	bindingAddress := parseIP(sc.schedulerIpAddr)
+	bindingAddress := parseIP(sc.schedulerIPAddr)
 	fwinfo := &mesos.FrameworkInfo{
 		User:            frameworkUser,
 		Name:            proto.String("Riak Framework"),
