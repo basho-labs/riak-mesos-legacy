@@ -29,7 +29,6 @@ deps:
 	cd $(BASE_DIR)/scheduler/data && $(MAKE)
 	cd $(BASE_DIR)/riak_explorer/data && $(MAKE)
 
-
 clean_deps:
 	rm $(BASE_DIR)/scheduler/data/*.tar.gz
 	rm $(BASE_DIR)/riak_explorer/data/*.tar.gz
@@ -65,6 +64,7 @@ clean:
 	-rm $(BASE_DIR)/scheduler/data/*_amd64
 	-rm $(BASE_DIR)/scheduler/bindata_generated.go
 	-rm $(BASE_DIR)/executor/bindata_generated.go
+	-rm $(BASE_DIR)/riak_explorer/bindata_generated.go
 
 run:
 	cd $(BASE_DIR)/bin && ./framework_$(FARC) \
