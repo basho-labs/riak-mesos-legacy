@@ -1,4 +1,4 @@
-bin/*
+bin/dcos
 .idea
 *.iml
 */bindata_generated.go
