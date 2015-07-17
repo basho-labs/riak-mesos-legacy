@@ -7,8 +7,6 @@ import (
 	"github.com/basho-labs/riak-mesos/scheduler"
 )
 
-var ()
-
 var (
 	mesosMaster       string
 	zookeeperAddr     string
