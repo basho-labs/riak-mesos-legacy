@@ -3,8 +3,8 @@ package riak_explorer
 import (
 	"archive/tar"
 	"bytes"
+	"compress/gzip"
 	"fmt"
-	log "github.com/Sirupsen/logrus"
 	"io"
 	"io/ioutil"
 	"os"
@@ -12,8 +12,12 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"syscall"
+	"text/template"
 	"time"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 type RiakExplorer struct {
@@ -21,6 +25,10 @@ type RiakExplorer struct {
 	exe      *exec.Cmd
 	waitChan chan interface{}
 	teardown chan chan interface{}
+}
+
+type templateData struct {
+	HTTPPort int64
 }
 
 func startExplorer(retChan chan *RiakExplorer) {
@@ -151,13 +159,21 @@ func (re *RiakExplorer) deleteData() {
 }
 func decompress(ret chan string) {
 	defer close(ret)
-	assetPath := fmt.Sprintf("riak_explorer_%s_%s.tar", runtime.GOOS, runtime.GOARCH)
+	assetPath := fmt.Sprintf("riak_explorer_%s_%s.tar.gz", runtime.GOOS, runtime.GOARCH)
 	asset, err := Asset(assetPath)
 	if err != nil {
 		log.Fatal(err)
 	}
-	r := bytes.NewReader(asset)
-	tr := tar.NewReader(r)
+	bytesReader := bytes.NewReader(asset)
+
+	gzReader, err := gzip.NewReader(bytesReader)
+
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	tr := tar.NewReader(gzReader)
 	tempdir, err := ioutil.TempDir("./", "riak_explorer.")
 	if err != nil {
 		log.Fatal(err)
@@ -197,19 +213,48 @@ func decompress(ret chan string) {
 	ret <- tempdir
 }
 func (re *RiakExplorer) configure() {
-	// TODO: Add dynamic port configuration
+	data, err := Asset("riak_explorer.conf")
+	if err != nil {
+		log.Panic("Got error", err)
+	}
+	tmpl, err := template.New("test").Parse(string(data))
+
+	if err != nil {
+		log.Panic(err)
+	}
+
+	// Populate template data from the MesosTask
+	vars := templateData{}
+
+	// When starting scheduler from Marathon, PORT0-N env vars will be set
+	strBindPort := os.Getenv("PORT1")
+
+	// TODO: Sargun fix me
+	if strBindPort == "" {
+		strBindPort = "9000"
+	}
+
+	port, err := strconv.Atoi(strBindPort)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	vars.HTTPPort = int64(port)
+
 	configpath := filepath.Join(".", re.tempdir, "riak_explorer", "etc", "riak_explorer.conf")
-	configfile, err := os.OpenFile(configpath, os.O_TRUNC|os.O_CREATE|os.O_RDWR, 0)
+	file, err := os.OpenFile(configpath, os.O_TRUNC|os.O_CREATE|os.O_RDWR, 0)
+
 	if err != nil {
-		log.Fatal(err)
+		log.Panic("Unable to open file: ", err)
 	}
-	configAsset, err := Asset("riak_explorer.conf")
+
+	err = tmpl.Execute(file, vars)
+
 	if err != nil {
-		log.Fatal(err)
+		log.Panic("Got error", err)
 	}
-	io.Copy(configfile, bytes.NewReader(configAsset))
 }
-func NewRiakExplorer(port int) (*RiakExplorer, error) {
+func NewRiakExplorer() (*RiakExplorer, error) {
 	retFuture := make(chan *RiakExplorer)
 	go startExplorer(retFuture)
 	retVal := <-retFuture

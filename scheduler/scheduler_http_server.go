@@ -3,7 +3,6 @@ package scheduler
 import (
 	"encoding/json"
 	"fmt"
-	assetfs "github.com/elazarl/go-bindata-assetfs"
 	"net"
 	"net/http"
 	"net/http/pprof"
@@ -11,6 +10,7 @@ import (
 	"strconv"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/elazarl/go-bindata-assetfs"
 	"github.com/gorilla/mux"
 )
 
@@ -83,7 +83,15 @@ func (schttp *SchedulerHTTPServer) serveNodes(w http.ResponseWriter, r *http.Req
 }
 
 func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *SchedulerHTTPServer {
-	ln, err := net.Listen("tcp", ":0")
+	// When starting scheduler from Marathon, PORT0-N env vars will be set
+	strBindPort := os.Getenv("PORT0")
+
+	// If PORT0 isn't set, automatically bind to an available one
+	// TODO: Sargun fix me
+	if strBindPort == "" {
+		strBindPort = "0"
+	}
+	ln, err := net.Listen("tcp", ":"+strBindPort)
 	if err != nil {
 		log.Fatal(err)
 	}

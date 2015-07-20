@@ -6,7 +6,7 @@ import (
 )
 
 func TestNothing(t *testing.T) {
-	re, err := NewRiakExplorer(10001)
+	re, err := NewRiakExplorer()
 	if err == nil {
 		defer re.TearDown()
 	}

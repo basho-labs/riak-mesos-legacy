@@ -31,5 +31,4 @@ func main() {
 
 	sched := scheduler.NewSchedulerCore(schedulerHostname, frameworkName, []string{zookeeperAddr}, schedulerIPAddr, user)
 	sched.Run(mesosMaster)
-
 }
