@@ -12,7 +12,6 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"syscall"
 	"text/template"
 	"time"
@@ -25,13 +24,14 @@ type RiakExplorer struct {
 	exe      *exec.Cmd
 	waitChan chan interface{}
 	teardown chan chan interface{}
+	port	 int64
 }
 
 type templateData struct {
 	HTTPPort int64
 }
 
-func startExplorer(retChan chan *RiakExplorer) {
+func startExplorer(port int64, retChan chan *RiakExplorer) {
 
 	signals := make(chan os.Signal, 3)
 	signal.Notify(signals, syscall.SIGTERM, syscall.SIGINT, syscall.SIGKILL)
@@ -48,11 +48,12 @@ func startExplorer(retChan chan *RiakExplorer) {
 		tempdir:  tempdir,
 		teardown: make(chan chan interface{}),
 		waitChan: waitChan,
+		port:	  port,
 	}
 
 	defer close(re.teardown)
 
-	re.configure()
+	re.configure(port)
 	re.start()
 
 	go func() {
@@ -90,7 +91,7 @@ func startExplorer(retChan chan *RiakExplorer) {
 		case <-time.After(100 * time.Millisecond):
 			{
 				// Try pinging Riak Explorer
-				_, err := NewRiakExplorerClient(fmt.Sprintf("localhost:9000")).Ping()
+				_, err := NewRiakExplorerClient(fmt.Sprintf("localhost:%d", port)).Ping()
 				if err == nil {
 					retChan <- re
 					// re.background() should never return
@@ -102,6 +103,9 @@ func startExplorer(retChan chan *RiakExplorer) {
 			}
 		}
 	}
+}
+func (re *RiakExplorer) NewRiakExplorerClient() *RiakExplorerClient {
+	return NewRiakExplorerClient(fmt.Sprintf("localhost:%d", re.port))
 }
 func (re *RiakExplorer) TearDown() {
 	log.Infof("RE: %+v", re)
@@ -212,7 +216,7 @@ func decompress(ret chan string) {
 	}
 	ret <- tempdir
 }
-func (re *RiakExplorer) configure() {
+func (re *RiakExplorer) configure(port int64) {
 	data, err := Asset("riak_explorer.conf")
 	if err != nil {
 		log.Panic("Got error", err)
@@ -226,21 +230,8 @@ func (re *RiakExplorer) configure() {
 	// Populate template data from the MesosTask
 	vars := templateData{}
 
-	// When starting scheduler from Marathon, PORT0-N env vars will be set
-	strBindPort := os.Getenv("PORT1")
 
-	// TODO: Sargun fix me
-	if strBindPort == "" {
-		strBindPort = "9000"
-	}
-
-	port, err := strconv.Atoi(strBindPort)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	vars.HTTPPort = int64(port)
-
+	vars.HTTPPort = port
 	configpath := filepath.Join(".", re.tempdir, "riak_explorer", "etc", "riak_explorer.conf")
 	file, err := os.OpenFile(configpath, os.O_TRUNC|os.O_CREATE|os.O_RDWR, 0)
 
@@ -254,9 +245,10 @@ func (re *RiakExplorer) configure() {
 		log.Panic("Got error", err)
 	}
 }
-func NewRiakExplorer() (*RiakExplorer, error) {
+
+func NewRiakExplorer(port int64) (*RiakExplorer, error) {
 	retFuture := make(chan *RiakExplorer)
-	go startExplorer(retFuture)
+	go startExplorer(port, retFuture)
 	retVal := <-retFuture
 	log.Info("Retval: ", retVal)
 	if retVal == nil {
