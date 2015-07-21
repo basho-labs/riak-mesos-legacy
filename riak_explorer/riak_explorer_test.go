@@ -11,7 +11,7 @@ func TestNothing(t *testing.T) {
 	assert := assert.New(t)
 
 	// Port number for testing
-	re, err := NewRiakExplorer(7901) // 998th  prime number.
+	re, err := NewRiakExplorer(7901, "rex@127.0.0.1") // 998th  prime number.
 	assert.Equal(nil, err)
 	re.TearDown()
 	_, err = re.NewRiakExplorerClient().Ping()

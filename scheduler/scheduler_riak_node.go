@@ -133,7 +133,16 @@ func (frn *FrameworkRiakNode) GetTaskStatus() *mesos.TaskStatus {
 	}
 }
 func (frn *FrameworkRiakNode) GetAsks() []common.ResourceAsker {
-	return []common.ResourceAsker{common.AskForCPU(0.1), common.AskForPorts(3), common.AskForMemory(128)}
+	// 10 for good measure
+	// Ports:
+	// -Protocol Buffers
+	// -HTTP
+	// -Riak Explorer (rex)
+	// 4-10 -- unknown, so far
+	// Potential:
+	// EPM
+
+	return []common.ResourceAsker{common.AskForCPU(0.1), common.AskForPorts(10), common.AskForMemory(128)}
 }
 func (frn *FrameworkRiakNode) GetCombinedAsk() common.CombinedResourceAsker {
 	ret := func(offer []*mesos.Resource) ([]*mesos.Resource, []*mesos.Resource, bool) {
@@ -197,6 +206,7 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(offer *mesos.Off
 	taskId := &mesos.TaskID{
 		Value: proto.String(frn.CurrentID()),
 	}
+
 	nodename := frn.NodeName() + "@" + offer.GetHostname()
 
 	if !strings.Contains(offer.GetHostname(), ".") {
@@ -205,6 +215,7 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(offer *mesos.Off
 
 	taskData := common.TaskData{
 		FullyQualifiedNodeName: nodename,
+		RexFullyQualifiedNodeName: "rex-" + nodename,
 		Zookeepers:             frn.frc.sc.zookeepers,
 		ClusterName:            frn.frc.Name,
 		NodeID:                 frn.UUID.String(),

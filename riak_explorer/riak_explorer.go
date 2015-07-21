@@ -29,9 +29,10 @@ type RiakExplorer struct {
 
 type templateData struct {
 	HTTPPort int64
+	NodeName string
 }
 
-func startExplorer(port int64, retChan chan *RiakExplorer) {
+func startExplorer(port int64, nodename string, retChan chan *RiakExplorer) {
 
 	signals := make(chan os.Signal, 3)
 	signal.Notify(signals, syscall.SIGTERM, syscall.SIGINT, syscall.SIGKILL)
@@ -53,7 +54,7 @@ func startExplorer(port int64, retChan chan *RiakExplorer) {
 
 	defer close(re.teardown)
 
-	re.configure(port)
+	re.configure(port, nodename)
 	re.start()
 
 	go func() {
@@ -216,7 +217,7 @@ func decompress(ret chan string) {
 	}
 	ret <- tempdir
 }
-func (re *RiakExplorer) configure(port int64) {
+func (re *RiakExplorer) configure(port int64, nodename string) {
 	data, err := Asset("riak_explorer.conf")
 	if err != nil {
 		log.Panic("Got error", err)
@@ -230,7 +231,7 @@ func (re *RiakExplorer) configure(port int64) {
 	// Populate template data from the MesosTask
 	vars := templateData{}
 
-
+	vars.NodeName = nodename
 	vars.HTTPPort = port
 	configpath := filepath.Join(".", re.tempdir, "riak_explorer", "etc", "riak_explorer.conf")
 	file, err := os.OpenFile(configpath, os.O_TRUNC|os.O_CREATE|os.O_RDWR, 0)
@@ -246,9 +247,9 @@ func (re *RiakExplorer) configure(port int64) {
 	}
 }
 
-func NewRiakExplorer(port int64) (*RiakExplorer, error) {
+func NewRiakExplorer(port int64, nodename string) (*RiakExplorer, error) {
 	retFuture := make(chan *RiakExplorer)
-	go startExplorer(port, retFuture)
+	go startExplorer(port, nodename, retFuture)
 	retVal := <-retFuture
 	log.Info("Retval: ", retVal)
 	if retVal == nil {

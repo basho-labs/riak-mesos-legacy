@@ -65,20 +65,20 @@ func (node *ZkNode) MakeEmptyChild(name string) *ZkNode {
 	}
 	return newNode
 }
-func (node *ZkNode) MakeChild(name string) *ZkNode {
+func (node *ZkNode) MakeChild(name string, ephemeral bool) *ZkNode {
 	if strings.Contains(name, "/") {
 		panic("Error, name of subnode cannot contain /")
 	}
 	ns := makeSubSpace(node.ns, name)
-	return node.mgr.makeNode(ns)
+	return node.mgr.makeNode(ns, ephemeral)
 }
 
-func (node *ZkNode) MakeChildWithData(name string, data []byte) *ZkNode {
+func (node *ZkNode) MakeChildWithData(name string, data []byte, ephemeral bool) *ZkNode {
 	if strings.Contains(name, "/") {
 		panic("Error, name of subnode cannot contain /")
 	}
 	ns := makeSubSpace(node.ns, name)
-	return node.mgr.makeNodeWithData(ns, data)
+	return node.mgr.makeNodeWithData(ns, data, ephemeral)
 }
 
 func (node *ZkNode) GetChild(name string) *ZkNode {
@@ -244,20 +244,32 @@ func (mgr *MetadataManager) getNode(ns Namespace) *ZkNode {
 	return node
 }
 
-func (mgr *MetadataManager) makeNode(ns Namespace) *ZkNode {
+func (mgr *MetadataManager) makeNode(ns Namespace, ephemeral bool) *ZkNode {
+	var flags int32
+	if ephemeral {
+		flags = zk.FlagEphemeral
+	} else {
+		flags = 0
+	}
 	// Namespaces are also nodes
 	log.Info("Making node")
-	_, err := mgr.zkConn.Create(ns.GetZKPath(), nil, 0, zk.WorldACL(zk.PermAll))
+	_, err := mgr.zkConn.Create(ns.GetZKPath(), nil, flags, zk.WorldACL(zk.PermAll))
 	if err != nil {
 		log.Panic(err)
 	}
 	return mgr.getNode(ns)
 }
 
-func (mgr *MetadataManager) makeNodeWithData(ns Namespace, data []byte) *ZkNode {
+func (mgr *MetadataManager) makeNodeWithData(ns Namespace, data []byte, ephemeral bool) *ZkNode {
+	var flags int32
+	if ephemeral {
+		flags = zk.FlagEphemeral
+	} else {
+		flags = 0
+	}
 	// Namespaces are also nodes
 	log.Info("Making node")
-	_, err := mgr.zkConn.Create(ns.GetZKPath(), data, 0, zk.WorldACL(zk.PermAll))
+	_, err := mgr.zkConn.Create(ns.GetZKPath(), data, flags, zk.WorldACL(zk.PermAll))
 	if err != nil {
 		log.Panic(err)
 	}

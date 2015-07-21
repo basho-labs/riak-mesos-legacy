@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"text/template"
 	"time"
+	rex "github.com/basho-labs/riak-mesos/riak_explorer"
 )
 
 type RiakNode struct {
@@ -24,6 +25,7 @@ type RiakNode struct {
 	running         bool
 	metadataManager *metamgr.MetadataManager
 	taskData        common.TaskData
+	rex				*rex.RiakExplorer
 }
 
 type templateData struct {
@@ -52,6 +54,18 @@ func NewRiakNode(taskInfo *mesos.TaskInfo, executor *ExecutorCore) *RiakNode {
 	}
 }
 
+func portIter(resources []*mesos.Resource) chan int64 {
+	ports := make(chan int64)
+	go func() {
+		defer close(ports)
+		for _, resource := range util.FilterResources(resources, func(res *mesos.Resource) bool { return res.GetName() == "ports" }) {
+			for _, port := range common.RangesToArray(resource.GetRanges().GetRange()) {
+				ports <- port
+			}
+		}
+	}()
+	return ports
+}
 func (riakNode *RiakNode) shutdownRiak() error {
 	process := exec.Command("riak/bin/riak", "stop")
 	process.Stdout = os.Stdout
@@ -132,7 +146,7 @@ func (riakNode *RiakNode) runLoop() {
 	riakNode.executor.Driver.Stop()
 
 }
-func (riakNode *RiakNode) configureRiak() {
+func (riakNode *RiakNode) configureRiak(ports chan int64) {
 
 	data, err := Asset("data/riak.conf")
 	if err != nil {
@@ -148,15 +162,6 @@ func (riakNode *RiakNode) configureRiak() {
 	vars := templateData{}
 	vars.FullyQualifiedNodeName = riakNode.taskData.FullyQualifiedNodeName
 
-	ports := make(chan int64)
-	go func() {
-		defer close(ports)
-		for _, resource := range util.FilterResources(riakNode.taskInfo.Resources, func(res *mesos.Resource) bool { return res.GetName() == "ports" }) {
-			for _, port := range common.RangesToArray(resource.GetRanges().GetRange()) {
-				ports <- port
-			}
-		}
-	}()
 
 	vars.HTTPPort = <-ports
 	vars.PBPort = <-ports
@@ -179,7 +184,16 @@ func (riakNode *RiakNode) Run() {
 	var err error
 	log.Info("Other hilarious facts: ", riakNode.taskInfo)
 
-	riakNode.configureRiak()
+	ports := portIter(riakNode.taskInfo.Resources)
+	riakNode.configureRiak(ports)
+	rexPort := <-ports
+	log.Info("RexPort (before sleeping): ", rexPort)
+
+	riakNode.rex, err = rex.NewRiakExplorer(rexPort, riakNode.taskData.RexFullyQualifiedNodeName)
+
+	if err != nil {
+		log.Fatal("Could not start up Riak Explorer")
+	}
 
 	process := exec.Command("riak/bin/riak", "start")
 	process.Stdout = os.Stdout
@@ -224,11 +238,21 @@ func (riakNode *RiakNode) Run() {
 		// Do cluster joiny stuff
 		children := coordinatedNodes.GetChildren()
 		log.Info("Coordinator Children: ", children)
-		if len(children) > 0 {
-			// We should join the children here
-			// TODO: Waiting on https://github.com/basho-labs/riak-mesos/issues/25
+		for _, child := range children {
+			cData, err := common.DeserializeCoordinatedData(child.GetData())
+			if err != nil {
+				log.Panicf("Unable to deserialize Coordinated data for child %v: %v", child, err)
+			}
+			reply, _ := riakNode.rex.NewRiakExplorerClient().Join(riakNode.taskData.FullyQualifiedNodeName, cData.NodeName)
+			log.Info("Join: ", reply)
 		}
-
+		child := coordinatedNodes.MakeChild(riakNode.taskInfo.GetTaskId().GetValue(), true)
+		coordinatedData := common.CoordinatedData{NodeName:riakNode.taskData.FullyQualifiedNodeName}
+		cdBytes, err := coordinatedData.Serialize()
+		if err != nil {
+			log.Panic("Could not serialize coordinated data	", err)
+		}
+		child.SetData(cdBytes)
 		lock.Unlock()
 		runStatus := &mesos.TaskStatus{
 			TaskId: riakNode.taskInfo.GetTaskId(),

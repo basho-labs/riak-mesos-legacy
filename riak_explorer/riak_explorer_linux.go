@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"fmt"
 	"syscall"
 )
 
@@ -18,9 +19,17 @@ func (re *RiakExplorer) start() {
 	exe.Stderr = os.Stderr
 	//TODO: Add for Linux
 	exe.SysProcAttr = &syscall.SysProcAttr{
-		Pdeathsig: syscall.SIGKILL,
+		//Pdeathsig: syscall.SIGKILL,
 	}
-	err := exe.Start()
+	wd, err := os.Getwd()
+	if err != nil {
+		log.Fatal("Could not get current working directory")
+	}
+	home := filepath.Join(wd, re.tempdir)
+	homevar := fmt.Sprintf("HOME=%s", home)
+	exe.Env = append(os.Environ(), homevar)
+
+	err = exe.Start()
 	if err != nil {
 		log.Panic("Error starting explorer")
 	}
