@@ -58,11 +58,15 @@ func main() {
 		requireClusterName()
 		respond(client.GetNodes(clusterName))
 	case "add-node":
+		requireClusterName()
+		respond(client.AddNode(clusterName))
 	case "add-nodes":
 		requireClusterName()
 		for i := 1; i <= nodes; i++ {
 			respond(client.AddNode(clusterName))
 		}
+	default:
+		log.Fatal("Unknown command")
 	}
 }
 
