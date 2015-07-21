@@ -5,6 +5,7 @@ import (
 	util "github.com/mesos/mesos-go/mesosutil"
 	"github.com/stretchr/testify/assert"
 	"testing"
+	"math/rand"
 )
 
 func generateResourceOffer() []*mesos.Resource {
@@ -85,12 +86,18 @@ func TestArrayToRanges(t *testing.T) {
 }
 
 func TestGoodPortAsk(t *testing.T) {
+	rand.Seed(10)
 	assert := assert.New(t)
 	offer := generateResourceOffer()
 	askFun := AskForPorts(100)
-	_, resourceAsk, success := askFun(offer)
+	remaining, resourceAsk, success := askFun(offer)
 	assert.Equal(true, success)
-	assert.Equal(util.NewRangesResource("ports", []*mesos.Value_Range{util.NewValueRange(31000, 31099)}), resourceAsk)
+	assert.Equal(util.NewRangesResource("ports", []*mesos.Value_Range{util.NewValueRange(31105, 31204)}), resourceAsk)
+	remainingPorts := util.FilterResources(remaining, func(res *mesos.Resource) bool {
+		return res.GetName() == "ports"
+	})
+	assert.Equal([]*mesos.Resource{util.NewRangesResource("ports", []*mesos.Value_Range{util.NewValueRange(31000, 31104), util.NewValueRange(31205, 32000)})}, remainingPorts)
+
 }
 
 func TestBadPortAsk(t *testing.T) {

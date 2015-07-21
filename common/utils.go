@@ -90,10 +90,21 @@ func AskForPorts(portCount int) ResourceAsker {
 		for idx, resource := range resources {
 			if resource.GetName() == "ports" {
 				ports := RangesToArray(resource.GetRanges().GetRange())
+
 				// Now we have to see if there are N ports
 				if len(ports) >= portCount {
-					takingPorts := ports[:portCount]
-					leavingPorts := ports[portCount:]
+					var sliceLoc int
+					// Calculate the slice where I'm taking ports:
+					if len(ports)-portCount == 0 {
+						sliceLoc = 0
+					} else {
+						sliceLoc = rand.Intn(len(ports)-portCount)
+					}
+					takingPorts := make([]int64, portCount)
+					copy(takingPorts, ports[sliceLoc:(sliceLoc+portCount)])
+					leavingPorts := make([]int64, len(ports) - portCount)
+					copy(leavingPorts, ports[:sliceLoc])
+					copy(leavingPorts[sliceLoc:], ports[(sliceLoc+portCount):])
 					newResources[idx] = util.NewRangesResource("ports", ArrayToRanges(leavingPorts))
 					ask := util.NewRangesResource("ports", ArrayToRanges(takingPorts))
 					return newResources, ask, true
