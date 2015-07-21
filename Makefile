@@ -34,6 +34,7 @@ clean_deps:
 	rm $(BASE_DIR)/riak_explorer/data/*.tar.gz
 
 build_executor:
+	go generate ./riak_explorer/...
 	go generate ./executor/...
 	gox \
 		-osarch=$(EGARC) \
