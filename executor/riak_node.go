@@ -6,6 +6,8 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/basho-labs/riak-mesos/common"
 	metamgr "github.com/basho-labs/riak-mesos/metadata_manager"
+	"github.com/basho-labs/riak-mesos/process_manager"
+	rex "github.com/basho-labs/riak-mesos/riak_explorer"
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	util "github.com/mesos/mesos-go/mesosutil"
 	"os"
@@ -13,7 +15,6 @@ import (
 	"path/filepath"
 	"text/template"
 	"time"
-	rex "github.com/basho-labs/riak-mesos/riak_explorer"
 )
 
 type RiakNode struct {
@@ -21,11 +22,11 @@ type RiakNode struct {
 	taskInfo        *mesos.TaskInfo
 	generation      uint64
 	finishChan      chan interface{}
-	waitChan        chan interface{}
 	running         bool
 	metadataManager *metamgr.MetadataManager
 	taskData        common.TaskData
-	rex				*rex.RiakExplorer
+	rex             *rex.RiakExplorer
+	pm              *process_manager.ProcessManager
 }
 
 type templateData struct {
@@ -44,10 +45,9 @@ func NewRiakNode(taskInfo *mesos.TaskInfo, executor *ExecutorCore) *RiakNode {
 	log.Infof("Deserialized task data: %+v", taskData)
 	mgr := metamgr.NewMetadataManager(executor.fwInfo.GetId().GetValue(), taskData.Zookeepers)
 	return &RiakNode{
+
 		executor:        executor,
 		taskInfo:        taskInfo,
-		finishChan:      make(chan interface{}, 1),
-		waitChan:        make(chan interface{}, 1),
 		running:         false,
 		metadataManager: mgr,
 		taskData:        taskData,
@@ -66,42 +66,7 @@ func portIter(resources []*mesos.Resource) chan int64 {
 	}()
 	return ports
 }
-func (riakNode *RiakNode) shutdownRiak() error {
-	process := exec.Command("riak/bin/riak", "stop")
-	process.Stdout = os.Stdout
-	process.Stderr = os.Stderr
-	wd, err := os.Getwd()
-	if err != nil {
-		log.Fatal("Could not get current working directory")
-	}
-	home := filepath.Join(wd, "riak/data")
-	homevar := fmt.Sprintf("HOME=%s", home)
-	process.Env = append(os.Environ(), homevar)
-	return process.Run()
-}
-func (riakNode *RiakNode) waitLoop() {
-	// I guess I can send an unneccessary ping, but eh
-	for riakNode.running == true {
-		process := exec.Command("riak/bin/riak", "ping")
-		process.Stdout = os.Stdout
-		process.Stderr = os.Stderr
-		wd, err := os.Getwd()
-		if err != nil {
-			log.Fatal("Could not get current working directory")
-		}
-		home := filepath.Join(wd, "riak/data")
-		homevar := fmt.Sprintf("HOME=%s", home)
-		process.Env = append(os.Environ(), homevar)
-		err = process.Run()
-		if err != nil {
-			log.Info("Error pinging Riak: ", err)
-			riakNode.waitChan <- nil
-			break
-		}
-		<-time.After(10 * time.Second)
-	}
-}
-func (riakNode *RiakNode) runLoop() {
+func (riakNode *RiakNode) runLoop(child *metamgr.ZkNode) {
 
 	runStatus := &mesos.TaskStatus{
 		TaskId: riakNode.taskInfo.GetTaskId(),
@@ -112,8 +77,9 @@ func (riakNode *RiakNode) runLoop() {
 		log.Panic("Got error", err)
 	}
 
+	waitChan := riakNode.pm.Listen()
 	select {
-	case <-riakNode.waitChan:
+	case <-waitChan:
 		{
 			log.Info("Riak Died, failing")
 			// Just in case, cleanup
@@ -130,7 +96,7 @@ func (riakNode *RiakNode) runLoop() {
 	case <-riakNode.finishChan:
 		{
 			log.Info("Finish channel says to shut down Riak")
-			riakNode.shutdownRiak()
+			riakNode.pm.TearDown()
 			runStatus = &mesos.TaskStatus{
 				TaskId: riakNode.taskInfo.GetTaskId(),
 				State:  mesos.TaskState_TASK_FINISHED.Enum(),
@@ -141,7 +107,8 @@ func (riakNode *RiakNode) runLoop() {
 			}
 		}
 	}
-	time.Sleep(15 * time.Minute)
+	child.Delete()
+	time.Sleep(15 * time.Second)
 	log.Info("Shutting down")
 	riakNode.executor.Driver.Stop()
 
@@ -161,7 +128,6 @@ func (riakNode *RiakNode) configureRiak(ports chan int64) {
 	// Populate template data from the MesosTask
 	vars := templateData{}
 	vars.FullyQualifiedNodeName = riakNode.taskData.FullyQualifiedNodeName
-
 
 	vars.HTTPPort = <-ports
 	vars.PBPort = <-ports
@@ -195,17 +161,20 @@ func (riakNode *RiakNode) Run() {
 		log.Fatal("Could not start up Riak Explorer")
 	}
 
-	process := exec.Command("riak/bin/riak", "start")
-	process.Stdout = os.Stdout
-	process.Stderr = os.Stderr
-	wd, err := os.Getwd()
-	if err != nil {
-		log.Fatal("Could not get current working directory")
+	HealthCheckFun := func() error {
+		process := exec.Command("/usr/bin/timeout", "--kill-after=5s", "--signal=TERM", "5s", "riak/bin/riak-admin", "wait-for-service", "riak_kv")
+		process.Stdout = os.Stdout
+		process.Stderr = os.Stderr
+		wd, err := os.Getwd()
+		if err != nil {
+			log.Fatal("Could not get current working directory")
+		}
+		home := filepath.Join(wd, "riak/data")
+		homevar := fmt.Sprintf("HOME=%s", home)
+		process.Env = append(os.Environ(), homevar)
+		return process.Run()
 	}
-	home := filepath.Join(wd, "riak/data")
-	homevar := fmt.Sprintf("HOME=%s", home)
-	process.Env = append(os.Environ(), homevar)
-	err = process.Run()
+	riakNode.pm, err = process_manager.NewProcessManager(func() { return }, "riak/bin/riak", []string{"console", "-noinput"}, HealthCheckFun)
 
 	if err != nil {
 		log.Error("Could not start Riak: ", err)
@@ -243,11 +212,11 @@ func (riakNode *RiakNode) Run() {
 			if err != nil {
 				log.Panicf("Unable to deserialize Coordinated data for child %v: %v", child, err)
 			}
-			reply, _ := riakNode.rex.NewRiakExplorerClient().Join(riakNode.taskData.FullyQualifiedNodeName, cData.NodeName)
-			log.Info("Join: ", reply)
+			reply, err := riakNode.rex.NewRiakExplorerClient().Join(riakNode.taskData.FullyQualifiedNodeName, cData.NodeName)
+			log.Infof("Join to %v with reply %+v, err: %+v", cData.NodeName, reply, err)
 		}
 		child := coordinatedNodes.MakeChild(riakNode.taskInfo.GetTaskId().GetValue(), true)
-		coordinatedData := common.CoordinatedData{NodeName:riakNode.taskData.FullyQualifiedNodeName}
+		coordinatedData := common.CoordinatedData{NodeName: riakNode.taskData.FullyQualifiedNodeName}
 		cdBytes, err := coordinatedData.Serialize()
 		if err != nil {
 			log.Panic("Could not serialize coordinated data	", err)
@@ -263,9 +232,7 @@ func (riakNode *RiakNode) Run() {
 			log.Panic("Got error", err)
 		}
 		riakNode.running = true
-		go riakNode.runLoop()
-		go riakNode.waitLoop()
-
+		go riakNode.runLoop(child)
 	}
 }
 
