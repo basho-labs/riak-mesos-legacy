@@ -5,11 +5,11 @@ import (
 )
 
 type TaskData struct {
-	FullyQualifiedNodeName string
+	FullyQualifiedNodeName    string
 	RexFullyQualifiedNodeName string
-	Zookeepers             []string
-	ClusterName            string
-	NodeID                 string
+	Zookeepers                []string
+	ClusterName               string
+	NodeID                    string
 }
 
 func (s *TaskData) Serialize() ([]byte, error) {
@@ -24,14 +24,13 @@ func DeserializeTaskData(data []byte) (TaskData, error) {
 }
 
 type CoordinatedData struct {
-	NodeName	string
+	NodeName string
 }
 
 func (s *CoordinatedData) Serialize() ([]byte, error) {
 	b, err := json.Marshal(s)
 	return b, err
 }
-
 
 func DeserializeCoordinatedData(data []byte) (CoordinatedData, error) {
 	t := CoordinatedData{}

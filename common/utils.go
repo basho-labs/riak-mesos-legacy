@@ -98,11 +98,11 @@ func AskForPorts(portCount int) ResourceAsker {
 					if len(ports)-portCount == 0 {
 						sliceLoc = 0
 					} else {
-						sliceLoc = rand.Intn(len(ports)-portCount)
+						sliceLoc = rand.Intn(len(ports) - portCount)
 					}
 					takingPorts := make([]int64, portCount)
 					copy(takingPorts, ports[sliceLoc:(sliceLoc+portCount)])
-					leavingPorts := make([]int64, len(ports) - portCount)
+					leavingPorts := make([]int64, len(ports)-portCount)
 					copy(leavingPorts, ports[:sliceLoc])
 					copy(leavingPorts[sliceLoc:], ports[(sliceLoc+portCount):])
 					newResources[idx] = util.NewRangesResource("ports", ArrayToRanges(leavingPorts))

@@ -4,8 +4,8 @@ import (
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	util "github.com/mesos/mesos-go/mesosutil"
 	"github.com/stretchr/testify/assert"
-	"testing"
 	"math/rand"
+	"testing"
 )
 
 func generateResourceOffer() []*mesos.Resource {
