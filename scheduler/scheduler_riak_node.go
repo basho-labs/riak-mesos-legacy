@@ -142,7 +142,7 @@ func (frn *FrameworkRiakNode) GetAsks() []common.ResourceAsker {
 	// Potential:
 	// EPM
 
-	return []common.ResourceAsker{common.AskForCPU(0.1), common.AskForPorts(10), common.AskForMemory(128)}
+	return []common.ResourceAsker{common.AskForCPU(0.3), common.AskForPorts(10), common.AskForMemory(320)}
 }
 func (frn *FrameworkRiakNode) GetCombinedAsk() common.CombinedResourceAsker {
 	ret := func(offer []*mesos.Resource) ([]*mesos.Resource, []*mesos.Resource, bool) {
@@ -214,11 +214,11 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(offer *mesos.Off
 	}
 
 	taskData := common.TaskData{
-		FullyQualifiedNodeName: nodename,
+		FullyQualifiedNodeName:    nodename,
 		RexFullyQualifiedNodeName: "rex-" + nodename,
-		Zookeepers:             frn.frc.sc.zookeepers,
-		ClusterName:            frn.frc.Name,
-		NodeID:                 frn.UUID.String(),
+		Zookeepers:                frn.frc.sc.zookeepers,
+		ClusterName:               frn.frc.Name,
+		NodeID:                    frn.UUID.String(),
 	}
 	frn.TaskData = taskData
 
