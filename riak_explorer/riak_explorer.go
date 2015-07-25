@@ -24,7 +24,7 @@ type RiakExplorer struct {
 	exe      *exec.Cmd
 	waitChan chan interface{}
 	teardown chan chan interface{}
-	port	 int64
+	port     int64
 }
 
 type templateData struct {
@@ -49,7 +49,7 @@ func startExplorer(port int64, nodename string, retChan chan *RiakExplorer) {
 		tempdir:  tempdir,
 		teardown: make(chan chan interface{}),
 		waitChan: waitChan,
-		port:	  port,
+		port:     port,
 	}
 
 	defer close(re.teardown)

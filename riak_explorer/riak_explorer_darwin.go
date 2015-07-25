@@ -3,11 +3,11 @@
 package riak_explorer
 
 import (
+	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"fmt"
 )
 
 func (re *RiakExplorer) start() {

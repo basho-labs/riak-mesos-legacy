@@ -1,10 +1,10 @@
 package riak_explorer
 
 import (
-	"github.com/stretchr/testify/assert"
-	"testing"
 	ps "github.com/mitchellh/go-ps"
+	"github.com/stretchr/testify/assert"
 	"os"
+	"testing"
 )
 
 func TestNothing(t *testing.T) {

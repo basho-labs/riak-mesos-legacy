@@ -3,11 +3,11 @@
 package riak_explorer
 
 import (
+	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"fmt"
 	"syscall"
 )
 
@@ -19,7 +19,7 @@ func (re *RiakExplorer) start() {
 	exe.Stderr = os.Stderr
 	//TODO: Add for Linux
 	exe.SysProcAttr = &syscall.SysProcAttr{
-		//Pdeathsig: syscall.SIGKILL,
+	//Pdeathsig: syscall.SIGKILL,
 	}
 	wd, err := os.Getwd()
 	if err != nil {
