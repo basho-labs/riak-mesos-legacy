@@ -8,23 +8,18 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"os/exec"
-	"os/signal"
 	"path/filepath"
 	"runtime"
-	"syscall"
 	"text/template"
-	"time"
-
+	"github.com/basho-labs/riak-mesos/process_manager"
 	log "github.com/Sirupsen/logrus"
 )
 
 type RiakExplorer struct {
 	tempdir  string
-	exe      *exec.Cmd
-	waitChan chan interface{}
-	teardown chan chan interface{}
 	port     int64
+	pm		 *process_manager.ProcessManager
+
 }
 
 type templateData struct {
@@ -32,138 +27,14 @@ type templateData struct {
 	NodeName string
 }
 
-func startExplorer(port int64, nodename string, retChan chan *RiakExplorer) {
-
-	signals := make(chan os.Signal, 3)
-	signal.Notify(signals, syscall.SIGTERM, syscall.SIGINT, syscall.SIGKILL)
-	defer close(retChan)
-
-	tempDirChan := make(chan string)
-	go decompress(tempDirChan)
-
-	// TODO: Put fault-tolerance around decompression failure
-	tempdir := <-tempDirChan
-
-	waitChan := make(chan interface{})
-	re := &RiakExplorer{
-		tempdir:  tempdir,
-		teardown: make(chan chan interface{}),
-		waitChan: waitChan,
-		port:     port,
-	}
-
-	defer close(re.teardown)
-
-	re.configure(port, nodename)
-	re.start()
-
-	go func() {
-		log.Info("Wait starting")
-		re.exe.Wait()
-		log.Info("Wait ended")
-		waitChan <- nil
-		close(waitChan)
-	}()
-
-	for i := 0; i < 1000; i++ {
-		select {
-		case <-signals:
-			{
-				log.Info("Tearing down at signal")
-				re.killProcess()
-				re.deleteData()
-				return
-			}
-		case <-re.waitChan:
-			{
-				log.Info("Deleting data after process died")
-				re.killProcess()
-				re.deleteData()
-				return
-			}
-		case tearDownChan := <-re.teardown:
-			{
-				log.Info("Tearing down")
-				re.killProcess()
-				re.deleteData()
-				tearDownChan <- nil
-				return
-			}
-		case <-time.After(100 * time.Millisecond):
-			{
-				// Try pinging Riak Explorer
-				_, err := NewRiakExplorerClient(fmt.Sprintf("localhost:%d", port)).Ping()
-				if err == nil {
-					retChan <- re
-					// re.background() should never return
-					re.background(signals)
-					return
-				} else {
-					log.Info("Rex status: ", err)
-				}
-			}
-		}
-	}
-}
 func (re *RiakExplorer) NewRiakExplorerClient() *RiakExplorerClient {
 	return NewRiakExplorerClient(fmt.Sprintf("localhost:%d", re.port))
 }
 func (re *RiakExplorer) TearDown() {
-	log.Infof("RE: %+v", re)
-	replyChan := make(chan interface{})
-	log.Info("Teardown: ", re.teardown)
-	re.teardown <- replyChan
-	<-replyChan
-	return
+	re.pm.TearDown()
 }
 
-func (re *RiakExplorer) background(signals chan os.Signal) {
-	select {
-	case <-signals:
-		{
-			log.Info("Tearing down at signal")
-			re.deleteData()
-			re.killProcess()
-		}
-	case <-re.waitChan:
-		{
-			log.Info("Deleting data after process died")
-			re.killProcess()
-			re.deleteData()
-		}
-	case tearDownChan := <-re.teardown:
-		{
-			log.Info("Tearing down")
-			re.killProcess()
-			re.deleteData()
-			tearDownChan <- nil
-			return
-		}
-	}
-}
-func (re *RiakExplorer) killProcess() {
-	re.exe.Process.Signal(syscall.SIGTERM)
-
-	// Wait 5 seconds for the process to try to exit
-	for i := 0; i < 50; i++ {
-		if re.exe.Process.Signal(syscall.Signal(0)) == nil {
-			return
-		}
-		time.Sleep(100 * time.Millisecond)
-	}
-	// Otherwise, kill it:
-	re.exe.Process.Signal(syscall.SIGKILL)
-}
-
-func (re *RiakExplorer) deleteData() {
-	log.Info("Deleting all data in: ", re.tempdir)
-	err := os.RemoveAll(re.tempdir)
-	if err != nil {
-		log.Error(err)
-	}
-}
-func decompress(ret chan string) {
-	defer close(ret)
+func decompress() string {
 	assetPath := fmt.Sprintf("riak_explorer_%s_%s.tar.gz", runtime.GOOS, runtime.GOARCH)
 	asset, err := Asset(assetPath)
 	if err != nil {
@@ -215,7 +86,7 @@ func decompress(ret chan string) {
 			log.Fatal("Experienced unknown tar file type: ", hdr.Typeflag)
 		}
 	}
-	ret <- tempdir
+	return tempdir
 }
 func (re *RiakExplorer) configure(port int64, nodename string) {
 	data, err := Asset("riak_explorer.conf")
@@ -248,14 +119,33 @@ func (re *RiakExplorer) configure(port int64, nodename string) {
 }
 
 func NewRiakExplorer(port int64, nodename string) (*RiakExplorer, error) {
-	retFuture := make(chan *RiakExplorer)
-	go startExplorer(port, nodename, retFuture)
-	retVal := <-retFuture
-	log.Info("Retval: ", retVal)
-	if retVal == nil {
-		err := fmt.Errorf("Unknown Error")
-		return retVal, err
-	} else {
-		return retVal, nil
+	tempdir := decompress()
+	exepath := filepath.Join(".", tempdir, "riak_explorer", "bin", "riak_explorer")
+
+	healthCheckFun := func() error {
+		log.Info("Running healthcheck: ", port)
+		_, err := NewRiakExplorerClient(fmt.Sprintf("localhost:%d", port)).Ping()
+		log.Info("Healthcheck result ", err)
+		return err
 	}
+	tearDownFun := func() {
+		log.Info("Deleting all data in: ", tempdir)
+		err := os.RemoveAll(tempdir)
+		if err != nil {
+			log.Error(err)
+		}
+	}
+	re := &RiakExplorer{
+		tempdir:  tempdir,
+		port:     port,
+	}
+	re.configure(port, nodename)
+	log.Debugf("Starting up Riak Exploer %v", exepath)
+	var err error
+	re.pm, err = process_manager.NewProcessManager(tearDownFun, exepath, []string{"console", "-noinput"}, healthCheckFun)
+	if err != nil {
+		log.Error("Could not start Riak Explorer: ", err)
+	}
+
+	return re, err
 }

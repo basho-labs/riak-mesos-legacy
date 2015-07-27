@@ -9,6 +9,7 @@ import (
 	"time"
 )
 
+
 type Healthchecker func() error
 type TeardownCallback func()
 
@@ -18,6 +19,7 @@ type ProcessManager struct {
 	pid		  int
 	subscribe chan chan int
 }
+
 
 func NewProcessManager(tdcb TeardownCallback, executablePath string, args []string, healthcheck Healthchecker) (*ProcessManager, error) {
 	retFuture := make(chan *ProcessManager)
@@ -62,11 +64,14 @@ func StartProcessManager(tdcb TeardownCallback, executablePath string, args []st
 	signal.Notify(sigchlds, syscall.SIGCHLD)
 
 	pm.start(executablePath, args)
-	waitChan := startSignalHandler(pm.pid, sigchlds)
+	waitChan := subscribe(pm.pid)
+	defer unsubscribe(pm.pid)
+	defer close(waitChan)
 	subscriptions := []chan int{}
 
 
-	for i := 0; i < 30; i++ {
+	// Wait 60 seconds for the process to start, and pass its healthcheck.
+	for i := 0; i < 60; i++ {
 		select {
 		case subscribe := <-pm.subscribe:
 			{
@@ -96,7 +101,7 @@ func StartProcessManager(tdcb TeardownCallback, executablePath string, args []st
 				tearDownChan <- nil
 				return
 			}
-		case <-time.After(100 * time.Millisecond):
+		case <-time.After(1000 * time.Millisecond):
 			{
 				// Try pinging Riak Explorer
 				err := healthcheck()
@@ -109,8 +114,9 @@ func StartProcessManager(tdcb TeardownCallback, executablePath string, args []st
 				}
 			}
 		}
-
 	}
+	log.Info("Process manager failed to start process in time")
+	pm.killProcess(waitChan)
 }
 
 func (pm *ProcessManager) notify(status int, subscriptions []chan int) {
@@ -122,7 +128,7 @@ func (pm *ProcessManager) notify(status int, subscriptions []chan int) {
 		}
 	}
 }
-func (pm *ProcessManager) background(waitChan chan handleSignal, subscriptions []chan int, signals chan os.Signal) {
+func (pm *ProcessManager) background(waitChan chan pidChangeNotification, subscriptions []chan int, signals chan os.Signal) {
 	log.Info("Going into background mode")
 	for {
 		select {
@@ -158,13 +164,14 @@ func (pm *ProcessManager) background(waitChan chan handleSignal, subscriptions [
 	}
 }
 
-func (pm *ProcessManager) killProcess(waitChan chan handleSignal) {
+func (pm *ProcessManager) killProcess(waitChan chan pidChangeNotification) {
 	log.Info("Killing process")
 	// Is it alive?
 	if syscall.Kill(pm.pid, syscall.Signal(0)) != nil {
 		return
 	}
 
+	// TODO: Work around some potential races here
 
 	syscall.Kill(pm.pid, syscall.SIGTERM)
 	select {
@@ -205,31 +212,3 @@ func (pm *ProcessManager) start(executablePath string, args []string) {
 	}
 }
 
-type handleSignal struct {
-	wstatus syscall.WaitStatus
-	rusage syscall.Rusage
-	pid int
-}
-func startSignalHandler(pid int, chlds chan os.Signal) chan handleSignal {
-	ch := make(chan handleSignal, 1)
-	go signalHandler(pid, chlds, ch)
-	return ch
-}
-func signalHandler(pid int, chlds chan os.Signal, waitChan chan handleSignal) {
-	var wstatus syscall.WaitStatus
-	var rusage syscall.Rusage
-
-	defer signal.Stop(chlds)
-	defer close(chlds)
-	for _ =  range chlds {
-		waitPid, err := syscall.Wait4(-1 * pid, &wstatus, 0, &rusage)
-		if err == nil && waitPid == pid {
-			hs := handleSignal {
-				wstatus:wstatus,
-				rusage:rusage,
-				pid:waitPid,
-			}
-			waitChan<-hs
-		}
-	}
-}
