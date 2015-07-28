@@ -7,7 +7,6 @@ import (
 	"github.com/basho-labs/riak-mesos/common"
 	metamgr "github.com/basho-labs/riak-mesos/metadata_manager"
 	"github.com/basho-labs/riak-mesos/process_manager"
-	rex "github.com/basho-labs/riak-mesos/riak_explorer"
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	util "github.com/mesos/mesos-go/mesosutil"
 	"os"
@@ -25,7 +24,6 @@ type RiakNode struct {
 	running         bool
 	metadataManager *metamgr.MetadataManager
 	taskData        common.TaskData
-	rex             *rex.RiakExplorer
 	pm              *process_manager.ProcessManager
 }
 
@@ -152,10 +150,6 @@ func (riakNode *RiakNode) Run() {
 
 	ports := portIter(riakNode.taskInfo.Resources)
 	riakNode.configureRiak(ports)
-	rexPort := <-ports
-	log.Info("RexPort (before sleeping): ", rexPort)
-
-	riakNode.rex, err = rex.NewRiakExplorer(rexPort, riakNode.taskData.RexFullyQualifiedNodeName)
 
 	if err != nil {
 		log.Fatal("Could not start up Riak Explorer")
@@ -202,19 +196,14 @@ func (riakNode *RiakNode) Run() {
 		coordinator.CreateChildIfNotExists("coordinatedNodes")
 		coordinatedNodes := coordinator.GetChild("coordinatedNodes")
 
-		lock := coordinator.GetLock()
-		lock.Lock()
+		// The following is commented out as part of experimenting with moving REX
+		// to the scheduler as opposed to running in the executors
+		// It used to coordinate the cluster join action.
+
+		// lock := coordinator.GetLock()
+		// lock.Lock()
 		// Do cluster joiny stuff
-		children := coordinatedNodes.GetChildren()
-		log.Info("Coordinator Children: ", children)
-		for _, child := range children {
-			cData, err := common.DeserializeCoordinatedData(child.GetData())
-			if err != nil {
-				log.Panicf("Unable to deserialize Coordinated data for child %v: %v", child, err)
-			}
-			reply, err := riakNode.rex.NewRiakExplorerClient().Join(riakNode.taskData.FullyQualifiedNodeName, cData.NodeName)
-			log.Infof("Join to %v with reply %+v, err: %+v", cData.NodeName, reply, err)
-		}
+
 		child := coordinatedNodes.MakeChild(riakNode.taskInfo.GetTaskId().GetValue(), true)
 		coordinatedData := common.CoordinatedData{NodeName: riakNode.taskData.FullyQualifiedNodeName}
 		cdBytes, err := coordinatedData.Serialize()
@@ -222,7 +211,8 @@ func (riakNode *RiakNode) Run() {
 			log.Panic("Could not serialize coordinated data	", err)
 		}
 		child.SetData(cdBytes)
-		lock.Unlock()
+		// lock.Unlock()
+
 		runStatus := &mesos.TaskStatus{
 			TaskId: riakNode.taskInfo.GetTaskId(),
 			State:  mesos.TaskState_TASK_RUNNING.Enum(),
