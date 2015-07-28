@@ -17,7 +17,6 @@ type ZkNode struct {
 	ns   Namespace
 }
 
-
 func (node *ZkNode) Delete() {
 	node.mgr.zkConn.Delete(node.ns.GetZKPath(), node.stat.Version)
 
