@@ -102,7 +102,10 @@ func (frn *FrameworkRiakNode) handleStatusUpdate(statusUpdate *mesos.TaskStatus)
 			frn.CurrentState = process_state.Started
 		}
 	case mesos.TaskState_TASK_FINISHED:
-		frn.CurrentState = process_state.Shutdown
+		{
+			log.Info("We should never get to this state")
+			frn.CurrentState = process_state.Shutdown
+		}
 	case mesos.TaskState_TASK_FAILED:
 		frn.CurrentState = process_state.Failed
 
