@@ -1,14 +1,14 @@
 package process_manager
 
 import (
+	log "github.com/Sirupsen/logrus"
 	ps "github.com/mitchellh/go-ps"
 	"github.com/stretchr/testify/assert"
 	"os"
-	"testing"
 	"os/signal"
 	"runtime"
-	log "github.com/Sirupsen/logrus"
 	"syscall"
+	"testing"
 )
 
 func TestTeardown(t *testing.T) {

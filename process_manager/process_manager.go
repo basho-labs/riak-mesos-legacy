@@ -9,17 +9,15 @@ import (
 	"time"
 )
 
-
 type Healthchecker func() error
 type TeardownCallback func()
 
 type ProcessManager struct {
 	tdcb      TeardownCallback
 	teardown  chan chan interface{}
-	pid		  int
+	pid       int
 	subscribe chan chan int
 }
-
 
 func NewProcessManager(tdcb TeardownCallback, executablePath string, args []string, healthcheck Healthchecker) (*ProcessManager, error) {
 	retFuture := make(chan *ProcessManager)
@@ -68,7 +66,6 @@ func StartProcessManager(tdcb TeardownCallback, executablePath string, args []st
 	defer unsubscribe(pm.pid)
 	defer close(waitChan)
 	subscriptions := []chan int{}
-
 
 	// Wait 60 seconds for the process to start, and pass its healthcheck.
 	for i := 0; i < 60; i++ {
@@ -175,25 +172,27 @@ func (pm *ProcessManager) killProcess(waitChan chan pidChangeNotification) {
 
 	syscall.Kill(pm.pid, syscall.SIGTERM)
 	select {
-		case <- waitChan: {
+	case <-waitChan:
+		{
 			return
 		}
-		case <-time.After(time.Second * 5): {
+	case <-time.After(time.Second * 5):
+		{
 			syscall.Kill(pm.pid, syscall.SIGKILL)
 		}
 	}
-	<- waitChan
+	<-waitChan
 }
 
 func (pm *ProcessManager) start(executablePath string, args []string) {
 
 	sysprocattr := &syscall.SysProcAttr{
-		Setpgid:true,
+		Setpgid: true,
 	}
 	procattr := &syscall.ProcAttr{
-		Sys:sysprocattr,
-		Env:os.Environ(),
-		Files:[]uintptr{os.Stdin.Fd(), os.Stdout.Fd(), os.Stderr.Fd()},
+		Sys:   sysprocattr,
+		Env:   os.Environ(),
+		Files: []uintptr{os.Stdin.Fd(), os.Stdout.Fd(), os.Stderr.Fd()},
 	}
 	if os.Getenv("HOME") == "" {
 		wd, err := os.Getwd()
@@ -209,6 +208,8 @@ func (pm *ProcessManager) start(executablePath string, args []string) {
 	pm.pid, err = syscall.ForkExec(executablePath, realArgs, procattr)
 	if err != nil {
 		log.Panic("Error starting process")
+	} else {
+		log.Infof("Process Manager started to manage %v at PID: %v", executablePath, pm.pid)
 	}
-}
 
+}

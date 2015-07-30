@@ -65,6 +65,7 @@ func (frc *FrameworkRiakCluster) AddNode(zkNode *metamgr.ZkNode) metamgr.Metadat
 	return frn
 }
 func NewFrameworkRiakCluster() *FrameworkRiakCluster {
+
 	return &FrameworkRiakCluster{
 		nodes: make(map[string]*FrameworkRiakNode),
 	}

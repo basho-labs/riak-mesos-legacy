@@ -5,21 +5,20 @@ import (
 	"bytes"
 	"compress/gzip"
 	"fmt"
+	log "github.com/Sirupsen/logrus"
+	"github.com/basho-labs/riak-mesos/process_manager"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
 	"text/template"
-	"github.com/basho-labs/riak-mesos/process_manager"
-	log "github.com/Sirupsen/logrus"
 )
 
 type RiakExplorer struct {
-	tempdir  string
-	port     int64
-	pm		 *process_manager.ProcessManager
-
+	tempdir string
+	port    int64
+	pm      *process_manager.ProcessManager
 }
 
 type templateData struct {
@@ -136,11 +135,11 @@ func NewRiakExplorer(port int64, nodename string) (*RiakExplorer, error) {
 		}
 	}
 	re := &RiakExplorer{
-		tempdir:  tempdir,
-		port:     port,
+		tempdir: tempdir,
+		port:    port,
 	}
 	re.configure(port, nodename)
-	log.Debugf("Starting up Riak Exploer %v", exepath)
+	log.Debugf("Starting up Riak Explorer %v", exepath)
 	var err error
 	re.pm, err = process_manager.NewProcessManager(tearDownFun, exepath, []string{"console", "-noinput"}, healthCheckFun)
 	if err != nil {
