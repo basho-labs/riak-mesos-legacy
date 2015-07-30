@@ -255,6 +255,27 @@ func (client *RiakExplorerClient) Plan(node string) (PlanReply, error) {
 	return m, nil
 }
 
+// RepairReply is the expected result struct of a repair request
+type RepairReply struct {
+	Repair struct {
+		Success int `json:"success"`
+		Error   int `json:"failure"`
+	} `json:"repair"`
+	Links Links `json:"links"`
+}
+
+// Repair instructs node to repair its partitions
+func (client *RiakExplorerClient) Repair(node string) (RepairReply, error) {
+	var m RepairReply
+	commandURI := fmt.Sprintf("control/nodes/%s/repair", node)
+	v, err := client.doGet(commandURI)
+	if err != nil {
+		return m, err
+	}
+	json.Unmarshal(v, &m)
+	return m, nil
+}
+
 // CommitReply is the expected result struct of a commit request
 type CommitReply struct {
 	Commit struct {

@@ -2,15 +2,17 @@ package scheduler
 
 import (
 	"encoding/json"
-	"sync"
-
+	"fmt"
 	log "github.com/Sirupsen/logrus"
 	metamgr "github.com/basho-labs/riak-mesos/metadata_manager"
+	rex "github.com/basho-labs/riak-mesos/riak_explorer"
 	"github.com/golang/protobuf/proto"
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	sched "github.com/mesos/mesos-go/scheduler"
-
-	//"github.com/basho-labs/riak-mesos/common"
+	"github.com/satori/go.uuid"
+	"os"
+	"strings"
+	"sync"
 	"time"
 )
 
@@ -87,10 +89,24 @@ type SchedulerCore struct {
 	rServer             *ReconcilationServer
 	user                string
 	zookeepers          []string
+	rex                 *rex.RiakExplorer
 }
 
-func NewSchedulerCore(schedulerHostname string, frameworkName string, zookeepers []string, schedulerIPAddr string, user string) *SchedulerCore {
+func NewSchedulerCore(schedulerHostname string, frameworkName string, zookeepers []string, schedulerIPAddr string, user string, rexPort int) *SchedulerCore {
 	mgr := metamgr.NewMetadataManager(frameworkName, zookeepers)
+	hostname, err := os.Hostname()
+	if err != nil {
+		log.Panic("Could not get hostname")
+	}
+	nodename := fmt.Sprintf("rex-%s@%s", uuid.NewV4().String(), hostname)
+
+	if !strings.Contains(nodename, ".") {
+		nodename = nodename + "."
+	}
+	myRex, err := rex.NewRiakExplorer(int64(rexPort), nodename)
+	if err != nil {
+		log.Fatal("Could not start up Riak Explorer in scheduler")
+	}
 	scheduler := &SchedulerCore{
 		lock:            &sync.Mutex{},
 		frameworkName:   frameworkName,
@@ -100,6 +116,7 @@ func NewSchedulerCore(schedulerHostname string, frameworkName string, zookeepers
 		frnDict:         make(map[string]*FrameworkRiakNode),
 		user:            user,
 		zookeepers:      zookeepers,
+		rex:             myRex,
 	}
 	scheduler.schedulerHTTPServer = ServeExecutorArtifact(scheduler, schedulerHostname)
 	return scheduler

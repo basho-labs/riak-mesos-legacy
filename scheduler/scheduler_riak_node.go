@@ -84,6 +84,34 @@ func (frn *FrameworkRiakNode) GetZkNode() *metamgr.ZkNode {
 	return frn.zkNode
 }
 
+func (frn *FrameworkRiakNode) handleRunningToFailedTransition() {
+	rexc := frn.frc.sc.rex.NewRiakExplorerClient()
+	for riakNodeName := range frn.frc.nodes {
+		riakNode := frn.frc.nodes[riakNodeName]
+		if riakNode.CurrentState == process_state.Started {
+			// We should try to join against this node
+			leaveReply, leaveErr := rexc.ForceRemove(riakNode.TaskData.FullyQualifiedNodeName, frn.TaskData.FullyQualifiedNodeName)
+			log.Infof("Triggered leave: %+v, %+v", leaveReply, leaveErr)
+			if leaveErr == nil {
+				break // We're done here
+			}
+		}
+	}
+}
+func (frn *FrameworkRiakNode) handleStartingToRunningTransition() {
+	rexc := frn.frc.sc.rex.NewRiakExplorerClient()
+	for riakNodeName := range frn.frc.nodes {
+		riakNode := frn.frc.nodes[riakNodeName]
+		if riakNode.CurrentState == process_state.Started {
+			// We should try to join against this node
+			joinReply, joinErr := rexc.Join(frn.TaskData.FullyQualifiedNodeName, riakNode.TaskData.FullyQualifiedNodeName)
+			log.Infof("Triggered join: %+v, %+v", joinReply, joinErr)
+			if joinErr == nil {
+				break // We're done here
+			}
+		}
+	}
+}
 func (frn *FrameworkRiakNode) handleStatusUpdate(statusUpdate *mesos.TaskStatus) {
 	// TODO: Check the task ID in the TaskStatus to make sure it matches our current task
 
@@ -99,6 +127,9 @@ func (frn *FrameworkRiakNode) handleStatusUpdate(statusUpdate *mesos.TaskStatus)
 	case mesos.TaskState_TASK_RUNNING:
 		{
 			frn.frc.Trigger()
+			if frn.CurrentState == process_state.Starting {
+				frn.handleStartingToRunningTransition()
+			}
 			frn.CurrentState = process_state.Started
 		}
 	case mesos.TaskState_TASK_FINISHED:
@@ -107,7 +138,12 @@ func (frn *FrameworkRiakNode) handleStatusUpdate(statusUpdate *mesos.TaskStatus)
 			frn.CurrentState = process_state.Shutdown
 		}
 	case mesos.TaskState_TASK_FAILED:
-		frn.CurrentState = process_state.Failed
+		{
+			if frn.CurrentState == process_state.Started {
+				frn.handleRunningToFailedTransition()
+			}
+			frn.CurrentState = process_state.Failed
+		}
 
 	// Maybe? -- Not entirely sure.
 	case mesos.TaskState_TASK_KILLED:

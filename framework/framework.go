@@ -14,6 +14,7 @@ var (
 	schedulerIPAddr   string
 	frameworkName     string
 	user              string
+	rexPort           int
 )
 
 func init() {
@@ -23,12 +24,13 @@ func init() {
 	flag.StringVar(&schedulerIPAddr, "ip", "33.33.33.1", "Framework ip")
 	flag.StringVar(&frameworkName, "name", "riak-mesos-go3", "Framework Instance Name")
 	flag.StringVar(&user, "user", "", "Framework Username")
+	flag.IntVar(&rexPort, "rex-port", 9090, "Riak Explorer port")
 	flag.Parse()
 }
 
 func main() {
 	log.SetLevel(log.DebugLevel)
 
-	sched := scheduler.NewSchedulerCore(schedulerHostname, frameworkName, []string{zookeeperAddr}, schedulerIPAddr, user)
+	sched := scheduler.NewSchedulerCore(schedulerHostname, frameworkName, []string{zookeeperAddr}, schedulerIPAddr, user, rexPort)
 	sched.Run(mesosMaster)
 }
