@@ -16,3 +16,6 @@ scheduler/cluster_state/clusterstate_jsonenums.go
 scheduler/cluster_state/clusterstate_string.go
 scheduler/process_state/processstate_jsonenums.go
 scheduler/process_state/processstate_string.go
+
+*.beam
+**/*.beam
