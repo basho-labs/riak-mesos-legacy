@@ -34,7 +34,6 @@ clean_deps:
 	rm $(BASE_DIR)/riak_explorer/data/*.tar.gz
 
 build_executor:
-	go generate ./riak_explorer/...
 	go generate ./executor/...
 	gox \
 		-osarch=$(EGARC) \
@@ -75,6 +74,12 @@ run:
 		-name=$(FNAM) \
 		-hostname=$(FHST) \
 		-user=$(FUSR)
+
+marathon-run:
+	curl -XPOST -v -H 'Content-Type: application/json' -d @marathon.json 'http://33.33.33.2:8080/v2/apps'
+
+marathon-kill:
+	curl -XDELETE -v 'http://33.33.33.2:8080/v2/apps/riak'
 
 install-dcos-cli:
 	mkdir -p $(BASE_DIR)/bin/dcos
