@@ -32,6 +32,7 @@ type templateData struct {
 	PBPort                 int64
 	HandoffPort            int64
 	FullyQualifiedNodeName string
+	DisterlPort			int64
 }
 
 func NewRiakNode(taskInfo *mesos.TaskInfo, executor *ExecutorCore) *RiakNode {
@@ -130,6 +131,7 @@ func (riakNode *RiakNode) configureRiak(ports chan int64) {
 	vars.HTTPPort = <-ports
 	vars.PBPort = <-ports
 	vars.HandoffPort = <-ports
+	vars.DisterlPort = <-ports
 
 	file, err := os.OpenFile("riak/etc/riak.conf", os.O_TRUNC|os.O_CREATE|os.O_RDWR, 0)
 
@@ -168,7 +170,7 @@ func (riakNode *RiakNode) Run() {
 		process.Env = append(os.Environ(), homevar)
 		return process.Run()
 	}
-	riakNode.pm, err = process_manager.NewProcessManager(func() { return }, "riak/bin/riak", []string{"console", "-noinput"}, HealthCheckFun)
+	riakNode.pm, err = process_manager.NewProcessManager(func() { return }, "riak/bin/riak", []string{"console", "-noinput"}, HealthCheckFun, []string{})
 
 	if err != nil {
 		log.Error("Could not start Riak: ", err)
@@ -188,13 +190,17 @@ func (riakNode *RiakNode) Run() {
 	} else {
 		rootNode := riakNode.metadataManager.GetRootNode()
 
-		clustersNode := rootNode.GetChild("clusters")
-		clusterNode := clustersNode.GetChild(riakNode.taskData.ClusterName)
+		clustersNode, err := rootNode.GetChild("clusters")
+		if err != nil { log.Panic(err) }
+		clusterNode, err := clustersNode.GetChild(riakNode.taskData.ClusterName)
+		if err != nil { log.Panic(err) }
 
 		clusterNode.CreateChildIfNotExists("coordinator")
-		coordinator := clusterNode.GetChild("coordinator")
+		coordinator, err := clusterNode.GetChild("coordinator")
+		if err != nil { log.Panic(err) }
 		coordinator.CreateChildIfNotExists("coordinatedNodes")
-		coordinatedNodes := coordinator.GetChild("coordinatedNodes")
+		coordinatedNodes, err := coordinator.GetChild("coordinatedNodes")
+		if err != nil { log.Panic(err) }
 
 		// The following is commented out as part of experimenting with moving REX
 		// to the scheduler as opposed to running in the executors
@@ -204,7 +210,8 @@ func (riakNode *RiakNode) Run() {
 		// lock.Lock()
 		// Do cluster joiny stuff
 
-		child := coordinatedNodes.MakeChild(riakNode.taskInfo.GetTaskId().GetValue(), true)
+		child, err := coordinatedNodes.MakeChild(riakNode.taskInfo.GetTaskId().GetValue(), true)
+		if err != nil { log.Panic(err) }
 		coordinatedData := common.CoordinatedData{NodeName: riakNode.taskData.FullyQualifiedNodeName}
 		cdBytes, err := coordinatedData.Serialize()
 		if err != nil {

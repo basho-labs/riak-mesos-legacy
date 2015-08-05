@@ -37,7 +37,8 @@ func (frc *FrameworkRiakCluster) GetZkNode() *metamgr.ZkNode {
 }
 
 func (frc *FrameworkRiakCluster) NewNode() metamgr.MetadataManagerNode {
-	nodes := frc.zkNode.GetChild("nodes")
+	nodes, err := frc.zkNode.GetChild("nodes")
+	if err != nil { log.Panic(err) }
 	myUUID := uuid.NewV4()
 	zkNode := nodes.MakeEmptyChild(myUUID.String())
 	frn := NewFrameworkRiakNode()
