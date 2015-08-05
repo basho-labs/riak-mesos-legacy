@@ -1,0 +1,19 @@
+{
+  "name": "riak",
+  "version": "0.1.0",
+  "tags": ["mesosphere", "framework"],
+  "maintainer": "help@basho.com",
+  "description": "A distributed NoSQL key-value data store that offers high availability, fault tolerance, operational simplicity, and scalability.",
+  "scm": "https://github.com/basho-labs/riak-mesos.git",
+  "website": "https://github.com/basho-labs/riak-mesos",
+  "images": {
+    "icon-small": "http://some.org/foo/small.png",
+    "icon-medium": "http://some.org/foo/medium.png",
+    "icon-large": "http://some.org/foo/large.png",
+    "screenshots": [
+      "http://some.org/foo/screen-1.png",
+      "http://some.org/foo/screen-2.png"
+    ]
+  },
+  "postInstallNotes": "Thank you for installing Riak. Visit https://github.com/basho-labs/riak-mesos/blob/master/README.md for usage information."
+}

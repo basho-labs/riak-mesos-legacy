@@ -16,7 +16,7 @@ make dev
 To build a complete framework package with embedded executor and riak packages:
 
 ```
-make rel
+FARC="linux_amd64" FGARC="linux/amd64" make rel
 ```
 
 ### Usage
