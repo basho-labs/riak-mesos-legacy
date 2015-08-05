@@ -13,7 +13,7 @@ import (
 	"github.com/basho-labs/riak-mesos/common"
 )
 
-type cepmd struct {
+type CEPM struct {
 	mgr       *metamgr.MetadataManager
 	cepmdNode *metamgr.ZkNode
 	ln        net.Listener
@@ -21,7 +21,7 @@ type cepmd struct {
 	hostname  string
 }
 
-func (c *cepmd) handleConn(conn net.Conn) {
+func (c *CEPM) handleConn(conn net.Conn) {
 	log.Info("Received connection: ", conn.RemoteAddr())
 	defer conn.Close()
 	reader := bufio.NewReader(conn)
@@ -87,7 +87,7 @@ func (c *cepmd) handleConn(conn net.Conn) {
 		return
 	}
 }
-func (c *cepmd) GetPort() int {
+func (c *CEPM) GetPort() int {
 	_, strPort, err := net.SplitHostPort(c.ln.Addr().String())
 	if err != nil {
 		log.Panic(err)
@@ -98,7 +98,7 @@ func (c *cepmd) GetPort() int {
 	}
 	return port
 }
-func (c *cepmd) acceptLoop() {
+func (c *CEPM) acceptLoop() {
 	defer c.ln.Close()
 	log.Info("Listening on: ", c.ln.Addr())
 	for {
@@ -109,16 +109,16 @@ func (c *cepmd) acceptLoop() {
 		go c.handleConn(conn)
 	}
 }
-func (c *cepmd) Foreground() {
+func (c *CEPM) Foreground() {
 	c.acceptLoop()
 
 }
-func (c *cepmd) Background() {
+func (c *CEPM) Background() {
 	go c.acceptLoop()
 
 }
 
-func setupCPMd(port int) *cepmd {
+func setupCPMd(port int) *CEPM {
 	ln, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", port))
 
 	if err != nil {
@@ -130,14 +130,14 @@ func setupCPMd(port int) *cepmd {
 		log.Panic("Failed resolve hostname: ", err)
 	}
 
-	c := &cepmd{
+	c := &CEPM{
 		ln:       ln,
 		lock:     &sync.Mutex{},
 		hostname: hostname,
 	}
 	return c
 }
-func NewCPMd(port int, mgr *metamgr.MetadataManager) *cepmd {
+func NewCPMd(port int, mgr *metamgr.MetadataManager) *CEPM {
 	c := setupCPMd(port)
 
 	var err error
