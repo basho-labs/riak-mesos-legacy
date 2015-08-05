@@ -6,9 +6,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestStub(t *testing.T) {
-	assert.True(t, true, "This is good. Canary test passing")
-}
 func TestNS(t *testing.T) {
 	assert := assert.New(t)
 	bns := baseNamespace{}

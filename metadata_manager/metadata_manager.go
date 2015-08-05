@@ -69,7 +69,7 @@ func (node *ZkNode) MakeEmptyChild(name string) *ZkNode {
 	}
 	return newNode
 }
-func (node *ZkNode) MakeChild(name string, ephemeral bool) *ZkNode {
+func (node *ZkNode) MakeChild(name string, ephemeral bool) (*ZkNode, error) {
 	if strings.Contains(name, "/") {
 		panic("Error, name of subnode cannot contain /")
 	}
@@ -77,7 +77,7 @@ func (node *ZkNode) MakeChild(name string, ephemeral bool) *ZkNode {
 	return node.mgr.makeNode(ns, ephemeral)
 }
 
-func (node *ZkNode) MakeChildWithData(name string, data []byte, ephemeral bool) *ZkNode {
+func (node *ZkNode) MakeChildWithData(name string, data []byte, ephemeral bool) (*ZkNode, error) {
 	if strings.Contains(name, "/") {
 		panic("Error, name of subnode cannot contain /")
 	}
@@ -85,7 +85,7 @@ func (node *ZkNode) MakeChildWithData(name string, data []byte, ephemeral bool) 
 	return node.mgr.makeNodeWithData(ns, data, ephemeral)
 }
 
-func (node *ZkNode) GetChild(name string) *ZkNode {
+func (node *ZkNode) GetChild(name string) (*ZkNode, error) {
 	if strings.Contains(name, "/") {
 		panic("Error, name of subnode cannot contain /")
 	}
@@ -206,7 +206,7 @@ func (mgr *MetadataManager) createIfNotExists(path string, ephemeral bool) {
 }
 
 // This subspaces the node in the "current working namespace"
-func (mgr *MetadataManager) GetRootNode() *ZkNode {
+func (mgr *MetadataManager) GetRootNode() (*ZkNode, error) {
 	return mgr.getNode(mgr.namespace)
 }
 
@@ -217,7 +217,10 @@ func (mgr *MetadataManager) getChildrenW(ns Namespace) ([]*ZkNode, <-chan zk.Eve
 	}
 	result := make([]*ZkNode, len(children))
 	for idx, name := range children {
-		result[idx] = mgr.getNode(makeSubSpace(ns, name))
+		result[idx], err = mgr.getNode(makeSubSpace(ns, name))
+		if err != nil {
+			log.Panic(err)
+		}
 	}
 	return result, watchChan
 }
@@ -228,15 +231,20 @@ func (mgr *MetadataManager) getChildren(ns Namespace) []*ZkNode {
 	}
 	result := make([]*ZkNode, len(children))
 	for idx, name := range children {
-		result[idx] = mgr.getNode(makeSubSpace(ns, name))
+		result[idx], err = mgr.getNode(makeSubSpace(ns, name))
+		if err != nil {
+			log.Panic(err)
+		}
 	}
 	return result
 }
 
-func (mgr *MetadataManager) getNode(ns Namespace) *ZkNode {
+func (mgr *MetadataManager) getNode(ns Namespace) (*ZkNode, error) {
 	// Namespaces are also nodes
 	data, stat, err := mgr.zkConn.Get(ns.GetZKPath())
-	if err != nil {
+	if err == zk.ErrNoNode {
+		return nil, err
+	} else if err != nil {
 		log.Panic(err)
 	}
 	node := &ZkNode{
@@ -245,10 +253,10 @@ func (mgr *MetadataManager) getNode(ns Namespace) *ZkNode {
 		stat: stat,
 		ns:   ns,
 	}
-	return node
+	return node, nil
 }
 
-func (mgr *MetadataManager) makeNode(ns Namespace, ephemeral bool) *ZkNode {
+func (mgr *MetadataManager) makeNode(ns Namespace, ephemeral bool) (*ZkNode, error) {
 	var flags int32
 	if ephemeral {
 		flags = zk.FlagEphemeral
@@ -264,7 +272,7 @@ func (mgr *MetadataManager) makeNode(ns Namespace, ephemeral bool) *ZkNode {
 	return mgr.getNode(ns)
 }
 
-func (mgr *MetadataManager) makeNodeWithData(ns Namespace, data []byte, ephemeral bool) *ZkNode {
+func (mgr *MetadataManager) makeNodeWithData(ns Namespace, data []byte, ephemeral bool) (*ZkNode, error) {
 	var flags int32
 	if ephemeral {
 		flags = zk.FlagEphemeral
