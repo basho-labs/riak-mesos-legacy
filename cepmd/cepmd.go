@@ -2,7 +2,7 @@ package main
 import (
 	"flag"
 	metamgr "github.com/basho-labs/riak-mesos/metadata_manager"
-	"github.com/basho-labs/riak-mesos/executor/cepmd/cepm"
+	"github.com/basho-labs/riak-mesos/cepmd/cepm"
 	"fmt"
 )
 
