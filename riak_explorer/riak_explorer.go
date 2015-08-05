@@ -145,7 +145,7 @@ func NewRiakExplorer(port int64, nodename string) (*RiakExplorer, error) {
 	re.configure(port, nodename)
 	log.Debugf("Starting up Riak Explorer %v", exepath)
 	var err error
-	re.pm, err = process_manager.NewProcessManager(tearDownFun, exepath, []string{"console", "-noinput"}, healthCheckFun)
+	re.pm, err = process_manager.NewProcessManager(tearDownFun, exepath, []string{"console", "-noinput"}, healthCheckFun, []string{})
 	if err != nil {
 		log.Error("Could not start Riak Explorer: ", err)
 	}

@@ -19,9 +19,9 @@ type ProcessManager struct {
 	subscribe chan chan int
 }
 
-func NewProcessManager(tdcb TeardownCallback, executablePath string, args []string, healthcheck Healthchecker) (*ProcessManager, error) {
+func NewProcessManager(tdcb TeardownCallback, executablePath string, args []string, healthcheck Healthchecker, extraEnv []string) (*ProcessManager, error) {
 	retFuture := make(chan *ProcessManager)
-	go StartProcessManager(tdcb, executablePath, args, healthcheck, retFuture)
+	go startProcessManager(tdcb, executablePath, args, healthcheck, extraEnv, retFuture)
 	retVal := <-retFuture
 	log.Info("Retval: ", retVal)
 	if retVal == nil {
@@ -43,7 +43,7 @@ func (pm *ProcessManager) TearDown() {
 	<-replyChan
 	return
 }
-func StartProcessManager(tdcb TeardownCallback, executablePath string, args []string, healthcheck Healthchecker, retChan chan *ProcessManager) {
+func startProcessManager(tdcb TeardownCallback, executablePath string, args []string, healthcheck Healthchecker, extraEnv []string, retChan chan *ProcessManager) {
 	defer close(retChan)
 	pm := &ProcessManager{
 		teardown:  make(chan chan interface{}, 10),
@@ -61,7 +61,7 @@ func StartProcessManager(tdcb TeardownCallback, executablePath string, args []st
 	sigchlds := make(chan os.Signal, 1000)
 	signal.Notify(sigchlds, syscall.SIGCHLD)
 
-	pm.start(executablePath, args)
+	pm.start(executablePath, args, extraEnv)
 	waitChan := subscribe(pm.pid)
 	defer unsubscribe(pm.pid)
 	defer close(waitChan)
@@ -184,16 +184,19 @@ func (pm *ProcessManager) killProcess(waitChan chan pidChangeNotification) {
 	<-waitChan
 }
 
-func (pm *ProcessManager) start(executablePath string, args []string) {
+func (pm *ProcessManager) start(executablePath string, args []string, extraEnv []string) {
 
 	sysprocattr := &syscall.SysProcAttr{
 		Setpgid: true,
 	}
+	env := append(os.Environ(), extraEnv...)
+
 	procattr := &syscall.ProcAttr{
 		Sys:   sysprocattr,
-		Env:   os.Environ(),
+		Env:   env,
 		Files: []uintptr{os.Stdin.Fd(), os.Stdout.Fd(), os.Stderr.Fd()},
 	}
+
 	if os.Getenv("HOME") == "" {
 		wd, err := os.Getwd()
 		if err != nil {
