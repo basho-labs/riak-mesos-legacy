@@ -29,7 +29,7 @@
 
 -import(error_logger,[error_msg/2]).
 
--include("net_address.hrl").
+-include_lib("kernel/include/net_address.hrl").
 
 
 
@@ -43,8 +43,8 @@
         end).
 
 
--include("dist.hrl").
--include("dist_util.hrl").
+-include_lib("kernel/include/dist.hrl").
+-include_lib("kernel/include/dist_util.hrl").
 
 %% ------------------------------------------------------------
 %%  Select this protocol based on node name
@@ -245,17 +245,26 @@ get_remote_id(Socket, Node) ->
 %% ------------------------------------------------------------
 
 setup(Node, Type, MyNode, LongOrShortNames,SetupTime) ->
-    spawn_opt(?MODULE, do_setup, 
+    spawn_opt(?MODULE, do_setup,
 	      [self(), Node, Type, MyNode, LongOrShortNames, SetupTime],
 	      [link, {priority, max}]).
 
 do_setup(Kernel, Node, Type, MyNode, LongOrShortNames,SetupTime) ->
     ?trace("~p~n",[{inet_tcp_dist,self(),setup,Node}]),
     [Name, Address] = splitnode(Node, LongOrShortNames),
+	Fun =
+		case catch erl_epmd:mesos_mode() of
+			true ->
+				erlang:display("Has Mesos Mode"),
+				fun (_FunIp) -> erl_epmd:get_port(Node) end;
+			_ ->
+				erlang:display("Does not Mesos Mode"),
+				fun (FunIp) -> erl_epmd:port_please(Name, FunIp) end
+		end,
     case inet:getaddr(Address, inet) of
 	{ok, Ip} ->
 	    Timer = dist_util:start_timer(SetupTime),
-	    case erl_epmd:port_please(Name, Ip) of
+	    case Fun(Ip) of
 		{port, TcpPort, Version} ->
 		    ?trace("port_please(~p) -> version ~p~n", 
 			   [Node,Version]),
@@ -323,6 +332,7 @@ do_setup(Kernel, Node, Type, MyNode, LongOrShortNames,SetupTime) ->
 		   "failed (~p).~n", [Node,_Other]),
 	    ?shutdown(Node)
     end.
+
 
 %%
 %% Close a socket.

@@ -28,10 +28,13 @@ deps:
 	godep restore
 	cd $(BASE_DIR)/scheduler/data && $(MAKE)
 	cd $(BASE_DIR)/riak_explorer/data && $(MAKE)
+	cd $(BASE_DIR)/executor/cepmd/cepmd_dist && $(MAKE)
 
 clean_deps:
 	rm $(BASE_DIR)/scheduler/data/*.tar.gz
 	rm $(BASE_DIR)/riak_explorer/data/*.tar.gz
+	cd $(BASE_DIR)/executor/cepmd/cepmd_dist && $(MAKE) clean
+
 
 build_executor:
 	go generate ./executor/...
@@ -39,7 +42,7 @@ build_executor:
 		-osarch=$(EGARC) \
 		-output="$(ETAR)/{{.Dir}}_{{.OS}}_{{.Arch}}" \
 		-rebuild \
-		./executor/...
+		./executor/
 
 rel: clean deps vet build_executor
 	go generate -tags=rel ./...
