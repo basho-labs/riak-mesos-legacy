@@ -3,6 +3,8 @@ package scheduler
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/basho-labs/riak-mesos/common"
 	metamgr "github.com/basho-labs/riak-mesos/metadata_manager"
@@ -11,7 +13,6 @@ import (
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	util "github.com/mesos/mesos-go/mesosutil"
 	"github.com/satori/go.uuid"
-	"strings"
 )
 
 // Next Status
@@ -48,6 +49,7 @@ func (frn *FrameworkRiakNode) Persist() {
 func (frn *FrameworkRiakNode) NeedsToBeScheduled() bool {
 	// Poor man's FSM:
 	// TODO: Fill out rest of possible states
+
 	switch frn.DestinationState {
 	case process_state.Started:
 		{
@@ -203,9 +205,8 @@ func (frn *FrameworkRiakNode) GetCombinedAsk() common.CombinedResourceAsker {
 
 func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(offer *mesos.Offer, resources []*mesos.Resource) *mesos.TaskInfo {
 	// THIS IS A MUTATING CALL
-
-	if frn.CurrentState != process_state.Shutdown && frn.CurrentState != process_state.Failed {
-		log.Panic("Trying to generate Task Info while node is up")
+	if frn.CurrentState != process_state.Shutdown && frn.CurrentState != process_state.Failed && frn.CurrentState != process_state.Unknown {
+		log.Panicf("Trying to generate Task Info while node is up. ZK FRN State: %v", frn.CurrentState)
 	}
 	frn.Generation = frn.Generation + 1
 	frn.TaskStatus = nil
