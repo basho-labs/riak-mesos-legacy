@@ -2,7 +2,13 @@ package scheduler
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"os"
+	"strings"
+	"sync"
+	"time"
+
 	log "github.com/Sirupsen/logrus"
 	metamgr "github.com/basho-labs/riak-mesos/metadata_manager"
 	rex "github.com/basho-labs/riak-mesos/riak_explorer"
@@ -10,10 +16,6 @@ import (
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	sched "github.com/mesos/mesos-go/scheduler"
 	"github.com/satori/go.uuid"
-	"os"
-	"strings"
-	"sync"
-	"time"
 )
 
 const (
@@ -224,11 +226,63 @@ func (sc *SchedulerCore) Disconnected(sched.SchedulerDriver) {
 	log.Error("Framework disconnected")
 }
 
+func (sc *SchedulerCore) spreadNodesAcrossOffers(allOffers []*mesos.Offer, allResources [][]*mesos.Resource, allNodes []*FrameworkRiakNode, currentOfferIndex int, currentRiakNodeIndex int, launchTasks map[string][]*mesos.TaskInfo) (map[string][]*mesos.TaskInfo, error) {
+	if len(allNodes) == 0 || len(allResources) == 0 {
+		return launchTasks, errors.New("Insufficient riak nodes or offers")
+	}
+
+	// No more nodes to schedule
+	if currentRiakNodeIndex >= len(allNodes) {
+		return launchTasks, nil
+	}
+
+	// No more offers, start from the beginning (round robin)
+	if currentOfferIndex >= len(allResources) {
+		return sc.spreadNodesAcrossOffers(allOffers, allResources, allNodes, 0, currentRiakNodeIndex, launchTasks)
+	}
+
+	offer := allOffers[currentOfferIndex]
+	riakNode := allNodes[currentRiakNodeIndex]
+
+	log.Infof("Scheduling for launch, Node: (%v), Current State: (%v), Destination State: (%v)", riakNode.UUID.String(), riakNode.CurrentState, riakNode.DestinationState)
+	var success bool
+	var ask []*mesos.Resource
+	allResources[currentOfferIndex], ask, success = riakNode.GetCombinedAsk()(allResources[currentOfferIndex])
+
+	if success {
+		log.Infof("GetCombinedAsk successful, preparing for launch, Node: (%v), Current State: (%v), Destination State: (%v)", riakNode.UUID.String(), riakNode.CurrentState, riakNode.DestinationState)
+		taskInfo := riakNode.PrepareForLaunchAndGetNewTaskInfo(offer, ask)
+		sc.frnDict[riakNode.CurrentID()] = riakNode
+
+		if launchTasks[*offer.Id.Value] == nil {
+			launchTasks[*offer.Id.Value] = []*mesos.TaskInfo{}
+		}
+
+		launchTasks[*offer.Id.Value] = append(launchTasks[*offer.Id.Value], taskInfo)
+		riakNode.Persist()
+
+		// Everything went well, add to the launch tasks
+		allNodes = append(allNodes[:currentRiakNodeIndex], allNodes[currentRiakNodeIndex+1:]...)
+		return sc.spreadNodesAcrossOffers(allOffers, allResources, allNodes, currentOfferIndex+1, currentRiakNodeIndex+1, launchTasks)
+	}
+
+	// There are no more offers with sufficient resources for a single node
+	if len(allResources) <= 1 {
+		return launchTasks, errors.New("Not enough resources to schedule RiakNode")
+	}
+
+	// This offer no longer has sufficient resources available, remove it from the pool
+	allOffers = append(allOffers[:currentOfferIndex], allOffers[currentOfferIndex+1:]...)
+	allResources = append(allResources[:currentOfferIndex], allResources[currentOfferIndex+1:]...)
+	return sc.spreadNodesAcrossOffers(allOffers, allResources, allNodes, currentOfferIndex+1, currentRiakNodeIndex, launchTasks)
+}
+
 func (sc *SchedulerCore) ResourceOffers(driver sched.SchedulerDriver, offers []*mesos.Offer) {
 	sc.lock.Lock()
 	defer sc.lock.Unlock()
 	log.Info("Received resource offers: ", offers)
-	launchTasks := []*mesos.TaskInfo{}
+	// launchTasks := []*mesos.TaskInfo{}
+	launchTasks := make(map[string][]*mesos.TaskInfo)
 	toBeScheduled := []*FrameworkRiakNode{}
 	for _, cluster := range sc.clusters {
 		for _, riakNode := range cluster.nodes {
@@ -240,41 +294,30 @@ func (sc *SchedulerCore) ResourceOffers(driver sched.SchedulerDriver, offers []*
 		}
 	}
 
-	// Issue https://github.com/basho-labs/riak-mesos/issues/11
-	// TODO: This currently fills in each Mesos node as much as possible
-	// Simply switching the outer and inner loops would result in spreading
-	// tasks across as many nodes as possible
-	// We either need to make this pluggalbe, or something? I don't know.
-
+	// Populate a mutable slice of offer resources
+	allResources := [][]*mesos.Resource{}
 	for _, offer := range offers {
-		resources := offer.Resources
-		for _, riakNode := range toBeScheduled {
-			var success bool
-			var ask []*mesos.Resource
-			resources, ask, success = riakNode.GetCombinedAsk()(resources)
-			if success {
-				taskInfo := riakNode.PrepareForLaunchAndGetNewTaskInfo(offer, ask)
-				sc.frnDict[riakNode.CurrentID()] = riakNode
-				launchTasks = append(launchTasks, taskInfo)
-				riakNode.Persist()
-			} else {
-				log.Error("Not enough resources to schedule RiakNode")
-			}
-
-		}
+		allResources = append(allResources, offer.Resources)
 	}
 
-	offerIDs := make([]*mesos.OfferID, len(offers))
-	for idx, offer := range offers {
-		offerIDs[idx] = offer.Id
-	}
-	log.Info("Launching Tasks: ", launchTasks)
-	status, err := driver.LaunchTasks(offerIDs, launchTasks, &mesos.Filters{RefuseSeconds: proto.Float64(OFFER_INTERVAL)})
-	if status != mesos.Status_DRIVER_RUNNING {
-		log.Fatal("Driver not running, while trying to launch tasks")
-	}
+	launchTasks, err := sc.spreadNodesAcrossOffers(offers, allResources, toBeScheduled, 0, 0, launchTasks)
 	if err != nil {
-		log.Panic("Failed to launch tasks: ", err)
+		log.Error(err)
+	}
+
+	for offerIdStr, tasks := range launchTasks {
+		oid := mesos.OfferID{
+			Value: &offerIdStr,
+		}
+
+		log.Infof("Launching Tasks: %v for offer %v", launchTasks, offerIdStr)
+		status, err := driver.LaunchTasks([]*mesos.OfferID{&oid}, tasks, &mesos.Filters{RefuseSeconds: proto.Float64(OFFER_INTERVAL)})
+		if status != mesos.Status_DRIVER_RUNNING {
+			log.Fatal("Driver not running, while trying to launch tasks")
+		}
+		if err != nil {
+			log.Panic("Failed to launch tasks: ", err)
+		}
 	}
 }
 func (sc *SchedulerCore) StatusUpdate(driver sched.SchedulerDriver, status *mesos.TaskStatus) {
