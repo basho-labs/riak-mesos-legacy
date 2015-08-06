@@ -228,7 +228,7 @@ func (sc *SchedulerCore) Disconnected(sched.SchedulerDriver) {
 
 func (sc *SchedulerCore) spreadNodesAcrossOffers(allOffers []*mesos.Offer, allResources [][]*mesos.Resource, allNodes []*FrameworkRiakNode, currentOfferIndex int, currentRiakNodeIndex int, launchTasks map[string][]*mesos.TaskInfo) (map[string][]*mesos.TaskInfo, error) {
 	if len(allNodes) == 0 || len(allResources) == 0 {
-		return launchTasks, errors.New("Insufficient riak nodes or offers")
+		return launchTasks, nil
 	}
 
 	// No more nodes to schedule
@@ -243,14 +243,12 @@ func (sc *SchedulerCore) spreadNodesAcrossOffers(allOffers []*mesos.Offer, allRe
 
 	offer := allOffers[currentOfferIndex]
 	riakNode := allNodes[currentRiakNodeIndex]
-
-	log.Infof("Scheduling for launch, Node: (%v), Current State: (%v), Destination State: (%v)", riakNode.UUID.String(), riakNode.CurrentState, riakNode.DestinationState)
+	
 	var success bool
 	var ask []*mesos.Resource
 	allResources[currentOfferIndex], ask, success = riakNode.GetCombinedAsk()(allResources[currentOfferIndex])
 
 	if success {
-		log.Infof("GetCombinedAsk successful, preparing for launch, Node: (%v), Current State: (%v), Destination State: (%v)", riakNode.UUID.String(), riakNode.CurrentState, riakNode.DestinationState)
 		taskInfo := riakNode.PrepareForLaunchAndGetNewTaskInfo(offer, ask)
 		sc.frnDict[riakNode.CurrentID()] = riakNode
 
