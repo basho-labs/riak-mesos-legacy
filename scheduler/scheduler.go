@@ -14,6 +14,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"github.com/basho-labs/riak-mesos/cepmd/cepm"
+
 )
 
 const (
@@ -90,6 +92,7 @@ type SchedulerCore struct {
 	user                string
 	zookeepers          []string
 	rex                 *rex.RiakExplorer
+	cepm				*cepm.CEPM
 }
 
 func NewSchedulerCore(schedulerHostname string, frameworkName string, zookeepers []string, schedulerIPAddr string, user string, rexPort int) *SchedulerCore {
@@ -103,7 +106,13 @@ func NewSchedulerCore(schedulerHostname string, frameworkName string, zookeepers
 	if !strings.Contains(nodename, ".") {
 		nodename = nodename + "."
 	}
-	myRex, err := rex.NewRiakExplorer(int64(rexPort), nodename)
+
+	c := cepm.NewCPMd(0, mgr)
+	c.Background()
+
+
+
+	myRex, err := rex.NewRiakExplorer(int64(rexPort), nodename, c)
 	if err != nil {
 		log.Fatal("Could not start up Riak Explorer in scheduler")
 	}
@@ -117,6 +126,7 @@ func NewSchedulerCore(schedulerHostname string, frameworkName string, zookeepers
 		user:            user,
 		zookeepers:      zookeepers,
 		rex:             myRex,
+		cepm:			 c,
 	}
 	scheduler.schedulerHTTPServer = ServeExecutorArtifact(scheduler, schedulerHostname)
 	return scheduler

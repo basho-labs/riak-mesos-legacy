@@ -14,6 +14,8 @@ import (
 	"path/filepath"
 	"text/template"
 	"time"
+	"github.com/basho-labs/riak-mesos/cepmd/cepm"
+	"io/ioutil"
 )
 
 type RiakNode struct {
@@ -35,6 +37,10 @@ type templateData struct {
 	DisterlPort			int64
 }
 
+type advancedTemplateData struct {
+	CEPMDPort int
+}
+
 func NewRiakNode(taskInfo *mesos.TaskInfo, executor *ExecutorCore) *RiakNode {
 	taskData, err := common.DeserializeTaskData(taskInfo.Data)
 	if err != nil {
@@ -43,6 +49,7 @@ func NewRiakNode(taskInfo *mesos.TaskInfo, executor *ExecutorCore) *RiakNode {
 
 	log.Infof("Deserialized task data: %+v", taskData)
 	mgr := metamgr.NewMetadataManager(executor.fwInfo.GetId().GetValue(), taskData.Zookeepers)
+
 	return &RiakNode{
 
 		executor:        executor,
@@ -133,8 +140,37 @@ func (riakNode *RiakNode) configureRiak(ports chan int64) {
 	vars.HandoffPort = <-ports
 	vars.DisterlPort = <-ports
 
-	file, err := os.OpenFile("riak/etc/riak.conf", os.O_TRUNC|os.O_CREATE|os.O_RDWR, 0)
+	file, err := os.OpenFile("riak/etc/riak.conf", os.O_TRUNC|os.O_CREATE|os.O_RDWR, 0664)
 
+	defer file.Close()
+	if err != nil {
+		log.Panic("Unable to open file: ", err)
+	}
+
+	err = tmpl.Execute(file, vars)
+
+	if err != nil {
+		log.Panic("Got error", err)
+	}
+}
+func (riakNode *RiakNode) configureAdvanced(cepmdPort int) {
+
+	data, err := Asset("data/advanced.config")
+	if err != nil {
+		log.Panic("Got error", err)
+	}
+	tmpl, err := template.New("advanced").Parse(string(data))
+
+	if err != nil {
+		log.Panic(err)
+	}
+
+	// Populate template data from the MesosTask
+	vars := advancedTemplateData{}
+	vars.CEPMDPort = cepmdPort
+	file, err := os.OpenFile("riak/etc/advanced.config", os.O_TRUNC|os.O_CREATE|os.O_RDWR, 0664)
+
+	defer file.Close()
 	if err != nil {
 		log.Panic("Unable to open file: ", err)
 	}
@@ -153,14 +189,25 @@ func (riakNode *RiakNode) Run() {
 	ports := portIter(riakNode.taskInfo.Resources)
 	riakNode.configureRiak(ports)
 
-	if err != nil {
-		log.Fatal("Could not start up Riak Explorer")
-	}
+
+	c := cepm.NewCPMd(0, riakNode.metadataManager)
+	c.Background()
+	riakNode.configureAdvanced(c.GetPort())
+
+	args := []string{"console", "-noinput"}
+
+	err = cepm.InstallInto("riak/lib/kernel-2.16.4/ebin")
+	if err != nil { log.Panic(err) }
+	args = append(args, "-no_epmd")
+	os.MkdirAll("riak/lib/kernel-2.16.4/priv", 0777)
+	ioutil.WriteFile("riak/lib/kernel-2.16.4/priv/cepmd_port", []byte(fmt.Sprintf("%d.", c.GetPort())), 0777)
+
 
 	HealthCheckFun := func() error {
 		process := exec.Command("/usr/bin/timeout", "--kill-after=5s", "--signal=TERM", "5s", "riak/bin/riak-admin", "wait-for-service", "riak_kv")
 		process.Stdout = os.Stdout
 		process.Stderr = os.Stderr
+
 		wd, err := os.Getwd()
 		if err != nil {
 			log.Fatal("Could not get current working directory")
@@ -168,9 +215,10 @@ func (riakNode *RiakNode) Run() {
 		home := filepath.Join(wd, "riak/data")
 		homevar := fmt.Sprintf("HOME=%s", home)
 		process.Env = append(os.Environ(), homevar)
+		process.Env = append(process.Env, fmt.Sprintf("CEPMD_PORT=%d", c.GetPort()))
 		return process.Run()
 	}
-	riakNode.pm, err = process_manager.NewProcessManager(func() { return }, "riak/bin/riak", []string{"console", "-noinput"}, HealthCheckFun, []string{})
+	riakNode.pm, err = process_manager.NewProcessManager(func() { return }, "riak/bin/riak", args, HealthCheckFun)
 
 	if err != nil {
 		log.Error("Could not start Riak: ", err)

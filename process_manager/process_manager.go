@@ -19,9 +19,9 @@ type ProcessManager struct {
 	subscribe chan chan int
 }
 
-func NewProcessManager(tdcb TeardownCallback, executablePath string, args []string, healthcheck Healthchecker, extraEnv []string) (*ProcessManager, error) {
+func NewProcessManager(tdcb TeardownCallback, executablePath string, args []string, healthcheck Healthchecker) (*ProcessManager, error) {
 	retFuture := make(chan *ProcessManager)
-	go startProcessManager(tdcb, executablePath, args, healthcheck, extraEnv, retFuture)
+	go startProcessManager(tdcb, executablePath, args, healthcheck, retFuture)
 	retVal := <-retFuture
 	log.Info("Retval: ", retVal)
 	if retVal == nil {
@@ -43,7 +43,7 @@ func (pm *ProcessManager) TearDown() {
 	<-replyChan
 	return
 }
-func startProcessManager(tdcb TeardownCallback, executablePath string, args []string, healthcheck Healthchecker, extraEnv []string, retChan chan *ProcessManager) {
+func startProcessManager(tdcb TeardownCallback, executablePath string, args []string, healthcheck Healthchecker, retChan chan *ProcessManager) {
 	defer close(retChan)
 	pm := &ProcessManager{
 		teardown:  make(chan chan interface{}, 10),
@@ -61,7 +61,7 @@ func startProcessManager(tdcb TeardownCallback, executablePath string, args []st
 	sigchlds := make(chan os.Signal, 1000)
 	signal.Notify(sigchlds, syscall.SIGCHLD)
 
-	pm.start(executablePath, args, extraEnv)
+	pm.start(executablePath, args)
 	waitChan := subscribe(pm.pid)
 	defer unsubscribe(pm.pid)
 	defer close(waitChan)
@@ -184,12 +184,12 @@ func (pm *ProcessManager) killProcess(waitChan chan pidChangeNotification) {
 	<-waitChan
 }
 
-func (pm *ProcessManager) start(executablePath string, args []string, extraEnv []string) {
+func (pm *ProcessManager) start(executablePath string, args []string) {
 
 	sysprocattr := &syscall.SysProcAttr{
 		Setpgid: true,
 	}
-	env := append(os.Environ(), extraEnv...)
+	env := os.Environ()
 
 	procattr := &syscall.ProcAttr{
 		Sys:   sysprocattr,
