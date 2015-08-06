@@ -1,10 +1,9 @@
 package cepm
 
-
 import (
-	"testing"
 	"github.com/stretchr/testify/assert"
 	"net"
+	"testing"
 )
 
 func TestListen(t *testing.T) {
@@ -12,6 +11,6 @@ func TestListen(t *testing.T) {
 	_ = assert
 	cpmd := setupCPMd(0)
 	t.Log("Listening: ", cpmd.ln.Addr())
-   	_, err := net.Dial("tcp", cpmd.ln.Addr().String())
+	_, err := net.Dial("tcp", cpmd.ln.Addr().String())
 	assert.Nil(err)
 }

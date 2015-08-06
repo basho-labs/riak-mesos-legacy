@@ -4,18 +4,18 @@ import (
 	"encoding/binary"
 	"fmt"
 	log "github.com/Sirupsen/logrus"
+	"github.com/basho-labs/riak-mesos/cepmd/cepm"
 	"github.com/basho-labs/riak-mesos/common"
 	metamgr "github.com/basho-labs/riak-mesos/metadata_manager"
 	"github.com/basho-labs/riak-mesos/process_manager"
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	util "github.com/mesos/mesos-go/mesosutil"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"text/template"
 	"time"
-	"github.com/basho-labs/riak-mesos/cepmd/cepm"
-	"io/ioutil"
 )
 
 type RiakNode struct {
@@ -34,7 +34,7 @@ type templateData struct {
 	PBPort                 int64
 	HandoffPort            int64
 	FullyQualifiedNodeName string
-	DisterlPort			int64
+	DisterlPort            int64
 }
 
 type advancedTemplateData struct {
@@ -189,7 +189,6 @@ func (riakNode *RiakNode) Run() {
 	ports := portIter(riakNode.taskInfo.Resources)
 	riakNode.configureRiak(ports)
 
-
 	c := cepm.NewCPMd(0, riakNode.metadataManager)
 	c.Background()
 	riakNode.configureAdvanced(c.GetPort())
@@ -197,11 +196,12 @@ func (riakNode *RiakNode) Run() {
 	args := []string{"console", "-noinput"}
 
 	err = cepm.InstallInto("riak/lib/kernel-2.16.4/ebin")
-	if err != nil { log.Panic(err) }
+	if err != nil {
+		log.Panic(err)
+	}
 	args = append(args, "-no_epmd")
 	os.MkdirAll("riak/lib/kernel-2.16.4/priv", 0777)
 	ioutil.WriteFile("riak/lib/kernel-2.16.4/priv/cepmd_port", []byte(fmt.Sprintf("%d.", c.GetPort())), 0777)
-
 
 	HealthCheckFun := func() error {
 		process := exec.Command("/usr/bin/timeout", "--kill-after=5s", "--signal=TERM", "5s", "riak/bin/riak-admin", "wait-for-service", "riak_kv")
@@ -239,16 +239,24 @@ func (riakNode *RiakNode) Run() {
 		rootNode := riakNode.metadataManager.GetRootNode()
 
 		clustersNode, err := rootNode.GetChild("clusters")
-		if err != nil { log.Panic(err) }
+		if err != nil {
+			log.Panic(err)
+		}
 		clusterNode, err := clustersNode.GetChild(riakNode.taskData.ClusterName)
-		if err != nil { log.Panic(err) }
+		if err != nil {
+			log.Panic(err)
+		}
 
 		clusterNode.CreateChildIfNotExists("coordinator")
 		coordinator, err := clusterNode.GetChild("coordinator")
-		if err != nil { log.Panic(err) }
+		if err != nil {
+			log.Panic(err)
+		}
 		coordinator.CreateChildIfNotExists("coordinatedNodes")
 		coordinatedNodes, err := coordinator.GetChild("coordinatedNodes")
-		if err != nil { log.Panic(err) }
+		if err != nil {
+			log.Panic(err)
+		}
 
 		// The following is commented out as part of experimenting with moving REX
 		// to the scheduler as opposed to running in the executors
@@ -259,7 +267,9 @@ func (riakNode *RiakNode) Run() {
 		// Do cluster joiny stuff
 
 		child, err := coordinatedNodes.MakeChild(riakNode.taskInfo.GetTaskId().GetValue(), true)
-		if err != nil { log.Panic(err) }
+		if err != nil {
+			log.Panic(err)
+		}
 		coordinatedData := common.CoordinatedData{NodeName: riakNode.taskData.FullyQualifiedNodeName}
 		cdBytes, err := coordinatedData.Serialize()
 		if err != nil {

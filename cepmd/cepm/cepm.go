@@ -4,14 +4,13 @@ import (
 	"bufio"
 	"fmt"
 	log "github.com/Sirupsen/logrus"
+	"github.com/basho-labs/riak-mesos/common"
 	metamgr "github.com/basho-labs/riak-mesos/metadata_manager"
 	"net"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
-	"github.com/basho-labs/riak-mesos/common"
-
 )
 
 type CEPM struct {
@@ -45,7 +44,7 @@ func (c *CEPM) handleConn(conn net.Conn) {
 			return
 		}
 		disterlData := common.DisterlData{
-			NodeName:commandAndMore[1],
+			NodeName:    commandAndMore[1],
 			DisterlPort: port,
 		}
 		nodeByteData, err := disterlData.Serialize()
@@ -151,8 +150,6 @@ func NewCPMd(port int, mgr *metamgr.MetadataManager) *CEPM {
 
 	return c
 }
-
-
 
 // Drops the ERL files into the given directory
 func InstallInto(dir string) error {

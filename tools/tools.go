@@ -80,7 +80,9 @@ func respond(val string, err error) {
 func getURL() string {
 	mgr := metadata_manager.NewMetadataManager(frameworkName, []string{zookeeperAddr})
 	zkNode, err := mgr.GetRootNode().GetChild("uri")
-	if err != nil { log.Panic(err) }
+	if err != nil {
+		log.Panic(err)
+	}
 	return string(zkNode.GetData())
 }
 

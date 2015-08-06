@@ -24,8 +24,8 @@ func DeserializeTaskData(data []byte) (TaskData, error) {
 }
 
 type CoordinatedData struct {
-	NodeName string
-	DisterlPort	int
+	NodeName    string
+	DisterlPort int
 }
 
 func (s *CoordinatedData) Serialize() ([]byte, error) {
@@ -39,10 +39,9 @@ func DeserializeCoordinatedData(data []byte) (CoordinatedData, error) {
 	return t, err
 }
 
-
 type DisterlData struct {
-	NodeName string
-	DisterlPort	int
+	NodeName    string
+	DisterlPort int
 }
 
 func (s *DisterlData) Serialize() ([]byte, error) {
