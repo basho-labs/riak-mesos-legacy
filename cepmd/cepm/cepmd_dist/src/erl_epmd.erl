@@ -13,8 +13,21 @@
 
 %% API
 -export([register_node/2, port_please/2, port_please/3, mesos_mode/0, get_port/1]).
--export([wait_forever/1]).
+-export([wait_forever/1, wait_forever/0]).
 
+-export([start/0, start_link/0]).
+
+wait_forever() ->
+    receive
+        _ ->
+            wait_forever()
+    end.
+
+start() ->
+    {ok, spawn(?MODULE, wait_forever, [])}.
+
+start_link() ->
+    {ok, spawn_link(?MODULE, wait_forever, [])}.
 mesos_mode() -> true.
 wait_forever(Socket) ->
     receive
@@ -67,16 +80,39 @@ get_port(Node) ->
     end.
    % get_port(Node,HostName, Timeout).
 
+get_port1() ->
+    case application:get_env(kernel, cepmd_port) of
+        undefined ->
+            get_port2();
+        {ok, Port} ->
+            {ok, Port}
+    end.
 
-
-get_connect() ->
+get_port2() ->
     case os:getenv("CEPMD_PORT") of
         false ->
-            {error, no_cepmd_port_env};
+            get_port3();
         CEPMDPortStr ->
             {PortInt, _} = string:to_integer(CEPMDPortStr),
+            {ok, PortInt}
+    end.
+get_port3() ->
+    File = filename:join([code:priv_dir(kernel), "cepmd_port"]),
+    case file:consult(File) of
+        {ok,[Port]} ->
+            {ok, Port};
+        _ ->
+            false
+    end.
+
+%% TODO: Make IPv6 friendly
+get_connect() ->
+    case get_port1() of
+        {ok, Port} ->
             %% TODO: Make IPv6 friendly
-            gen_tcp:connect({127,0,0,1}, PortInt, [{mode, list}, {packet, line}, {active, once}])
+            gen_tcp:connect({127,0,0,1}, Port, [{mode, list}, {packet, line}, {active, once}]);
+        _Else ->
+            {error, no_cepmd_port}
     end.
 
 do_wait_for_data(Conn) ->

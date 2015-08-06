@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 	"github.com/basho-labs/riak-mesos/common"
+
 )
 
 type CEPM struct {
@@ -149,4 +150,18 @@ func NewCPMd(port int, mgr *metamgr.MetadataManager) *CEPM {
 	}
 
 	return c
+}
+
+
+
+// Drops the ERL files into the given directory
+func InstallInto(dir string) error {
+	var err error
+
+	err = RestoreAssets(dir, "")
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
