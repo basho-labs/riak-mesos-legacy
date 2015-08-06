@@ -243,7 +243,7 @@ func (sc *SchedulerCore) spreadNodesAcrossOffers(allOffers []*mesos.Offer, allRe
 
 	offer := allOffers[currentOfferIndex]
 	riakNode := allNodes[currentRiakNodeIndex]
-	
+
 	var success bool
 	var ask []*mesos.Resource
 	allResources[currentOfferIndex], ask, success = riakNode.GetCombinedAsk()(allResources[currentOfferIndex])
@@ -279,7 +279,6 @@ func (sc *SchedulerCore) ResourceOffers(driver sched.SchedulerDriver, offers []*
 	sc.lock.Lock()
 	defer sc.lock.Unlock()
 	log.Info("Received resource offers: ", offers)
-	// launchTasks := []*mesos.TaskInfo{}
 	launchTasks := make(map[string][]*mesos.TaskInfo)
 	toBeScheduled := []*FrameworkRiakNode{}
 	for _, cluster := range sc.clusters {
