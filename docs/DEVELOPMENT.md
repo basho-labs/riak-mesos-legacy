@@ -52,7 +52,7 @@ Setup riak-mesos and mesos-go
 ### Create src directories
 cd $GOPATH
 mkdir -p src/github.com/mesos
-mkdir -p src/github.com/basho
+mkdir -p src/github.com/basho-labs
 ### Download
 cd $GOPATH/src/github.com/
 git clone git@github.com:basho-labs/riak-mesos.git basho-labs/riak-mesos
