@@ -2,6 +2,8 @@ package main
 
 import (
 	"flag"
+	"os"
+	"strconv"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/basho-labs/riak-mesos/scheduler"
@@ -14,7 +16,7 @@ var (
 	schedulerIPAddr   string
 	frameworkName     string
 	user              string
-	rexPort           int
+	logFile           string
 )
 
 func init() {
@@ -24,12 +26,32 @@ func init() {
 	flag.StringVar(&schedulerIPAddr, "ip", "33.33.33.1", "Framework ip")
 	flag.StringVar(&frameworkName, "name", "riak-mesos-go3", "Framework Instance Name")
 	flag.StringVar(&user, "user", "", "Framework Username")
-	flag.IntVar(&rexPort, "rex-port", 9090, "Riak Explorer port")
+	flag.StringVar(&logFile, "log", "", "Log File Location")
 	flag.Parse()
 }
 
 func main() {
 	log.SetLevel(log.DebugLevel)
+
+	fo, logErr := os.Create(logFile)
+	if logErr != nil {
+		panic(logErr)
+	}
+	log.SetOutput(fo)
+
+	// When starting scheduler from Marathon, PORT0-N env vars will be set
+	rexPortStr := os.Getenv("PORT1")
+
+	// If PORT1 isn't set, fallback to a hardcoded one for now
+	// TODO: Sargun fix me
+	if rexPortStr == "" {
+		rexPortStr = "9090"
+	}
+
+	rexPort, portErr := strconv.Atoi(rexPortStr)
+	if portErr != nil {
+		log.Fatal(portErr)
+	}
 
 	sched := scheduler.NewSchedulerCore(schedulerHostname, frameworkName, []string{zookeeperAddr}, schedulerIPAddr, user, rexPort)
 	sched.Run(mesosMaster)

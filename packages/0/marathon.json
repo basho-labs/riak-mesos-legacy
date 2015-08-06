@@ -1,0 +1,15 @@
+{
+  "id": "{{riak.framework-id}}",
+  "instances": 1,
+  "cpus": {{riak.cpus}},
+  "mem": {{riak.mem}},
+  "ports": [0, 0],
+  "uris": ["{{riak.url}}"],
+  "env": {},
+  "args": [
+      "framework_linux_amd64",
+      "-master={{mesos.master}}",
+      "-zk={{riak.master}}",
+      "-name={{riak.framework-id}}"],
+  "healthChecks": []
+}

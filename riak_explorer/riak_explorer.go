@@ -5,14 +5,15 @@ import (
 	"bytes"
 	"compress/gzip"
 	"fmt"
-	log "github.com/Sirupsen/logrus"
-	"github.com/basho-labs/riak-mesos/process_manager"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
 	"text/template"
+
+	log "github.com/Sirupsen/logrus"
+	"github.com/basho-labs/riak-mesos/process_manager"
 )
 
 type RiakExplorer struct {
@@ -35,6 +36,9 @@ func (re *RiakExplorer) TearDown() {
 
 func decompress() string {
 	assetPath := fmt.Sprintf("riak_explorer_%s_%s.tar.gz", runtime.GOOS, runtime.GOARCH)
+
+	log.Info("Decompressing Riak Explorer: ", assetPath)
+
 	asset, err := Asset(assetPath)
 	if err != nil {
 		log.Fatal(err)
@@ -44,7 +48,7 @@ func decompress() string {
 	gzReader, err := gzip.NewReader(bytesReader)
 
 	if err != nil {
-		fmt.Println(err)
+		log.Fatal("Error encountered decompressing riak explorer: ", err)
 		os.Exit(1)
 	}
 
