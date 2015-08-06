@@ -119,7 +119,7 @@ func (riakNode *RiakNode) runLoop(child *metamgr.ZkNode) {
 	riakNode.executor.Driver.Stop()
 
 }
-func (riakNode *RiakNode) configureRiak(ports chan int64) {
+func (riakNode *RiakNode) configureRiak(ports chan int64) templateData {
 
 	data, err := Asset("data/riak.conf")
 	if err != nil {
@@ -152,6 +152,7 @@ func (riakNode *RiakNode) configureRiak(ports chan int64) {
 	if err != nil {
 		log.Panic("Got error", err)
 	}
+	return vars
 }
 func (riakNode *RiakNode) configureAdvanced(cepmdPort int) {
 
@@ -187,7 +188,7 @@ func (riakNode *RiakNode) Run() {
 	log.Info("Other hilarious facts: ", riakNode.taskInfo)
 
 	ports := portIter(riakNode.taskInfo.Resources)
-	riakNode.configureRiak(ports)
+	config := riakNode.configureRiak(ports)
 
 	c := cepm.NewCPMd(0, riakNode.metadataManager)
 	c.Background()
@@ -270,7 +271,13 @@ func (riakNode *RiakNode) Run() {
 		if err != nil {
 			log.Panic(err)
 		}
-		coordinatedData := common.CoordinatedData{NodeName: riakNode.taskData.FullyQualifiedNodeName}
+		coordinatedData := common.CoordinatedData{
+			NodeName:    riakNode.taskData.FullyQualifiedNodeName,
+			DisterlPort: int(config.DisterlPort),
+			PBPort:      int(config.PBPort),
+			HTTPPort:    int(config.HTTPPort),
+			Hostname:    riakNode.executor.slaveInfo.GetHostname(),
+		}
 		cdBytes, err := coordinatedData.Serialize()
 		if err != nil {
 			log.Panic("Could not serialize coordinated data	", err)

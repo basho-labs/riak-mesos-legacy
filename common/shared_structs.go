@@ -26,6 +26,9 @@ func DeserializeTaskData(data []byte) (TaskData, error) {
 type CoordinatedData struct {
 	NodeName    string
 	DisterlPort int
+	PBPort      int
+	HTTPPort    int
+	Hostname	string
 }
 
 func (s *CoordinatedData) Serialize() ([]byte, error) {
