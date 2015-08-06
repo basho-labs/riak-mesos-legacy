@@ -28,15 +28,17 @@ deps:
 	godep restore
 	cd $(BASE_DIR)/scheduler/data && $(MAKE)
 	cd $(BASE_DIR)/riak_explorer/data && $(MAKE)
-	cd $(BASE_DIR)/cepmd/cepmd_dist && $(MAKE)
+	cd $(BASE_DIR)/cepmd/cepm/cepmd_dist && $(MAKE)
 
 clean_deps:
 	rm $(BASE_DIR)/scheduler/data/*.tar.gz
 	rm $(BASE_DIR)/riak_explorer/data/*.tar.gz
-	cd $(BASE_DIR)/cepmd/cepmd_dist && $(MAKE) clean
+	cd $(BASE_DIR)/cepmd/cepm/cepmd_dist && $(MAKE) clean
 
 
 build_executor:
+	go generate ./cepmd/...
+	go generate ./riak_explorer/...
 	go generate ./executor/...
 	gox \
 		-osarch=$(EGARC) \
