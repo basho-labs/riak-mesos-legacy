@@ -21,7 +21,7 @@ type ProcessManager struct {
 
 func NewProcessManager(tdcb TeardownCallback, executablePath string, args []string, healthcheck Healthchecker) (*ProcessManager, error) {
 	retFuture := make(chan *ProcessManager)
-	go StartProcessManager(tdcb, executablePath, args, healthcheck, retFuture)
+	go startProcessManager(tdcb, executablePath, args, healthcheck, retFuture)
 	retVal := <-retFuture
 	log.Info("Retval: ", retVal)
 	if retVal == nil {
@@ -43,7 +43,7 @@ func (pm *ProcessManager) TearDown() {
 	<-replyChan
 	return
 }
-func StartProcessManager(tdcb TeardownCallback, executablePath string, args []string, healthcheck Healthchecker, retChan chan *ProcessManager) {
+func startProcessManager(tdcb TeardownCallback, executablePath string, args []string, healthcheck Healthchecker, retChan chan *ProcessManager) {
 	defer close(retChan)
 	pm := &ProcessManager{
 		teardown:  make(chan chan interface{}, 10),
@@ -189,11 +189,14 @@ func (pm *ProcessManager) start(executablePath string, args []string) {
 	sysprocattr := &syscall.SysProcAttr{
 		Setpgid: true,
 	}
+	env := os.Environ()
+
 	procattr := &syscall.ProcAttr{
 		Sys:   sysprocattr,
-		Env:   os.Environ(),
+		Env:   env,
 		Files: []uintptr{os.Stdin.Fd(), os.Stdout.Fd(), os.Stderr.Fd()},
 	}
+
 	if os.Getenv("HOME") == "" {
 		wd, err := os.Getwd()
 		if err != nil {

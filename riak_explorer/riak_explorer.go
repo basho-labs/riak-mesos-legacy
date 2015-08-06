@@ -5,15 +5,15 @@ import (
 	"bytes"
 	"compress/gzip"
 	"fmt"
+	log "github.com/Sirupsen/logrus"
+	"github.com/basho-labs/riak-mesos/cepmd/cepm"
+	"github.com/basho-labs/riak-mesos/process_manager"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
 	"text/template"
-
-	log "github.com/Sirupsen/logrus"
-	"github.com/basho-labs/riak-mesos/process_manager"
 )
 
 type RiakExplorer struct {
@@ -25,6 +25,10 @@ type RiakExplorer struct {
 type templateData struct {
 	HTTPPort int64
 	NodeName string
+}
+
+type advancedTemplateData struct {
+	CEPMDPort int
 }
 
 func (re *RiakExplorer) NewRiakExplorerClient() *RiakExplorerClient {
@@ -120,11 +124,39 @@ func (re *RiakExplorer) configure(port int64, nodename string) {
 		log.Panic("Got error", err)
 	}
 }
+func (re *RiakExplorer) configureAdvanced(cepmdPort int) {
+	data, err := Asset("advanced.config")
+	if err != nil {
+		log.Panic("Got error", err)
+	}
+	tmpl, err := template.New("advanced").Parse(string(data))
 
-func NewRiakExplorer(port int64, nodename string) (*RiakExplorer, error) {
+	if err != nil {
+		log.Panic(err)
+	}
+
+	// Populate template data from the MesosTask
+	vars := advancedTemplateData{}
+	vars.CEPMDPort = cepmdPort
+	configpath := filepath.Join(".", re.tempdir, "riak_explorer", "etc", "advanced.config")
+	file, err := os.OpenFile(configpath, os.O_TRUNC|os.O_CREATE|os.O_RDWR, 0)
+
+	if err != nil {
+		log.Panic("Unable to open file: ", err)
+	}
+
+	err = tmpl.Execute(file, vars)
+
+	if err != nil {
+		log.Panic("Got error", err)
+	}
+}
+
+func NewRiakExplorer(port int64, nodename string, c *cepm.CEPM) (*RiakExplorer, error) {
 	tempdir := decompress()
 	exepath := filepath.Join(".", tempdir, "riak_explorer", "bin", "riak_explorer")
 
+	args := []string{"console", "-noinput"}
 	healthCheckFun := func() error {
 		log.Info("Running healthcheck: ", port)
 		_, err := NewRiakExplorerClient(fmt.Sprintf("localhost:%d", port)).Ping()
@@ -142,10 +174,22 @@ func NewRiakExplorer(port int64, nodename string) (*RiakExplorer, error) {
 		tempdir: tempdir,
 		port:    port,
 	}
+	if c != nil {
+		// This is gross -- we're passing "hidden" state by passing it through the unix environment variables.
+		// Fix it -- we should convert the NewRiakExplorer into using a fluent pattern?
+		libpath := filepath.Join(".", tempdir, "riak_explorer", "lib", "basho-patches")
+		os.Mkdir(libpath, 0777)
+		err := cepm.InstallInto(libpath)
+		if err != nil {
+			log.Panic(err)
+		}
+		args = append(args, "-no_epmd")
+		re.configureAdvanced(c.GetPort())
+	}
 	re.configure(port, nodename)
 	log.Debugf("Starting up Riak Explorer %v", exepath)
 	var err error
-	re.pm, err = process_manager.NewProcessManager(tearDownFun, exepath, []string{"console", "-noinput"}, healthCheckFun)
+	re.pm, err = process_manager.NewProcessManager(tearDownFun, exepath, args, healthCheckFun)
 	if err != nil {
 		log.Error("Could not start Riak Explorer: ", err)
 	}

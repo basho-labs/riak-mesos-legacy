@@ -206,8 +206,12 @@ func (mgr *MetadataManager) createIfNotExists(path string, ephemeral bool) {
 }
 
 // This subspaces the node in the "current working namespace"
-func (mgr *MetadataManager) GetRootNode() (*ZkNode, error) {
-	return mgr.getNode(mgr.namespace)
+func (mgr *MetadataManager) GetRootNode() *ZkNode {
+	node, err := mgr.getNode(mgr.namespace)
+	if err != nil {
+		log.Panic("Could not get Root node")
+	}
+	return node
 }
 
 func (mgr *MetadataManager) getChildrenW(ns Namespace) ([]*ZkNode, <-chan zk.Event) {
@@ -242,10 +246,8 @@ func (mgr *MetadataManager) getChildren(ns Namespace) []*ZkNode {
 func (mgr *MetadataManager) getNode(ns Namespace) (*ZkNode, error) {
 	// Namespaces are also nodes
 	data, stat, err := mgr.zkConn.Get(ns.GetZKPath())
-	if err == zk.ErrNoNode {
+	if err != nil {
 		return nil, err
-	} else if err != nil {
-		log.Panic(err)
 	}
 	node := &ZkNode{
 		mgr:  mgr,
@@ -283,7 +285,7 @@ func (mgr *MetadataManager) makeNodeWithData(ns Namespace, data []byte, ephemera
 	log.Info("Making node")
 	_, err := mgr.zkConn.Create(ns.GetZKPath(), data, flags, zk.WorldACL(zk.PermAll))
 	if err != nil {
-		log.Panic(err)
+		return nil, err
 	}
 	return mgr.getNode(ns)
 }
