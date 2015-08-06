@@ -25,6 +25,7 @@ func DeserializeTaskData(data []byte) (TaskData, error) {
 
 type CoordinatedData struct {
 	NodeName string
+	DisterlPort	int
 }
 
 func (s *CoordinatedData) Serialize() ([]byte, error) {
@@ -34,6 +35,23 @@ func (s *CoordinatedData) Serialize() ([]byte, error) {
 
 func DeserializeCoordinatedData(data []byte) (CoordinatedData, error) {
 	t := CoordinatedData{}
+	err := json.Unmarshal(data, &t)
+	return t, err
+}
+
+
+type DisterlData struct {
+	NodeName string
+	DisterlPort	int
+}
+
+func (s *DisterlData) Serialize() ([]byte, error) {
+	b, err := json.Marshal(s)
+	return b, err
+}
+
+func DeserializeDisterlData(data []byte) (DisterlData, error) {
+	t := DisterlData{}
 	err := json.Unmarshal(data, &t)
 	return t, err
 }
