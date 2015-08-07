@@ -95,6 +95,7 @@ func (frn *FrameworkRiakNode) handleRunningToFailedTransition() {
 			leaveReply, leaveErr := rexc.ForceRemove(riakNode.TaskData.FullyQualifiedNodeName, frn.TaskData.FullyQualifiedNodeName)
 			log.Infof("Triggered leave: %+v, %+v", leaveReply, leaveErr)
 			if leaveErr == nil {
+				log.Info("Leave successful")
 				break // We're done here
 			}
 		}
@@ -173,6 +174,21 @@ func (frn *FrameworkRiakNode) GetTaskStatus() *mesos.TaskStatus {
 		}
 	}
 }
+
+func (frn *FrameworkRiakNode) GetExecutorAsks() []common.ResourceAsker {
+	// 10 for good measure
+	// Ports:
+	// -Protocol Buffers
+	// -HTTP
+	// -Riak Explorer (rex)
+	// 4-10 -- unknown, so far
+	// Potential:
+	// EPM
+
+	return []common.ResourceAsker{common.AskForCPU(0.01),  common.AskForMemory(32)}
+}
+
+
 func (frn *FrameworkRiakNode) GetAsks() []common.ResourceAsker {
 	// 10 for good measure
 	// Ports:
@@ -185,25 +201,37 @@ func (frn *FrameworkRiakNode) GetAsks() []common.ResourceAsker {
 
 	return []common.ResourceAsker{common.AskForCPU(0.3), common.AskForPorts(10), common.AskForMemory(320)}
 }
+
+
 func (frn *FrameworkRiakNode) GetCombinedAsk() common.CombinedResourceAsker {
-	ret := func(offer []*mesos.Resource) ([]*mesos.Resource, []*mesos.Resource, bool) {
-		asks := []*mesos.Resource{}
+	ret := func(offer []*mesos.Resource) ([]*mesos.Resource, []*mesos.Resource, []*mesos.Resource, bool) {
+		executorAsks := []*mesos.Resource{}
+		taskAsks := []*mesos.Resource{}
+
 		success := true
 		remaining := offer
 		for _, fun := range frn.GetAsks() {
 			var newAsk *mesos.Resource
 			remaining, newAsk, success = fun(remaining)
-			asks = append(asks, newAsk)
+			taskAsks = append(taskAsks, newAsk)
 			if !success {
-				return offer, []*mesos.Resource{}, false
+				return offer, []*mesos.Resource{}, []*mesos.Resource{}, false
 			}
 		}
-		return remaining, asks, success
+		for _, fun := range frn.GetExecutorAsks() {
+			var newAsk *mesos.Resource
+			remaining, newAsk, success = fun(remaining)
+			executorAsks = append(executorAsks, newAsk)
+			if !success {
+				return offer, []*mesos.Resource{}, []*mesos.Resource{}, false
+			}
+		}
+		return remaining, executorAsks, taskAsks, success
 	}
 	return ret
 }
 
-func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(offer *mesos.Offer, resources []*mesos.Resource) *mesos.TaskInfo {
+func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(offer *mesos.Offer, executorAsk  []*mesos.Resource, taskAsk []*mesos.Resource) *mesos.TaskInfo {
 	// THIS IS A MUTATING CALL
 	if frn.CurrentState != process_state.Shutdown && frn.CurrentState != process_state.Failed && frn.CurrentState != process_state.Unknown {
 		log.Panicf("Trying to generate Task Info while node is up. ZK FRN State: %v", frn.CurrentState)
@@ -238,10 +266,7 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(offer *mesos.Off
 			Shell:     proto.Bool(false),
 			Arguments: []string{frn.frc.sc.schedulerHTTPServer.executorName, "-logtostderr=true", "-taskinfo", frn.CurrentID()},
 		},
-		Resources: []*mesos.Resource{
-			util.NewScalarResource("cpus", 0.01),
-			util.NewScalarResource("mem", 32),
-		},
+		Resources: executorAsk,
 	}
 	taskId := &mesos.TaskID{
 		Value: proto.String(frn.CurrentID()),
@@ -273,7 +298,7 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(offer *mesos.Off
 		TaskId:    taskId,
 		SlaveId:   offer.SlaveId,
 		Executor:  exec,
-		Resources: resources,
+		Resources: taskAsk,
 		Data:      binTaskData,
 	}
 	frn.LastTaskInfo = taskInfo
