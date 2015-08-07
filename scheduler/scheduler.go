@@ -181,6 +181,7 @@ func (sc *SchedulerCore) Run(mesosMaster string) {
 		Id:              frameworkId,
 		FailoverTimeout: proto.Float64(86400),
 		WebuiUrl:        proto.String(sc.schedulerHTTPServer.GetURI()),
+		Checkpoint:      proto.Bool(true),
 	}
 
 	log.Info("Running scheduler with FrameworkInfo: ", fwinfo)
