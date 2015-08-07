@@ -86,11 +86,11 @@ func (frn *FrameworkRiakNode) GetZkNode() *metamgr.ZkNode {
 	return frn.zkNode
 }
 
-func (frn *FrameworkRiakNode) handleRunningToFailedTransition() {
+func (frn *FrameworkRiakNode) handleUpToDownTransition() {
 	rexc := frn.frc.sc.rex.NewRiakExplorerClient()
 	for riakNodeName := range frn.frc.nodes {
 		riakNode := frn.frc.nodes[riakNodeName]
-		if riakNode.CurrentState == process_state.Started {
+		if riakNode.CurrentState == process_state.Started && riakNode != frn {
 			// We should try to join against this node
 			leaveReply, leaveErr := rexc.ForceRemove(riakNode.TaskData.FullyQualifiedNodeName, frn.TaskData.FullyQualifiedNodeName)
 			log.Infof("Triggered leave: %+v, %+v", leaveReply, leaveErr)
@@ -143,7 +143,7 @@ func (frn *FrameworkRiakNode) handleStatusUpdate(statusUpdate *mesos.TaskStatus)
 	case mesos.TaskState_TASK_FAILED:
 		{
 			if frn.CurrentState == process_state.Started {
-				frn.handleRunningToFailedTransition()
+				frn.handleUpToDownTransition()
 			}
 			frn.CurrentState = process_state.Failed
 		}
@@ -155,7 +155,12 @@ func (frn *FrameworkRiakNode) handleStatusUpdate(statusUpdate *mesos.TaskStatus)
 	// These two could actually appear if the task is running -- we should better handle
 	// status updates in these two scenarios
 	case mesos.TaskState_TASK_LOST:
-		frn.CurrentState = process_state.Failed
+		{
+			if frn.CurrentState == process_state.Started {
+				frn.handleUpToDownTransition()
+			}
+			frn.CurrentState = process_state.Failed
+		}
 	case mesos.TaskState_TASK_ERROR:
 		frn.CurrentState = process_state.Failed
 	default:
