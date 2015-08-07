@@ -94,9 +94,10 @@ type SchedulerCore struct {
 	zookeepers          []string
 	rex                 *rex.RiakExplorer
 	cepm                *cepm.CEPM
+	frameworkName       string
 }
 
-func NewSchedulerCore(schedulerHostname string, frameworkID string, zookeepers []string, schedulerIPAddr string, user string, rexPort int) *SchedulerCore {
+func NewSchedulerCore(schedulerHostname string, frameworkID string, frameworkName string, zookeepers []string, schedulerIPAddr string, user string, rexPort int) *SchedulerCore {
 	mgr := metamgr.NewMetadataManager(frameworkID, zookeepers)
 	hostname, err := os.Hostname()
 	if err != nil {
@@ -126,6 +127,8 @@ func NewSchedulerCore(schedulerHostname string, frameworkID string, zookeepers [
 		zookeepers:      zookeepers,
 		rex:             myRex,
 		cepm:            c,
+		frameworkName:   frameworkName,
+
 	}
 	scheduler.schedulerHTTPServer = ServeExecutorArtifact(scheduler, schedulerHostname)
 	return scheduler
@@ -177,7 +180,7 @@ func (sc *SchedulerCore) Run(mesosMaster string) {
 	bindingAddress := parseIP(sc.schedulerIPAddr)
 	fwinfo := &mesos.FrameworkInfo{
 		User:            frameworkUser,
-		Name:            proto.String("Riak Framework"),
+		Name:            proto.String(sc.frameworkName),
 		Id:              frameworkId,
 		FailoverTimeout: proto.Float64(86400),
 		WebuiUrl:        proto.String(sc.schedulerHTTPServer.GetURI()),
