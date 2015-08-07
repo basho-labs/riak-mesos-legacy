@@ -20,6 +20,8 @@ Vagrant.configure(2) do |config|
 
   config.vm.hostname = "ubuntu.local"
 
+  config.vm.synced_folder "./../../../../", "/riak-mesos"
+
   config.vm.provider "virtualbox" do |vb|
     vb.memory = "2048"
   end

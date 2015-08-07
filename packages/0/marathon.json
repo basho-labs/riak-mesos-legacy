@@ -10,6 +10,6 @@
       "framework_linux_amd64",
       "-master={{mesos.master}}",
       "-zk={{riak.master}}",
-      "-name={{riak.framework-id}}"],
+      "-id={{riak.framework-id}}"],
   "healthChecks": []
 }
