@@ -3,6 +3,13 @@ package main
 import (
 	"encoding/binary"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"text/template"
+	"time"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/basho-labs/riak-mesos/cepmd/cepm"
 	"github.com/basho-labs/riak-mesos/common"
@@ -10,12 +17,6 @@ import (
 	"github.com/basho-labs/riak-mesos/process_manager"
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	util "github.com/mesos/mesos-go/mesosutil"
-	"io/ioutil"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"text/template"
-	"time"
 )
 
 type RiakNode struct {
@@ -196,13 +197,20 @@ func (riakNode *RiakNode) Run() {
 
 	args := []string{"console", "-noinput"}
 
-	err = cepm.InstallInto("riak/lib/kernel-2.16.4/ebin")
+	kernelDirs, err := filepath.Glob("riak/lib/kernel*")
+	if err != nil {
+		log.Fatal("Could not find kernel directory")
+	}
+
+	log.Infof("Found kernel dirs: %v", kernelDirs)
+
+	err = cepm.InstallInto(fmt.Sprint(kernelDirs[0], "/ebin"))
 	if err != nil {
 		log.Panic(err)
 	}
 	args = append(args, "-no_epmd")
-	os.MkdirAll("riak/lib/kernel-2.16.4/priv", 0777)
-	ioutil.WriteFile("riak/lib/kernel-2.16.4/priv/cepmd_port", []byte(fmt.Sprintf("%d.", c.GetPort())), 0777)
+	os.MkdirAll(fmt.Sprint(kernelDirs[0], "/priv"), 0777)
+	ioutil.WriteFile(fmt.Sprint(kernelDirs[0], "/priv/cepmd_port"), []byte(fmt.Sprintf("%d.", c.GetPort())), 0777)
 
 	HealthCheckFun := func() error {
 		process := exec.Command("/usr/bin/timeout", "--kill-after=5s", "--signal=TERM", "5s", "riak/bin/riak-admin", "wait-for-service", "riak_kv")
