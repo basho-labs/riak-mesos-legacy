@@ -310,13 +310,16 @@ func (sc *SchedulerCore) ResourceOffers(driver sched.SchedulerDriver, offers []*
 		log.Error(err)
 	}
 
-	for offerIdStr, tasks := range launchTasks {
-		oid := mesos.OfferID{
-			Value: &offerIdStr,
+	for _, offer := range offers {
+		tasks := launchTasks[*offer.Id.Value]
+
+		if tasks == nil {
+			tasks = []*mesos.TaskInfo{}
 		}
 
-		log.Infof("Launching Tasks: %v for offer %v", launchTasks, offerIdStr)
-		status, err := driver.LaunchTasks([]*mesos.OfferID{&oid}, tasks, &mesos.Filters{RefuseSeconds: proto.Float64(OFFER_INTERVAL)})
+		log.Infof("Launching Tasks: %v for offer %v", tasks, *offer.Id.Value)
+		status, err := driver.LaunchTasks([]*mesos.OfferID{offer.Id}, tasks, &mesos.Filters{RefuseSeconds: proto.Float64(OFFER_INTERVAL)})
+
 		if status != mesos.Status_DRIVER_RUNNING {
 			log.Fatal("Driver not running, while trying to launch tasks")
 		}
