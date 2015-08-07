@@ -14,7 +14,7 @@ func init() {
 
 // The new value for the resource, the ask, and whether or not the ask was accomodated - the ask may be nil if it wasn't accomodated
 type ResourceAsker (func([]*mesos.Resource) (remaining []*mesos.Resource, ask *mesos.Resource, success bool))
-type CombinedResourceAsker (func([]*mesos.Resource) (remaining []*mesos.Resource, ask []*mesos.Resource, success bool))
+type CombinedResourceAsker (func([]*mesos.Resource) (remaining []*mesos.Resource, executorAsk []*mesos.Resource, taskAsk []*mesos.Resource, success bool))
 
 func AskForScalar(resourceName string, askSize float64) ResourceAsker {
 	return func(resources []*mesos.Resource) ([]*mesos.Resource, *mesos.Resource, bool) {

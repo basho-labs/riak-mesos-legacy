@@ -259,11 +259,11 @@ func (sc *SchedulerCore) spreadNodesAcrossOffers(allOffers []*mesos.Offer, allRe
 	riakNode := allNodes[currentRiakNodeIndex]
 
 	var success bool
-	var ask []*mesos.Resource
-	allResources[currentOfferIndex], ask, success = riakNode.GetCombinedAsk()(allResources[currentOfferIndex])
+	var executorAsk, taskAsk []*mesos.Resource
+	allResources[currentOfferIndex], executorAsk, taskAsk, success = riakNode.GetCombinedAsk()(allResources[currentOfferIndex])
 
 	if success {
-		taskInfo := riakNode.PrepareForLaunchAndGetNewTaskInfo(offer, ask)
+		taskInfo := riakNode.PrepareForLaunchAndGetNewTaskInfo(offer, executorAsk, taskAsk)
 		sc.frnDict[riakNode.CurrentID()] = riakNode
 
 		if launchTasks[*offer.Id.Value] == nil {
