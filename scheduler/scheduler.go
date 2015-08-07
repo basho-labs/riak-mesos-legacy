@@ -173,20 +173,20 @@ func (sc *SchedulerCore) Run(mesosMaster string) {
 		Value: proto.String(sc.frameworkID),
 	}
 	// TODO: Get "Real" credentials here
-	var frameworkUser *string
-	if sc.user != "" {
-		frameworkUser = proto.String(sc.user)
-	}
+
 	cred := (*mesos.Credential)(nil)
 	bindingAddress := parseIP(sc.schedulerIPAddr)
 	fwinfo := &mesos.FrameworkInfo{
-		User:            frameworkUser,
 		Name:            proto.String(sc.frameworkName),
 		Id:              frameworkId,
 		FailoverTimeout: proto.Float64(86400),
 		WebuiUrl:        proto.String(sc.schedulerHTTPServer.GetURI()),
 		Checkpoint:      proto.Bool(true),
 		Role:            proto.String(sc.frameworkRole),
+	}
+
+	if sc.user != "" {
+		fwinfo.User = proto.String(sc.user)
 	}
 
 	log.Info("Running scheduler with FrameworkInfo: ", fwinfo)
