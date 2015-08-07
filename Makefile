@@ -35,10 +35,13 @@ clean_deps:
 	rm $(BASE_DIR)/riak_explorer/data/*.tar.gz
 	cd $(BASE_DIR)/cepmd/cepm/cepmd_dist && $(MAKE) clean
 
+build_cepmd_dev:
+	go generate ./cepmd/...
+
+build_cepmd_rel:
+	go generate -tags=rel ./cepmd/...
 
 build_executor:
-	go generate ./cepmd/...
-	go generate ./riak_explorer/...
 	go generate ./executor/...
 	gox \
 		-osarch=$(EGARC) \
@@ -46,7 +49,7 @@ build_executor:
 		-rebuild \
 		./executor/
 
-rel: clean deps vet build_executor
+rel: clean deps vet build_cepmd_rel build_executor
 	go generate -tags=rel ./...
 	gox \
 		-tags=rel \
@@ -55,7 +58,7 @@ rel: clean deps vet build_executor
 		-rebuild \
 		./framework/... ./tools/...
 
-dev: clean deps vet build_executor
+dev: clean deps vet build_cepmd_dev build_executor
 	go generate -tags=dev ./...
 	gox \
 		-tags=dev \
@@ -94,6 +97,13 @@ install-dcos-cli:
 		sudo /bin/bash install.sh . http://33.33.33.2
 	echo "\n\nPlease run the following command to finish installation:\n\nsource $(BASE_DIR)/bin/dcos/bin/env-setup\n"
 
+vagrant-mesos:
+	cd vagrant/ubuntu/trusty64/riak-mesos && vagrant up
+
+package-deps:
+	cd vagrant/ubuntu/trusty64/dependencies && make
+deploy-deps:
+	cd vagrant/ubuntu/trusty64/dependencies && make deploy
 
 test:
 	go test ./...
