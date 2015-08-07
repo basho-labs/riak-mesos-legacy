@@ -28,7 +28,7 @@ type CoordinatedData struct {
 	DisterlPort int
 	PBPort      int
 	HTTPPort    int
-	Hostname	string
+	Hostname    string
 }
 
 func (s *CoordinatedData) Serialize() ([]byte, error) {
