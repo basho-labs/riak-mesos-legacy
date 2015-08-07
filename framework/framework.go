@@ -33,11 +33,13 @@ func init() {
 func main() {
 	log.SetLevel(log.DebugLevel)
 
-	fo, logErr := os.Create(logFile)
-	if logErr != nil {
-		panic(logErr)
+	if logFile != "" {
+		fo, logErr := os.Create(logFile)
+		if logErr != nil {
+			panic(logErr)
+		}
+		log.SetOutput(fo)
 	}
-	log.SetOutput(fo)
 
 	// When starting scheduler from Marathon, PORT0-N env vars will be set
 	rexPortStr := os.Getenv("PORT1")
