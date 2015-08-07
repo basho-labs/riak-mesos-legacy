@@ -18,6 +18,7 @@ var (
 	user              string
 	logFile           string
 	frameworkName     string
+	frameworkRole     string
 )
 
 func init() {
@@ -29,6 +30,7 @@ func init() {
 	flag.StringVar(&user, "user", "", "Framework Username")
 	flag.StringVar(&logFile, "log", "", "Log File Location")
 	flag.StringVar(&frameworkName, "name", "Riak Mesos Framework", "Framework Instance Name")
+	flag.StringVar(&frameworkRole, "role", "*", "Framework Role Name")
 
 	flag.Parse()
 }
@@ -58,6 +60,6 @@ func main() {
 		log.Fatal(portErr)
 	}
 
-	sched := scheduler.NewSchedulerCore(schedulerHostname, frameworkID, frameworkName, []string{zookeeperAddr}, schedulerIPAddr, user, rexPort)
+	sched := scheduler.NewSchedulerCore(schedulerHostname, frameworkID, frameworkName, frameworkRole, []string{zookeeperAddr}, schedulerIPAddr, user, rexPort)
 	sched.Run(mesosMaster)
 }
