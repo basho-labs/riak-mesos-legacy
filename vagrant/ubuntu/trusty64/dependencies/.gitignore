@@ -1,0 +1,8 @@
+_build
+.vagrant
+riak
+riak-mesos-director
+riak_explorer
+node_package
+OTP_R16B02_basho8
+*.tar.gz

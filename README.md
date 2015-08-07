@@ -45,12 +45,20 @@ or
     -hostname=33.33.33.1
 ```
 
-##### Find the Framework URL and add a node
+##### Add some nodes to the cluster
 
 ```
-FRAMEURL=`./bin/tools_darwin_amd64 -zk=33.33.33.2:2181 -command=get-url -name=riak-mesos-go3`
-curl -XPOST ${FRAMEURL}clusters/mycluster
-curl -XPOST ${FRAMEURL}clusters/mycluster/nodes
+./bin/tools_darwin_amd64 \
+    -name=riak-mesos-go3 \
+    -zk=33.33.33.2:2181 \
+    -command=create-cluster \
+    -cluster-name=mycluster
+./bin/tools_darwin_amd64 \
+    -name=riak-mesos-go3 \
+    -zk=33.33.33.2:2181 \
+    -command=add-nodes \
+    -nodes=3 \
+    -cluster-name=mycluster
 ```
 
 ##### Add a node to a new cluster

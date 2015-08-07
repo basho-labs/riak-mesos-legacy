@@ -1,0 +1,28 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure(2) do |config|
+  config.vm.box = "ubuntu/trusty64"
+
+  config.vm.provider "virtualbox" do |vb|
+    vb.memory = "4096"
+    vb.cpus = 4
+  end
+
+  config.vm.synced_folder "./../../../../", "/riak-mesos"
+
+  config.vm.provision "shell", inline: <<-SHELL
+    # Build Erlang
+    apt-get -y update
+    apt-get -y install build-essential autoconf libncurses5-dev openssl libssl-dev fop xsltproc unixodbc-dev libpam0g-dev git
+    cd /vagrant/OTP_R16B02_basho8
+    ./otp_build autoconf
+    ./configure && make && sudo make install
+
+    # Build the projects
+    cd /vagrant/riak && make rel
+    cd /vagrant/riak-mesos-director && make rel
+    cd /vagrant/riak_explorer && make rel-backend
+
+  SHELL
+end
