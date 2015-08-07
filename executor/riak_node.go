@@ -216,6 +216,7 @@ func (riakNode *RiakNode) Run() {
 		home := filepath.Join(wd, "riak/data")
 		homevar := fmt.Sprintf("HOME=%s", home)
 		process.Env = append(os.Environ(), homevar)
+		process.Env = append(process.Env, "NO_EPMD=1")
 		process.Env = append(process.Env, fmt.Sprintf("CEPMD_PORT=%d", c.GetPort()))
 		return process.Run()
 	}
