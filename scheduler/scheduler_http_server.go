@@ -85,6 +85,12 @@ func (schttp *SchedulerHTTPServer) GetURI() string {
 	return schttp.URI
 }
 
+func (schttp *SchedulerHTTPServer) healthcheck(w http.ResponseWriter, r *http.Request) {
+	// TODO: Add better healthchecking
+	w.WriteHeader(200)
+	fmt.Fprintln(w, "OK!")
+}
+
 func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *SchedulerHTTPServer {
 	// When starting scheduler from Marathon, PORT0-N env vars will be set
 	strBindPort := os.Getenv("PORT0")
@@ -153,6 +159,7 @@ func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *Schedul
 	router.Methods("GET").Path("/clusters/{cluster}").HandlerFunc(schttp.getCluster)
 	router.Methods("GET").Path("/clusters/{cluster}/nodes").HandlerFunc(schttp.serveNodes)
 	router.Methods("POST").Path("/clusters/{cluster}/nodes").HandlerFunc(schttp.createNode)
+	router.Methods("GET").Path("/healthcheck").HandlerFunc(schttp.healthcheck)
 
 	//http.Serve(ln, newHandler())
 	middleWare := http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
