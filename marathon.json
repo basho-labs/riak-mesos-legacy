@@ -14,7 +14,9 @@
       "-hostname=ubuntu.local",
       "-id=riak-mesos-go21",
       "-log=/riak-mesos/test.log",
-      "-user=vagrant"],
+      "-user=vagrant",
+      "-name=\"Riak Mesos Framework\"",
+      "-role=*"],
   "healthChecks": [
     {
       "path": "/healthcheck",

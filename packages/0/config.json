@@ -24,10 +24,36 @@
               "description": "Zookeeper address. Specify in the format host:port.",
               "default": "master.mesos:2181"
             },
-            "framework-id": {
+            "id": {
               "type": "string",
               "description": "Framework ID.",
               "default": "riak-mesos"
+            },
+            "ip": {
+              "type": "string",
+              "description": "Framework HTTP API bind address.",
+            },
+            "hostname": {
+              "type": "string",
+              "description": "Framework HTTP API hostname.",
+            },
+            "log": {
+              "type": "string",
+              "description": "Framework log file location.",
+            },
+            "user": {
+              "type": "string",
+              "description": "Framework User.",
+            },
+            "name": {
+              "type": "string",
+              "description": "Framework Name.",
+              "default": "Riak Mesos Framework"
+            },
+            "role": {
+              "type": "string",
+              "description": "Framework Role.",
+              "default": "*"
             },
             "url": {
                 "type": "string",
@@ -47,7 +73,7 @@
           },
           "required": [
             "zk",
-            "name"
+            "id"
           ]
         }
       }
