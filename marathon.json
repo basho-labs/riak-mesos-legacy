@@ -6,7 +6,15 @@
   "ports": [0,0],
   "uris": [],
   "env": {},
-  "args": ["/vagrant/bin/framework_linux_amd64", "-master=zk://33.33.33.2:2181/mesos", "-zk=33.33.33.2", "-ip=ubuntu.local", "-hostname=ubuntu.local", "-id=riak-mesos-go", "-log=/vagrant/test.log", "-user=vagrant"],
+  "args": [
+      "/riak-mesos/bin/framework_linux_amd64",
+      "-master=zk://33.33.33.2:2181/mesos",
+      "-zk=33.33.33.2",
+      "-ip=ubuntu.local",
+      "-hostname=ubuntu.local",
+      "-id=riak-mesos-go21",
+      "-log=/riak-mesos/test.log",
+      "-user=vagrant"],
   "healthChecks": [
     {
       "path": "/healthcheck",
