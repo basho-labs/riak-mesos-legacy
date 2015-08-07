@@ -128,7 +128,6 @@ func NewSchedulerCore(schedulerHostname string, frameworkID string, frameworkNam
 		rex:             myRex,
 		cepm:            c,
 		frameworkName:   frameworkName,
-
 	}
 	scheduler.schedulerHTTPServer = ServeExecutorArtifact(scheduler, schedulerHostname)
 	return scheduler
