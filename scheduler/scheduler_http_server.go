@@ -81,6 +81,9 @@ func (schttp *SchedulerHTTPServer) serveNodes(w http.ResponseWriter, r *http.Req
 	nodes := schttp.sc.clusters[clusterName].nodes
 	json.NewEncoder(w).Encode(nodes)
 }
+func (schttp *SchedulerHTTPServer) GetURI() string {
+	return schttp.URI
+}
 
 func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *SchedulerHTTPServer {
 	// When starting scheduler from Marathon, PORT0-N env vars will be set

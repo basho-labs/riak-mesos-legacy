@@ -180,6 +180,7 @@ func (sc *SchedulerCore) Run(mesosMaster string) {
 		Name:            proto.String("Riak Framework"),
 		Id:              frameworkId,
 		FailoverTimeout: proto.Float64(86400),
+		WebuiUrl:        proto.String(sc.schedulerHTTPServer.GetURI()),
 	}
 
 	log.Info("Running scheduler with FrameworkInfo: ", fwinfo)
