@@ -83,7 +83,7 @@ func (rServer *ReconcilationServer) loop() {
 
 type SchedulerCore struct {
 	lock                *sync.Mutex
-	frameworkName       string
+	frameworkID         string
 	clusters            map[string]*FrameworkRiakCluster
 	schedulerHTTPServer *SchedulerHTTPServer
 	mgr                 *metamgr.MetadataManager
@@ -96,8 +96,8 @@ type SchedulerCore struct {
 	cepm                *cepm.CEPM
 }
 
-func NewSchedulerCore(schedulerHostname string, frameworkName string, zookeepers []string, schedulerIPAddr string, user string, rexPort int) *SchedulerCore {
-	mgr := metamgr.NewMetadataManager(frameworkName, zookeepers)
+func NewSchedulerCore(schedulerHostname string, frameworkID string, zookeepers []string, schedulerIPAddr string, user string, rexPort int) *SchedulerCore {
+	mgr := metamgr.NewMetadataManager(frameworkID, zookeepers)
 	hostname, err := os.Hostname()
 	if err != nil {
 		log.Panic("Could not get hostname")
@@ -117,7 +117,7 @@ func NewSchedulerCore(schedulerHostname string, frameworkName string, zookeepers
 	}
 	scheduler := &SchedulerCore{
 		lock:            &sync.Mutex{},
-		frameworkName:   frameworkName,
+		frameworkID:     frameworkID,
 		schedulerIPAddr: schedulerIPAddr,
 		clusters:        make(map[string]*FrameworkRiakCluster),
 		mgr:             mgr,
@@ -166,7 +166,7 @@ func (sc *SchedulerCore) setupMetadataManager() {
 }
 func (sc *SchedulerCore) Run(mesosMaster string) {
 	frameworkId := &mesos.FrameworkID{
-		Value: proto.String(sc.frameworkName),
+		Value: proto.String(sc.frameworkID),
 	}
 	// TODO: Get "Real" credentials here
 	var frameworkUser *string

@@ -135,34 +135,34 @@ func makeSubSpace(ns Namespace, subSpaceName string) Namespace {
 }
 
 type MetadataManager struct {
-	framework     MetadataManagerFramework
-	frameworkName string
-	zkConn        *zk.Conn
-	namespace     Namespace
-	lock          *sync.Mutex
-	zkLock        zk.Lock
+	framework   MetadataManagerFramework
+	frameworkID string
+	zkConn      *zk.Conn
+	namespace   Namespace
+	lock        *sync.Mutex
+	zkLock      zk.Lock
 }
 
 func (mgr *MetadataManager) setup() {
 	mgr.CreateNSIfNotExists(mgr.namespace, false)
 }
 
-func NewMetadataManager(frameworkName string, zookeepers []string) *MetadataManager {
+func NewMetadataManager(frameworkID string, zookeepers []string) *MetadataManager {
 	conn, _, err := zk.Connect(zookeepers, time.Second)
 	if err != nil {
 		log.Panic(err)
 	}
 	bns := baseNamespace{}
-	ns := makeSubSpace(makeSubSpace(makeSubSpace(bns, "riak"), "frameworks"), frameworkName)
+	ns := makeSubSpace(makeSubSpace(makeSubSpace(bns, "riak"), "frameworks"), frameworkID)
 	lockPath := makeSubSpace(ns, "lock")
 	zkLock := zk.NewLock(conn, lockPath.GetZKPath(), zk.WorldACL(zk.PermAll))
 
 	manager := &MetadataManager{
-		lock:          &sync.Mutex{},
-		frameworkName: frameworkName,
-		zkConn:        conn,
-		namespace:     ns,
-		zkLock:        *zkLock,
+		lock:        &sync.Mutex{},
+		frameworkID: frameworkID,
+		zkConn:      conn,
+		namespace:   ns,
+		zkLock:      *zkLock,
 	}
 
 	manager.setup()
