@@ -40,6 +40,11 @@ package:
 	cd riak-mesos-director/rel && tar -zcvf riak_mesos_director_linux_amd64.tar.gz riak_mesos_director
 	mv riak-mesos-director/rel/riak_mesos_director_linux_amd64.tar.gz $(BUILD_DIR)/
 
+package-mac:
+	#vagrant up
+	cd riak-mesos-director/rel && tar -zcvf riak_mesos_director_darwin_amd64.tar.gz riak_mesos_director
+	mv riak-mesos-director/rel/riak_mesos_director_darwin_amd64.tar.gz $(BUILD_DIR)/
+
 # Deployment
 deploy-riak:
 	cd $(BUILD_DIR) && s3cmd put --acl-public riak_linux_amd64.tar.gz s3://riak-tools/
@@ -48,3 +53,6 @@ deploy-explorer:
 deploy-director:
 	cd $(BUILD_DIR) && s3cmd put --acl-public riak_mesos_director_linux_amd64.tar.gz s3://riak-tools/
 deploy: deploy-riak deploy-explorer deploy-director
+
+deploy-mac:
+	cd $(BUILD_DIR) && s3cmd put --acl-public riak_mesos_director_darwin_amd64.tar.gz s3://riak-tools/

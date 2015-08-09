@@ -1,87 +1,85 @@
 # Development Guide
 
-## Environment Setup
+For first time dev environment setup, visit [DEVELOPMENT-SETUP.md](DEVELOPMENT-SETUP.md)
 
-### OSX
+### Build
 
-Install Go
-
-```
-brew update && brew upgrade
-brew install go
-```
-
-Enable cross-compiling with linux/amd64
+Download dependencies and build the platform specific executables
 
 ```
-cd /usr/local/Cellar/go/1.4.2/libexec/src && \
-    GOOS=linux GOARCH=amd64 ./make.bash --no-clean
+make dev
 ```
 
-Create a Go WORKSPACE
+To build a complete framework package with embedded executor and riak packages:
 
 ```
-export GOPATH=~/go/riak-mesos
-mkdir -p $GOPATH
-export PATH=$PATH:$GOPATH/bin
-cd $GOPATH
+FARC="linux_amd64" FGARC="linux/amd64" make rel
 ```
 
-Optionally setup `.bashrc` or `.profile` or `.zprofile` by adding the following
+### Usage
+
+#### Mac OS X
 
 ```
-export GOPATH=~/go/riak-mesos
-export PATH=$PATH:$GOPATH/bin
+make run
 ```
 
-Install Go CLI tools
+or when running scheduler on mac os x and Mesos on vagrant
 
 ```
-go get github.com/mitchellh/gox
-go get github.com/tools/godep
-go get -u github.com/jteeuwen/go-bindata/...
-go get github.com/campoy/jsonenums
-go get golang.org/x/tools/cmd/stringer
-go get -u github.com/golang/lint/golint
-go get golang.org/x/tools/cmd/goimports
+FUSR=vagrant FHST=33.33.33.1 FNAM=riak-mesos-go3 make run
 ```
 
-Setup riak-mesos and mesos-go
+or
 
 ```
-### Create src directories
-cd $GOPATH
-mkdir -p src/github.com/mesos
-mkdir -p src/github.com/basho-labs
-### Download
-cd $GOPATH/src/github.com/
-git clone git@github.com:basho-labs/riak-mesos.git basho-labs/riak-mesos
-git clone https://github.com/mesos/mesos-go.git mesos/mesos-go
-### Build Mesos Go
-cd $GOPATH/src/github.com/mesos/mesos-go
-godep restore
-go build ./...
-### Build Riak Mesos Framework
-cd $GOPATH/src/github.com/basho-labs/riak-mesos
-godep restore
-cd bin
-go generate ../... && gox -osarch="linux/amd64" -osarch=darwin/amd64 ../...
+./bin/framework_darwin_amd64 \
+    -master=zk://33.33.33.2:2181/mesos \
+    -zk=33.33.33.2:2181 \
+    -id=riak-mesos-go3 \
+    -user=vagrant \
+    -ip=33.33.33.1 \
+    -hostname=33.33.33.1
 ```
 
-## Vagrant Setup
-
-On Mac OS X, configure a static IP for riak-mesos to bind to:
-
-Add the following to your `/etc/hosts` file:
+##### Add some nodes to the cluster
 
 ```
-127.0.0.1	33.33.33.1
-33.33.33.2  ubuntu.local
+./bin/tools_darwin_amd64 \
+    -name=riak-mesos-go3 \
+    -zk=33.33.33.2:2181 \
+    -command=create-cluster \
+    -cluster-name=mycluster
+./bin/tools_darwin_amd64 \
+    -name=riak-mesos-go3 \
+    -zk=33.33.33.2:2181 \
+    -command=add-nodes \
+    -nodes=3 \
+    -cluster-name=mycluster
 ```
 
-Start and connect to the Vagrant VM
+#### Vagrant / Linux
+
+Navigate to the shared directory:
 
 ```
-vagrant up
-vagrant ssh
+cd /vagrant
+```
+
+Run the scheduler
+
+```
+FUSR=vagrant ARCH=linux_amd64 make run
+```
+
+or
+
+```
+./bin/framework_linux_amd64 \
+    -master=zk://33.33.33.2:2181/mesos \
+    -zk=33.33.33.2:2181 \
+    -id=riak-mesos-go3 \
+    -user=vagrant \
+    -ip=localhost \
+    -hostname=33.33.33.2 \
 ```

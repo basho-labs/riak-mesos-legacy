@@ -1,105 +1,149 @@
 # Riak Mesos Framework
 
-## Development
-
-For initial setup of development environment, please follow the directions in
-[DEVELOPMENT.md](https://github.com/basho-labs/riak-mesos/tree/master/docs/DEVELOPMENT.md).
-
-### Build
-
-Download dependencies and build the platform specific executables
-
-```
-make dev
-```
-
-To build a complete framework package with embedded executor and riak packages:
-
-```
-FARC="linux_amd64" FGARC="linux/amd64" make rel
-```
-
-### Usage
-
-#### Mac OS X
-
-```
-make run
-```
-
-or when running scheduler on mac os x and Mesos on vagrant
-
-```
-FUSR=vagrant FHST=33.33.33.1 FNAM=riak-mesos-go3 make run
-```
-
-or
-
-```
-./bin/framework_darwin_amd64 \
-    -master=zk://33.33.33.2:2181/mesos \
-    -zk=33.33.33.2:2181 \
-    -name=riak-mesos-go3 \
-    -user=vagrant \
-    -ip=33.33.33.1 \
-    -hostname=33.33.33.1
-```
-
-##### Add some nodes to the cluster
-
-```
-./bin/tools_darwin_amd64 \
-    -name=riak-mesos-go3 \
-    -zk=33.33.33.2:2181 \
-    -command=create-cluster \
-    -cluster-name=mycluster
-./bin/tools_darwin_amd64 \
-    -name=riak-mesos-go3 \
-    -zk=33.33.33.2:2181 \
-    -command=add-nodes \
-    -nodes=3 \
-    -cluster-name=mycluster
-```
-
-##### Add a node to a new cluster
-
-```
-curl -XPOST http://33.33.33.1:57173/clusters/mycluster
-curl -XPOST http://33.33.33.1:57173/clusters/mycluster/nodes
-```
-
-
-#### Vagrant / Linux
-
-Navigate to the shared directory:
-
-```
-cd /vagrant
-```
-
-Run the scheduler
-
-```
-FUSR=vagrant ARCH=linux_amd64 make run
-```
-
-or
-
-```
-./bin/framework_linux_amd64 \
-    -master=zk://33.33.33.2:2181/mesos \
-    -zk=33.33.33.2:2181 \
-    -name=riak-mesos-go3 \
-    -user=vagrant \
-    -ip=localhost \
-    -hostname=33.33.33.2 \
-
-```
+An [Apache Mesos](http://mesos.apache.org/) framework for [Riak KV](http://basho.com/products/riak-kv/), a distributed NoSQL key-value data store that offers high availability, fault tolerance,
+operational simplicity, and scalability.
 
 ## Architecture
 
+### Scheduler
+
+The Riak Mesos Framework scheduler will attempt to spread Riak nodes across as many different
+mesos agents as possible to increase fault tolerance. If there are more nodes requested than
+there are agents available, the scheduler will then start adding more Riak nodes to existing
+agents.
+
 ![Architecture](docs/RiakMesosFramework.png)
 
-### Client Interaction
+### Director
 
-For information on how client applications can interact with the Riak Mesos Framework, read the [HTTP-API.md](https://github.com/basho-labs/riak-mesos/tree/master/docs/HTTP-API.md) document.
+Due to the nature of Apache Mesos and the potential for Riak nodes to come and
+go on a regular basis, client applications using a Mesos based cluster must
+be kept up to date on the cluster's current state. Instead of requiring this
+intelligence to be built into Riak client libraries, a smart proxy application named
+`Director` has been created which can run alongside client applications.
+
+![Director](docs/RiakMesosControlFrame.png)
+
+For installation and usage instructions related to the Riak Mesos Director, please read [docs/DIRECTOR.md](docs/DIRECTOR.md)
+
+## Usage
+
+### Installation
+
+The Riak Mesos Framework can be configured in a few different ways depending on the restraints of
+the Mesos cluster.
+
+#### DCOS Setup
+
+[DCOS](http://docs.mesosphere.com/) support is still in development.
+
+```
+dcos package update
+dcos package install riak
+```
+
+#### Marathon Setup
+
+Sample `marathon.json`
+
+```
+{
+  "id": "/riak",
+  "instances": 1,
+  "cpus": 0.5,
+  "mem": 512,
+  "ports": [0,0],
+  "uris": [
+      "http://riak-tools.s3.amazonaws.com/riak_mesos_framework_0.1.0_linux_amd64.tar.gz"
+  ],
+  "env": {},
+  "args": [
+      "framework_linux_amd64",
+      "-master=zk://mesos.master:2181/mesos",
+      "-zk=mesos.master:2181",
+      "-id=riak-mesos-go",
+      "-name=\"Riak Mesos Framework\"",
+      "-role=*"],
+  "healthChecks": [
+    {
+      "path": "/healthcheck",
+      "portIndex": 0,
+      "protocol": "HTTP",
+      "gracePeriodSeconds": 300,
+      "intervalSeconds": 60,
+      "timeoutSeconds": 20,
+      "maxConsecutiveFailures": 5,
+      "ignoreHttp1xx": false
+    }
+  ]
+}
+```
+
+#### Manual Setup
+
+Download and extract [riak_mesos_framework_linux_amd64_0.1.0.tar.gz](http://riak-tools.s3.amazonaws.com/riak_mesos_framework_linux_amd64_0.1.0.tar.gz), and start the framework with an incantation similar to this:
+
+```
+./framework_linux_amd64 \
+    -master=zk://mesos.master:2181/mesos \
+    -zk=mesos.master:2181 \
+    -id=riak-mesos-go \
+    -user=centos \
+    -role=* \
+    -ip=mesos.master \
+    -hostname=mesos.master
+```
+
+### Riak Cluster Configuration
+
+#### CLI Tool
+
+Included with the framework tarball is a CLI tool named `tools_linux_amd64` which can be used to
+perform a variety of tasks on a running Riak Mesos Framework instance. Following are some usage
+instructions.
+
+Configure a few environment variables matching your setup for convenience.
+
+```
+NAME="riak-mesos-go"
+ZK="mesos.master:2181"
+CLUSTERNAME="mycluster"
+```
+
+Create a cluster
+
+```
+./bin/tools_darwin_amd64 \
+    -name=$NAME \
+    -zk=$ZK \
+    -cluster-name=$CLUSTERNAME \
+    -command="create-cluster"
+```
+
+Set the initial node count
+
+```
+./bin/tools_darwin_amd64 \
+    -name=$NAME \
+    -zk=$ZK \
+    -cluster-name=$CLUSTERNAME \
+    -command="add-nodes" \
+    -nodes=5
+```
+
+Get the base URL for the Riak Mesos Framework [HTTP API](docs/HTTP-API.md) endpoints.
+
+```
+./bin/tools_darwin_amd64 -name=$NAME -zk=$ZK -command="get-url"
+```
+
+#### HTTP-API
+
+Clusters may also be configured using the HTTP API exposed by the framework. For more information,
+please read the [docs/HTTP-API.md](docs/HTTP-API.md) document.
+
+## Development / Contributing
+
+For initial setup of development environment, please follow the directions in
+[docs/DEVELOPMENT-SETUP.md](docs/DEVELOPMENT-SETUP.md). For further build and testing information,
+visit [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
