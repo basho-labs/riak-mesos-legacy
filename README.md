@@ -113,7 +113,7 @@ CLUSTERNAME="mycluster"
 Create a cluster
 
 ```
-./bin/tools_darwin_amd64 \
+./tools_darwin_amd64 \
     -name=$NAME \
     -zk=$ZK \
     -cluster-name=$CLUSTERNAME \
@@ -123,7 +123,7 @@ Create a cluster
 Set the initial node count
 
 ```
-./bin/tools_darwin_amd64 \
+./tools_darwin_amd64 \
     -name=$NAME \
     -zk=$ZK \
     -cluster-name=$CLUSTERNAME \
@@ -134,7 +134,7 @@ Set the initial node count
 Get the base URL for the Riak Mesos Framework [HTTP API](docs/HTTP-API.md) endpoints.
 
 ```
-./bin/tools_darwin_amd64 -name=$NAME -zk=$ZK -command="get-url"
+./tools_darwin_amd64 -name=$NAME -zk=$ZK -command="get-url"
 ```
 
 #### HTTP-API
