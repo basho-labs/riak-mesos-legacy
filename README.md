@@ -3,6 +3,26 @@
 An [Apache Mesos](http://mesos.apache.org/) framework for [Riak KV](http://basho.com/products/riak-kv/), a distributed NoSQL key-value data store that offers high availability, fault tolerance,
 operational simplicity, and scalability.
 
+## Quick Links
+
+* [Architecture](#architecture)
+    * [Scheduler](#scheduler)
+    * [Director](#director)
+* [Usage](#usage)
+    * [Installation](#installation)
+        * [DCOS Setup](#dcos-setup)
+        * [Marathon Setup](#marathon-setup)
+        * [Manual Setup](#manual-setup)
+    * [Riak Cluster Configuration](#riak-cluster-configuration)
+    * [CLI Tool](#cli-tool)
+    * [HTTP API](docs/HTTP-API.md)
+* Documentation
+    * Development
+        * [Development Guide](docs/DEVELOPMENT.md)
+        * [Development Setup](docs/DEVELOPMENT-SETUP.md)
+    * [Director](docs/DIRECTOR.md)
+    * [HTTP API](docs/HTTP-API.md)
+
 ## Architecture
 
 ### Scheduler
