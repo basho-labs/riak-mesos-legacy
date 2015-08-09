@@ -157,7 +157,7 @@ Get the base URL for the Riak Mesos Framework [HTTP API](docs/HTTP-API.md) endpo
 ./tools_darwin_amd64 -name=$NAME -zk=$ZK -command="get-url"
 ```
 
-#### HTTP-API
+#### HTTP API
 
 Clusters may also be configured using the HTTP API exposed by the framework. For more information,
 please read the [docs/HTTP-API.md](docs/HTTP-API.md) document.
