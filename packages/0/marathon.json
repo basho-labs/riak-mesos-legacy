@@ -7,7 +7,7 @@
   "uris": ["{{riak.url}}"],
   "env": {},
   "args": [
-      "framework_linux_amd64",
+      "riak_mesos_framework/framework_linux_amd64",
       "-master={{mesos.master}}",
       "-zk={{riak.zk}}",
       "-id={{riak.id}}"

@@ -15,5 +15,5 @@
       "http://some.org/foo/screen-2.png"
     ]
   },
-  "postInstallNotes": "Thank you for installing Riak. Visit https://github.com/basho-labs/riak-mesos/blob/master/README.md for usage information."
+  "postInstallNotes": "Thank you for installing Riak on Mesos. Visit https://github.com/basho-labs/riak-mesos for usage information."
 }

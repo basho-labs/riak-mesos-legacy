@@ -4,15 +4,17 @@
   "cpus": 0.5,
   "mem": 512,
   "ports": [0,0],
-  "uris": [],
+  "uris": [
+      "http://33.33.33.1:8000/_build/riak_mesos_linux_amd64_0.1.0.tar.gz"
+  ],
   "env": {},
   "args": [
-      "/riak-mesos/bin/framework_linux_amd64",
+      "riak_mesos_framework/framework_linux_amd64",
       "-master=zk://33.33.33.2:2181/mesos",
       "-zk=33.33.33.2",
       "-ip=ubuntu.local",
       "-hostname=ubuntu.local",
-      "-id=riak-mesos-go21",
+      "-id=riak-mesos-go22",
       "-log=/riak-mesos/test.log",
       "-user=vagrant",
       "-name=\"Riak Mesos Framework\"",

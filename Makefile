@@ -1,4 +1,6 @@
-BASE_DIR = $(shell pwd)
+BASE_DIR         = $(shell pwd)
+BUILD_DIR       ?= _build
+PACKAGE_VERSION ?= 0.1.0
 
 ### Framework / Executor Architecture
 FARC  ?= darwin_amd64
@@ -58,6 +60,15 @@ rel: clean deps vet build_cepmd_rel build_executor
 		-rebuild \
 		./framework/... ./tools/...
 
+rel-tools: clean vet
+	go generate -tags=rel ./...
+	gox \
+		-tags=rel \
+		-osarch=$(FGARC) \
+		-output="$(FTAR)/{{.Dir}}_{{.OS}}_{{.Arch}}" \
+		-rebuild \
+		./tools/...
+
 dev: clean deps vet build_cepmd_dev build_executor
 	go generate -tags=dev ./...
 	gox \
@@ -85,6 +96,11 @@ run:
 
 marathon-run:
 	curl -XPOST -v -H 'Content-Type: application/json' -d @marathon.json 'http://33.33.33.2:8080/v2/apps'
+marathon-run-director:
+	curl -XPOST -v -H 'Content-Type: application/json' -d @director.marathon.json 'http://33.33.33.2:8080/v2/apps'
+
+mesos-kill:
+	curl -XPOST -v 'http://33.33.33.2:5050/master/shutdown' --data "frameworkId=riak-mesos-go"
 
 marathon-kill:
 	curl -XDELETE -v 'http://33.33.33.2:8080/v2/apps/riak'
@@ -104,6 +120,15 @@ package-deps:
 	cd vagrant/ubuntu/trusty64/dependencies && make
 deploy-deps:
 	cd vagrant/ubuntu/trusty64/dependencies && make deploy
+
+package-rel:
+	-rm -rf $(BUILD_DIR)
+	mkdir -p $(BUILD_DIR)/riak_mesos_framework
+	cp bin/framework_linux_amd64 $(BUILD_DIR)/riak_mesos_framework/
+	cp bin/tools_linux_amd64 $(BUILD_DIR)/riak_mesos_framework/
+	cp packages/0/*.json $(BUILD_DIR)/riak_mesos_framework/
+	echo "Thank you for downloading Riak Mesos Framework. Please visit https://github.com/basho-labs/riak-mesos for usage information." > $(BUILD_DIR)/riak_mesos_framework/INSTALL.txt
+	cd $(BUILD_DIR) && tar -zcvf riak_mesos_linux_amd64_$(PACKAGE_VERSION).tar.gz riak_mesos_framework
 
 test:
 	go test ./...
