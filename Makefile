@@ -51,14 +51,22 @@ build_executor:
 		-rebuild \
 		./executor/
 
-rel: clean deps vet build_cepmd_rel build_executor
+
+framework_rel:
+	gox \
+  		-tags=rel \
+  		-osarch=$(FGARC) \
+  		-output="$(FTAR)/{{.Dir}}_{{.OS}}_{{.Arch}}" \
+  		-rebuild \
+  		./framework/...
+rel: clean deps vet build_cepmd_rel build_executor framework_rel
 	go generate -tags=rel ./...
 	gox \
-		-tags=rel \
-		-osarch=$(FGARC) \
-		-output="$(FTAR)/{{.Dir}}_{{.OS}}_{{.Arch}}" \
-		-rebuild \
-		./framework/... ./tools/...
+  		-tags=rel \
+  		-osarch=$(FGARC) \
+  		-output="$(FTAR)/{{.Dir}}_{{.OS}}_{{.Arch}}" \
+  		-rebuild \
+  		./tools/...
 
 rel-tools: clean vet
 	go generate -tags=rel ./...
@@ -69,7 +77,16 @@ rel-tools: clean vet
 		-rebuild \
 		./tools/...
 
-dev: clean deps vet build_cepmd_dev build_executor
+
+framework_dev:
+	gox \
+		-tags=dev \
+		-osarch=$(FGARC) \
+		-output="$(FTAR)/{{.Dir}}_{{.OS}}_{{.Arch}}" \
+		-rebuild \
+		./framework/...
+
+dev: clean deps vet build_cepmd_dev build_executor framework_dev
 	go generate -tags=dev ./...
 	gox \
 		-tags=dev \
