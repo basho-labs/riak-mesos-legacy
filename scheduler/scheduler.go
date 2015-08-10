@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/user"
 	"strings"
 	"sync"
 
@@ -136,12 +135,8 @@ func (sc *SchedulerCore) Run(mesosMaster string) {
 	if sc.user != "" {
 		fwinfo.User = proto.String(sc.user)
 	} else {
-		currentUser, err := user.Current()
-		if err != nil {
-			log.Errorf("Problem retrieving current user: %v", err)
-		} else {
-			fwinfo.User = &currentUser.Name
-		}
+		guestUser := "guest"
+		fwinfo.User = &guestUser
 	}
 
 	log.Info("Running scheduler with FrameworkInfo: ", fwinfo)

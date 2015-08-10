@@ -99,8 +99,7 @@ marathon-run-director:
 	curl -XPOST -v -H 'Content-Type: application/json' -d @director.marathon.json 'http://33.33.33.2:8080/v2/apps'
 
 mesos-kill:
-	curl -XPOST -v 'http://33.33.33.2:5050/master/shutdown' --data "frameworkId=riak-mesos-go24"
-
+	curl -XPOST -v 'http://33.33.33.2:5050/master/shutdown' --data "frameworkId=20150810-185220-35725601-5050-1200-0000"
 marathon-kill:
 	curl -XDELETE -v 'http://33.33.33.2:8080/v2/apps/riak'
 
