@@ -1,5 +1,5 @@
 {
-  "id": "/riak",
+  "id": "/riak1",
   "instances": 1,
   "cpus": 0.5,
   "mem": 512,
@@ -14,10 +14,9 @@
       "-zk=33.33.33.2",
       "-ip=ubuntu.local",
       "-hostname=ubuntu.local",
-      "-id=riak-mesos-go22",
       "-log=/riak-mesos/test.log",
       "-user=vagrant",
-      "-name=\"Riak Mesos Framework\"",
+      "-name=riakMesosFramework",
       "-role=*"],
   "healthChecks": [
     {

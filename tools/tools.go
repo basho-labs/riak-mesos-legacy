@@ -78,6 +78,12 @@ func respond(val string, err error) {
 }
 
 func getURL() string {
+	overrideURL := os.Getenv("RM_API")
+
+	if overrideURL != "" {
+		return overrideURL
+	}
+
 	mgr := metadata_manager.NewMetadataManager(frameworkName, []string{zookeeperAddr})
 	zkNode, err := mgr.GetRootNode().GetChild("uri")
 	if err != nil {

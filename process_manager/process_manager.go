@@ -2,11 +2,12 @@ package process_manager
 
 import (
 	"fmt"
-	log "github.com/Sirupsen/logrus"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 type Healthchecker func() error
@@ -210,7 +211,7 @@ func (pm *ProcessManager) start(executablePath string, args []string) {
 	realArgs := append([]string{executablePath}, args...)
 	pm.pid, err = syscall.ForkExec(executablePath, realArgs, procattr)
 	if err != nil {
-		log.Panic("Error starting process")
+		log.Panicf("Error starting process %v", err)
 	} else {
 		log.Infof("Process Manager started to manage %v at PID: %v", executablePath, pm.pid)
 	}
