@@ -5,9 +5,10 @@ import (
 	"os"
 	"strconv"
 
+	"regexp"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/basho-labs/riak-mesos/scheduler"
-	"regexp"
 )
 
 // Must start with a-z, or A-Z
@@ -29,7 +30,7 @@ func init() {
 	flag.StringVar(&mesosMaster, "master", "zk://33.33.33.2:2181/mesos", "Mesos master")
 	flag.StringVar(&zookeeperAddr, "zk", "33.33.33.2:2181", "Zookeeper")
 	flag.StringVar(&schedulerHostname, "hostname", "", "Framework hostname")
-	flag.StringVar(&schedulerIPAddr, "ip", "33.33.33.1", "Framework ip")
+	flag.StringVar(&schedulerIPAddr, "ip", "", "Framework ip")
 	flag.StringVar(&user, "user", "", "Framework Username")
 	flag.StringVar(&logFile, "log", "", "Log File Location")
 	flag.StringVar(&frameworkName, "name", "riakMesosFramework", "Framework Instance Name")

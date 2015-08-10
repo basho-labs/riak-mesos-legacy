@@ -70,7 +70,7 @@ setup(
         'test': ['coverage'],
     },
     package_data={
-        'dcos_riak': ['tools_linux_amd64']
+        'dcos_riak': ['tools_darwin_amd64']
     },
     data_files=[],
 

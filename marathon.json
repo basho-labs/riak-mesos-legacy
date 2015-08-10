@@ -14,10 +14,9 @@
       "-zk=33.33.33.2",
       "-ip=ubuntu.local",
       "-hostname=ubuntu.local",
-      "-id=riak-mesos-go24",
       "-log=/riak-mesos/test.log",
       "-user=vagrant",
-      "-name=\"Riak Mesos Framework\"",
+      "-name=riakMesosFramework",
       "-role=*"],
   "healthChecks": [
     {

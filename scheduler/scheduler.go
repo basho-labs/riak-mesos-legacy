@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/user"
 	"strings"
 	"sync"
 
@@ -123,7 +124,6 @@ func (sc *SchedulerCore) Run(mesosMaster string) {
 	// TODO: Get "Real" credentials here
 
 	cred := (*mesos.Credential)(nil)
-	bindingAddress := parseIP(sc.schedulerIPAddr)
 	fwinfo := &mesos.FrameworkInfo{
 		Name:            proto.String(sc.frameworkName),
 		Id:              frameworkId,
@@ -135,22 +135,34 @@ func (sc *SchedulerCore) Run(mesosMaster string) {
 
 	if sc.user != "" {
 		fwinfo.User = proto.String(sc.user)
+	} else {
+		currentUser, err := user.Current()
+		if err != nil {
+			log.Errorf("Problem retrieving current user: %v", err)
+		} else {
+			fwinfo.User = &currentUser.Name
+		}
 	}
 
 	log.Info("Running scheduler with FrameworkInfo: ", fwinfo)
 
 	config := sched.DriverConfig{
-		Scheduler:      sc,
-		Framework:      fwinfo,
-		Master:         mesosMaster,
-		Credential:     cred,
-		BindingAddress: bindingAddress,
+		Scheduler:  sc,
+		Framework:  fwinfo,
+		Master:     mesosMaster,
+		Credential: cred,
+		// BindingAddress: bindingAddress,
 		//	WithAuthContext: func(ctx context.Context) context.Context {
 		//		ctx = auth.WithLoginProvider(ctx, *authProvider)
 		//		ctx = sasl.WithBindingAddress(ctx, bindingAddress)
 		//		return ctx
 		//	},
 	}
+
+	if sc.schedulerIPAddr != "" {
+		config.BindingAddress = parseIP(sc.schedulerIPAddr)
+	}
+
 	driver, err := sched.NewMesosSchedulerDriver(config)
 	if err != nil {
 		log.Error("Unable to create a SchedulerDriver ", err.Error())

@@ -33,9 +33,9 @@ deps:
 	cd $(BASE_DIR)/erlang_dist && $(MAKE)
 
 clean_deps:
-	rm $(BASE_DIR)/scheduler/data/*.tar.gz
-	rm $(BASE_DIR)/riak_explorer/data/*.tar.gz
-	cd $(BASE_DIR)/cepmd/cepm/cepmd_dist && $(MAKE) clean
+	-rm $(BASE_DIR)/scheduler/data/*.tar.gz
+	-rm $(BASE_DIR)/riak_explorer/data/*.tar.gz
+	cd $(BASE_DIR)/erlang_dist/ && $(MAKE) clean
 
 build_cepmd_dev:
 	go generate ./cepmd/...
@@ -61,7 +61,6 @@ rel: clean deps vet build_cepmd_rel build_executor
 		./framework/... ./tools/...
 
 rel-tools: vet
-	go generate -tags=rel ./...
 	gox \
 		-tags=rel \
 		-osarch=$(FGARC) \
@@ -100,7 +99,7 @@ marathon-run-director:
 	curl -XPOST -v -H 'Content-Type: application/json' -d @director.marathon.json 'http://33.33.33.2:8080/v2/apps'
 
 mesos-kill:
-	curl -XPOST -v 'http://33.33.33.2:5050/master/shutdown' --data "frameworkId=riak-mesos-go23"
+	curl -XPOST -v 'http://33.33.33.2:5050/master/shutdown' --data "frameworkId=riak-mesos-go24"
 
 marathon-kill:
 	curl -XDELETE -v 'http://33.33.33.2:8080/v2/apps/riak'
@@ -111,7 +110,7 @@ install-dcos-cli:
 		sudo pip install virtualenv && \
 		curl -O https://downloads.mesosphere.io/dcos-cli/install.sh && \
 		sudo /bin/bash install.sh . http://33.33.33.2
-	echo "\n\nPlease run the following command to finish installation:\n\nsource $(BASE_DIR)/bin/dcos/bin/env-setup\n"
+	echo "\n\nPlease run the following command to finish installation:\n\nsource $(BASE_DIR)/bin/dcos/bin/env-setup\n\nsudo pip install --upgrade cli/\n"
 
 vagrant-mesos:
 	cd vagrant/ubuntu/trusty64/riak-mesos && vagrant up
@@ -131,7 +130,7 @@ package-rel:
 	cd $(BUILD_DIR) && tar -zcvf riak_mesos_linux_amd64_$(PACKAGE_VERSION).tar.gz riak_mesos_framework
 
 deploy:
-	cd $(BUILD_DIR) && s3cmd put --acl-public riak_mesos_linux_amd64_$(PACKAGE_VERSION).tar.gz s3://riak-tools/
+	cd $(BUILD_DIR) && s3cmd put --acl-public riak_mesos_linux_amd64_$(PACKAGE_VERSION).tar.gz s3://riak-tools/riak-mesos/
 
 test:
 	go test ./...

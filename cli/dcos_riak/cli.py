@@ -28,11 +28,25 @@ def api_url():
     client = marathon.create_client()
     tasks = client.get_tasks("riak")
 
+
     if len(tasks) == 0:
         raise CliError("Riak is not running")
 
-    base_url = util.get_config().get('core.dcos_url').rstrip("/")
-    return base_url + '/service/riak/'
+    # # Sort of hacky; assume that there's a single instance of the framework running
+    # tasks[0]
+    # [{u'servicePorts': [10000, 10001], u'stagedAt': u'2015-08-10T02:21:07.490Z', u'healthCheckResults': [{u'lastSuccess': u'2015-08-10T15:20:00.241Z', u'consecutiveFailures': 0, u'alive': True, u'firstSuccess': u'2015-08-10T13:00:58.810Z', u'taskId': u'riak1.754b4936-3f06-11e5-bc88-080027594325', u'lastFailure': None}], u'id': u'riak1.754b4936-3f06-11e5-bc88-080027594325', u'host': u'ubuntu.local', u'version': u'2015-08-10T02:21:05.575Z', u'appId': u'/riak1', u'startedAt': u'2015-08-10T02:21:09.654Z', u'ports': [31813, 31814]}]
+
+    return "http://" + tasks[0]["host"] + ":" + str(tasks[0]["ports"][0]) + "/"
+
+    # base_url = util.get_config().get('core.dcos_url').rstrip("/")
+    # return base_url + '/service/riak/'
+
+def find_tools():
+    for f in pkg_resources.resource_listdir('dcos_riak', None):
+        if f.startswith("tools_") and f.endswith("_amd64"):
+            return pkg_resources.resource_filename('dcos_riak', f)
+
+    raise CliError("tools_*_amd64 not found in package resources")
 
 
 def run(args):
@@ -40,9 +54,10 @@ def run(args):
     if help_arg:
         args[0] = "help"
 
-    command = ["tools_linux_amd64"]# TODO decide whether to implement tools in python or include tools here
+    command = [find_tools()]# TODO decide whether to implement tools in python or include tools here
     command.extend(args)
 
+    env = {}
     if not help_arg:
         env["RM_API"] = api_url()
 
