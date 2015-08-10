@@ -1,0 +1,13 @@
+README.rst
+setup.cfg
+setup.py
+dcos_riak/__init__.py
+dcos_riak/cli.py
+dcos_riak/constants.py
+dcos_riak/tools_linux_amd64 # TODO decide whether to implement tools in python or include tools here
+dcos_riak.egg-info/PKG-INFO
+dcos_riak.egg-info/SOURCES.txt
+dcos_riak.egg-info/dependency_links.txt
+dcos_riak.egg-info/entry_points.txt
+dcos_riak.egg-info/requires.txt
+dcos_riak.egg-info/top_level.txt

@@ -1,0 +1,2 @@
+[console_scripts]
+dcos-riak = dcos_riak.cli:main
