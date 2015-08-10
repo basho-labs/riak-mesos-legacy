@@ -15,7 +15,7 @@
               "description": "Zookeeper address. Specify in the format host:port.",
               "default": "mesos.master:2181"
             },
-            "appId": {
+            "app-id": {
               "type": "string",
               "description": "Riak Application ID.",
               "default": "riak"
@@ -36,10 +36,10 @@
               "type": "string",
               "description": "Framework User."
             },
-            "name": {
+            "framework-name": {
               "type": "string",
               "description": "Framework Instance Name.",
-              "default": "riakMesosFramework"
+              "default": "riak"
             },
             "role": {
               "type": "string",
@@ -51,6 +51,11 @@
                 "description": "Riak Mesos Framework download URL",
                 "default": "http://riak-tools.s3.amazonaws.com/riak-mesos/riak_mesos_linux_amd64_0.1.0.tar.gz"
             },
+            "instances": {
+                "type": "number",
+                "description": "Number of framework instances",
+                "default": 1
+            },
             "cpus": {
                 "type": "number",
                 "description": "CPU requirements",
@@ -60,12 +65,40 @@
                 "type": "number",
                 "description": "Memory requirements",
                 "default": 100
+            },
+            "healthcheck-grace-period-seconds": {
+                "type": "number",
+                "description": "Memory requirements",
+                "default": 300
+            },
+            "healthcheck-interval-seconds": {
+                "type": "number",
+                "description": "Memory requirements",
+                "default": 60
+            },
+            "healthcheck-timeout-seconds": {
+                "type": "number",
+                "description": "Memory requirements",
+                "default": 20
+            },
+            "healthcheck-max-consecutive-failures": {
+                "type": "number",
+                "description": "Memory requirements",
+                "default": 5
             }
           },
           "required": [
+            "app-id",
+            "instances",
+            "cpus",
+            "mem",
+            "url",
             "master",
             "zk",
-            "appId"
+            "healthcheck-grace-period-seconds",
+            "healthcheck-interval-seconds",
+            "healthcheck-timeout-seconds",
+            "healthcheck-max-consecutive-failures"
           ]
         }
       }

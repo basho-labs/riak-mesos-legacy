@@ -14,5 +14,13 @@
       "http://riak-tools.s3.amazonaws.com/riak-mesos/riak-mesos-screenshot.png"
     ]
   },
-  "postInstallNotes": "Thank you for installing Riak on Mesos. Visit https://github.com/basho-labs/riak-mesos for usage information."
+  "postInstallNotes": "Thank you for installing Riak on Mesos. Visit https://github.com/basho-labs/riak-mesos for usage information.",
+  "preInstallNotes": "The Mesos Riak Framework implementation is alpha and there may be bugs, incomplete features, incorrect documentation or other discrepancies.",
+  "postUninstallNotes": "The Mesos Riak Framework has been uninstalled and will no longer run.",
+  "licenses": [
+    {
+      "name": "Apache License Version 2.0",
+      "url": "https://github.com/basho-labs/riak-mesos/blob/master/LICENSE"
+    }
+  ]
 }
