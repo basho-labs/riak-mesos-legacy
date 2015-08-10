@@ -19,7 +19,8 @@ import (
 
 type FrameworkRiakNode struct {
 	frc              *FrameworkRiakCluster `json:"-"`
-	zkNode           *metamgr.ZkNode       `json:"-"`
+	sc               *SchedulerCore
+	zkNode           *metamgr.ZkNode `json:"-"`
 	UUID             uuid.UUID
 	DestinationState process_state.ProcessState
 	CurrentState     process_state.ProcessState
@@ -76,10 +77,6 @@ func (frn *FrameworkRiakNode) CurrentID() string {
 
 func (frn *FrameworkRiakNode) ExecutorID() string {
 	return frn.CurrentID()
-}
-
-func (frn *FrameworkRiakNode) NodeName() string {
-	return fmt.Sprintf("%s-%s-%d", frn.frc.Name, frn.UUID.String(), frn.Generation)
 }
 
 func (frn *FrameworkRiakNode) GetZkNode() *metamgr.ZkNode {
@@ -190,9 +187,8 @@ func (frn *FrameworkRiakNode) GetExecutorAsks() []common.ResourceAsker {
 	// Potential:
 	// EPM
 
-	return []common.ResourceAsker{common.AskForCPU(0.01),  common.AskForMemory(32)}
+	return []common.ResourceAsker{common.AskForCPU(0.01), common.AskForMemory(32)}
 }
-
 
 func (frn *FrameworkRiakNode) GetAsks() []common.ResourceAsker {
 	// 10 for good measure
@@ -206,7 +202,6 @@ func (frn *FrameworkRiakNode) GetAsks() []common.ResourceAsker {
 
 	return []common.ResourceAsker{common.AskForCPU(0.3), common.AskForPorts(10), common.AskForMemory(320)}
 }
-
 
 func (frn *FrameworkRiakNode) GetCombinedAsk() common.CombinedResourceAsker {
 	ret := func(offer []*mesos.Resource) ([]*mesos.Resource, []*mesos.Resource, []*mesos.Resource, bool) {
@@ -236,7 +231,7 @@ func (frn *FrameworkRiakNode) GetCombinedAsk() common.CombinedResourceAsker {
 	return ret
 }
 
-func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(offer *mesos.Offer, executorAsk  []*mesos.Resource, taskAsk []*mesos.Resource) *mesos.TaskInfo {
+func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(offer *mesos.Offer, executorAsk []*mesos.Resource, taskAsk []*mesos.Resource) *mesos.TaskInfo {
 	// THIS IS A MUTATING CALL
 	if frn.CurrentState != process_state.Shutdown && frn.CurrentState != process_state.Failed && frn.CurrentState != process_state.Unknown {
 		log.Panicf("Trying to generate Task Info while node is up. ZK FRN State: %v", frn.CurrentState)
@@ -263,7 +258,7 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(offer *mesos.Off
 	exec := &mesos.ExecutorInfo{
 		//No idea is this is the "right" way to do it, but I think so?
 		ExecutorId: util.NewExecutorID(frn.ExecutorID()),
-		Name:       proto.String("Test Executor (Go)"),
+		Name:       proto.String("Executor (Go)"),
 		Source:     proto.String("Riak Mesos Framework (Go)"),
 		Command: &mesos.CommandInfo{
 			Value:     proto.String(frn.frc.sc.schedulerHTTPServer.executorName),
@@ -277,7 +272,7 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(offer *mesos.Off
 		Value: proto.String(frn.CurrentID()),
 	}
 
-	nodename := frn.NodeName() + "@" + offer.GetHostname()
+	nodename := frn.CurrentID() + "@" + offer.GetHostname()
 
 	if !strings.Contains(offer.GetHostname(), ".") {
 		nodename = nodename + "."
@@ -289,6 +284,7 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(offer *mesos.Off
 		Zookeepers:                frn.frc.sc.zookeepers,
 		ClusterName:               frn.frc.Name,
 		NodeID:                    frn.UUID.String(),
+		FrameworkName:             frn.frc.sc.frameworkName,
 	}
 	frn.TaskData = taskData
 

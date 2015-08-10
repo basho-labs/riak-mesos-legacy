@@ -13,7 +13,7 @@ var (
 	zookeeperAddr string
 	clusterName   string
 	nodes         int
-	frameworkID   string
+	frameworkName string
 	cmd           string
 	client        *SchedulerHTTPClient
 )
@@ -22,7 +22,7 @@ func init() {
 	flag.StringVar(&zookeeperAddr, "zk", "33.33.33.2:2181", "Zookeeper")
 	flag.StringVar(&clusterName, "cluster-name", "", "Name of new cluster")
 	flag.IntVar(&nodes, "nodes", 1, "Nodes in new cluster")
-	flag.StringVar(&frameworkID, "name", "riak-mesos-go3", "Framework Instance ID")
+	flag.StringVar(&frameworkName, "name", "riakMesosFramework", "Framework Instance ID")
 	flag.StringVar(&cmd, "command", "get-url", "get-url, get-clusters, get-cluster, create-cluster, delete-cluster, get-nodes, add-node, add-nodes")
 	flag.Parse()
 
@@ -78,7 +78,7 @@ func respond(val string, err error) {
 }
 
 func getURL() string {
-	mgr := metadata_manager.NewMetadataManager(frameworkID, []string{zookeeperAddr})
+	mgr := metadata_manager.NewMetadataManager(frameworkName, []string{zookeeperAddr})
 	zkNode, err := mgr.GetRootNode().GetChild("uri")
 	if err != nil {
 		log.Panic(err)

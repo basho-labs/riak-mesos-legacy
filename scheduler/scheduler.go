@@ -83,7 +83,6 @@ func (rServer *ReconcilationServer) loop() {
 
 type SchedulerCore struct {
 	lock                *sync.Mutex
-	frameworkID         string
 	clusters            map[string]*FrameworkRiakCluster
 	schedulerHTTPServer *SchedulerHTTPServer
 	mgr                 *metamgr.MetadataManager
@@ -96,10 +95,12 @@ type SchedulerCore struct {
 	cepm                *cepm.CEPM
 	frameworkName       string
 	frameworkRole       string
+	schedulerState      *SchedulerState
 }
 
-func NewSchedulerCore(schedulerHostname string, frameworkID string, frameworkName string, frameworkRole string, zookeepers []string, schedulerIPAddr string, user string, rexPort int) *SchedulerCore {
-	mgr := metamgr.NewMetadataManager(frameworkID, zookeepers)
+func NewSchedulerCore(schedulerHostname string, frameworkName string, frameworkRole string, zookeepers []string, schedulerIPAddr string, user string, rexPort int) *SchedulerCore {
+	mgr := metamgr.NewMetadataManager(frameworkName, zookeepers)
+	ss := GetSchedulerState(mgr)
 	hostname, err := os.Hostname()
 	if err != nil {
 		log.Panic("Could not get hostname")
@@ -119,7 +120,6 @@ func NewSchedulerCore(schedulerHostname string, frameworkID string, frameworkNam
 	}
 	scheduler := &SchedulerCore{
 		lock:            &sync.Mutex{},
-		frameworkID:     frameworkID,
 		schedulerIPAddr: schedulerIPAddr,
 		clusters:        make(map[string]*FrameworkRiakCluster),
 		mgr:             mgr,
@@ -130,6 +130,7 @@ func NewSchedulerCore(schedulerHostname string, frameworkID string, frameworkNam
 		cepm:            c,
 		frameworkName:   frameworkName,
 		frameworkRole:   frameworkRole,
+		schedulerState:  ss,
 	}
 	scheduler.schedulerHTTPServer = ServeExecutorArtifact(scheduler, schedulerHostname)
 	return scheduler
@@ -169,9 +170,15 @@ func (sc *SchedulerCore) setupMetadataManager() {
 	sc.mgr.SetupFramework(sc.schedulerHTTPServer.URI, sc)
 }
 func (sc *SchedulerCore) Run(mesosMaster string) {
-	frameworkId := &mesos.FrameworkID{
-		Value: proto.String(sc.frameworkID),
+	var frameworkId *mesos.FrameworkID
+	if sc.schedulerState.FrameworkID == nil {
+		frameworkId = nil
+	} else {
+		frameworkId = &mesos.FrameworkID{
+			Value: sc.schedulerState.FrameworkID,
+		}
 	}
+
 	// TODO: Get "Real" credentials here
 
 	cred := (*mesos.Credential)(nil)
@@ -222,6 +229,10 @@ func (sc *SchedulerCore) Registered(driver sched.SchedulerDriver, frameworkId *m
 	log.Info("Framework registered")
 	log.Info("Framework ID: ", frameworkId)
 	log.Info("Master Info: ", masterInfo)
+	sc.schedulerState.FrameworkID = frameworkId.Value
+	if err := sc.schedulerState.Persist(); err != nil {
+		log.Error("Unable to persist framework ID after startup")
+	}
 	sc.rServer.enable()
 }
 

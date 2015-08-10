@@ -49,7 +49,7 @@ func NewRiakNode(taskInfo *mesos.TaskInfo, executor *ExecutorCore) *RiakNode {
 	}
 
 	log.Infof("Deserialized task data: %+v", taskData)
-	mgr := metamgr.NewMetadataManager(executor.fwInfo.GetId().GetValue(), taskData.Zookeepers)
+	mgr := metamgr.NewMetadataManager(taskData.FrameworkName, taskData.Zookeepers)
 
 	return &RiakNode{
 
