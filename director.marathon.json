@@ -7,7 +7,7 @@
     "instances": 1,
     "env": {
         "DIRECTOR_ZK": "33.33.33.2:2181",
-        "DIRECTOR_FRAMEWORK": "riak-mesos-go22",
+        "DIRECTOR_FRAMEWORK": "riak-mesos-go24",
         "DIRECTOR_CLUSTER": "mycluster"
     },
     "uris": [

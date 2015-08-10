@@ -60,7 +60,7 @@ rel: clean deps vet build_cepmd_rel build_executor
 		-rebuild \
 		./framework/... ./tools/...
 
-rel-tools: clean vet
+rel-tools: vet
 	go generate -tags=rel ./...
 	gox \
 		-tags=rel \
@@ -100,7 +100,7 @@ marathon-run-director:
 	curl -XPOST -v -H 'Content-Type: application/json' -d @director.marathon.json 'http://33.33.33.2:8080/v2/apps'
 
 mesos-kill:
-	curl -XPOST -v 'http://33.33.33.2:5050/master/shutdown' --data "frameworkId=riak-mesos-go"
+	curl -XPOST -v 'http://33.33.33.2:5050/master/shutdown' --data "frameworkId=riak-mesos-go23"
 
 marathon-kill:
 	curl -XDELETE -v 'http://33.33.33.2:8080/v2/apps/riak'
