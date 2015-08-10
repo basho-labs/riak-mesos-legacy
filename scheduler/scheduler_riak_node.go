@@ -21,6 +21,7 @@ type FrameworkRiakNode struct {
 	frc              *FrameworkRiakCluster `json:"-"`
 	sc               *SchedulerCore
 	zkNode           *metamgr.ZkNode `json:"-"`
+	reconciled       bool
 	UUID             uuid.UUID
 	DestinationState process_state.ProcessState
 	CurrentState     process_state.ProcessState
@@ -37,6 +38,7 @@ func NewFrameworkRiakNode() *FrameworkRiakNode {
 		DestinationState: process_state.Started,
 		CurrentState:     process_state.Unknown,
 		Generation:       0,
+		reconciled:       false,
 	}
 }
 
@@ -113,6 +115,7 @@ func (frn *FrameworkRiakNode) handleStartingToRunningTransition() {
 	}
 }
 func (frn *FrameworkRiakNode) handleStatusUpdate(statusUpdate *mesos.TaskStatus) {
+	frn.reconciled = true
 	// TODO: Check the task ID in the TaskStatus to make sure it matches our current task
 
 	// Poor man's FSM event handler

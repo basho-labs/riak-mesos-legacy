@@ -33,7 +33,7 @@ type SchedulerCore struct {
 	user                string
 	zookeepers          []string
 	rex                 *rex.RiakExplorer
-	rexPort			    int
+	rexPort             int
 	cepm                *cepm.CEPM
 	frameworkName       string
 	frameworkRole       string
@@ -69,7 +69,7 @@ func NewSchedulerCore(schedulerHostname string, frameworkName string, frameworkR
 		user:            user,
 		zookeepers:      zookeepers,
 		rex:             myRex,
-		rexPort:		 rexPort,
+		rexPort:         rexPort,
 		cepm:            c,
 		frameworkName:   frameworkName,
 		frameworkRole:   frameworkRole,
