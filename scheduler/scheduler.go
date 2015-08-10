@@ -7,7 +7,6 @@ import (
 	"os"
 	"strings"
 	"sync"
-	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/basho-labs/riak-mesos/cepmd/cepm"
@@ -22,64 +21,6 @@ import (
 const (
 	OFFER_INTERVAL float64 = 5
 )
-
-func newReconciliationServer(driver sched.SchedulerDriver) *ReconcilationServer {
-	rs := &ReconcilationServer{
-		tasksToReconcile: make(chan *mesos.TaskStatus, 10),
-		lock:             &sync.Mutex{},
-		enabled:          false,
-		driver:           driver,
-	}
-	go rs.loop()
-	return rs
-}
-
-type ReconcilationServer struct {
-	tasksToReconcile chan *mesos.TaskStatus
-	driver           sched.SchedulerDriver
-	lock             *sync.Mutex
-	enabled          bool
-}
-
-func (rServer *ReconcilationServer) enable() {
-	log.Info("Reconcilation process enabled")
-	rServer.lock.Lock()
-	defer rServer.lock.Unlock()
-	rServer.enabled = true
-}
-
-func (rServer *ReconcilationServer) disable() {
-	log.Info("Reconcilation process disabled")
-	rServer.lock.Lock()
-	defer rServer.lock.Unlock()
-	rServer.enabled = true
-}
-func (rServer *ReconcilationServer) loop() {
-	tasksToReconcile := []*mesos.TaskStatus{}
-	ticker := time.Tick(time.Millisecond * 100)
-	for {
-		select {
-		case task := <-rServer.tasksToReconcile:
-			{
-				tasksToReconcile = append(tasksToReconcile, task)
-			}
-		case <-ticker:
-			{
-				rServer.lock.Lock()
-				if rServer.enabled {
-					rServer.lock.Unlock()
-					if len(tasksToReconcile) > 0 {
-						log.Info("Reconciling tasks: ", tasksToReconcile)
-						rServer.driver.ReconcileTasks(tasksToReconcile)
-						tasksToReconcile = []*mesos.TaskStatus{}
-					}
-				} else {
-					rServer.lock.Unlock()
-				}
-			}
-		}
-	}
-}
 
 type SchedulerCore struct {
 	lock                *sync.Mutex
