@@ -10,6 +10,9 @@ import (
 	"time"
 )
 
+// TODO: Convert ZKNode functions to all work around MetadataNode interface for better testing
+type MetadataNode interface {
+}
 type ZkNode struct {
 	mgr  *MetadataManager
 	stat *zk.Stat
