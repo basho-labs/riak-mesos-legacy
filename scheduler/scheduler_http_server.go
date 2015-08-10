@@ -86,9 +86,20 @@ func (schttp *SchedulerHTTPServer) GetURI() string {
 }
 
 func (schttp *SchedulerHTTPServer) healthcheck(w http.ResponseWriter, r *http.Request) {
+	var pass bool = true
 	// TODO: Add better healthchecking
-	w.WriteHeader(200)
-	fmt.Fprintln(w, "OK!")
+	rexc := schttp.sc.rex.NewRiakExplorerClient()
+	_, err := rexc.Ping()
+	if err == nil {
+		fmt.Fprintln(w, "REX Client: OK")
+	} else {
+		fmt.Fprintln(w, "REX Client: NOT OK")
+	}
+	if pass {
+		w.WriteHeader(200)
+	} else {
+		w.WriteHeader(503)
+	}
 }
 
 func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *SchedulerHTTPServer {
