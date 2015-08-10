@@ -34,8 +34,7 @@
             },
             "user": {
               "type": "string",
-              "description": "Framework User.",
-              "default": "vagrant"
+              "description": "Framework User."
             },
             "name": {
               "type": "string",
@@ -50,7 +49,7 @@
             "url": {
                 "type": "string",
                 "description": "Riak Mesos Framework download URL",
-                "default": "http://33.33.33.1:8000/_build/riak_mesos_linux_amd64_0.1.0.tar.gz"
+                "default": "http://riak-tools.s3.amazonaws.com/riak-mesos/riak_mesos_linux_amd64_0.1.0.tar.gz"
             },
             "cpus": {
                 "type": "number",

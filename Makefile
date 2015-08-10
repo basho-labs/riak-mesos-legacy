@@ -128,8 +128,17 @@ package-rel:
 	echo "Thank you for downloading Riak Mesos Framework. Please visit https://github.com/basho-labs/riak-mesos for usage information." > $(BUILD_DIR)/riak_mesos_framework/INSTALL.txt
 	cd $(BUILD_DIR) && tar -zcvf riak_mesos_linux_amd64_$(PACKAGE_VERSION).tar.gz riak_mesos_framework
 
+package-dcos:
+	-rm -rf $(BUILD_DIR)/dcos-riak-*
+	cp $(BASE_DIR)/bin/tools_linux_amd64 $(BASE_DIR)/cli/dcos_riak
+	cp -R $(BASE_DIR)/cli $(BUILD_DIR)/dcos-riak-$(PACKAGE_VERSION)
+	cd $(BUILD_DIR) && tar -zcvf dcos-riak-$(PACKAGE_VERSION).tar.gz dcos-riak-$(PACKAGE_VERSION)
+
 deploy:
 	cd $(BUILD_DIR) && s3cmd put --acl-public riak_mesos_linux_amd64_$(PACKAGE_VERSION).tar.gz s3://riak-tools/riak-mesos/
+
+deploy-dcos:
+	cd $(BUILD_DIR) && s3cmd put --acl-public dcos-riak-$(PACKAGE_VERSION).tar.gz s3://riak-tools/riak-mesos/
 
 test:
 	go test ./...
