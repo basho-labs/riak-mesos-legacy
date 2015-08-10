@@ -7,12 +7,11 @@
   "scm": "https://github.com/basho-labs/riak-mesos.git",
   "website": "https://github.com/basho-labs/riak-mesos",
   "images": {
-    "icon-small": "http://some.org/foo/small.png",
-    "icon-medium": "http://some.org/foo/medium.png",
-    "icon-large": "http://some.org/foo/large.png",
+    "icon-small": "http://riak-tools.s3.amazonaws.com/riak-mesos/riak-mesos-small.png",
+    "icon-medium": "http://riak-tools.s3.amazonaws.com/riak-mesos/riak-mesos-medium.png",
+    "icon-large": "http://riak-tools.s3.amazonaws.com/riak-mesos/riak-mesos-large.png",
     "screenshots": [
-      "http://some.org/foo/screen-1.png",
-      "http://some.org/foo/screen-2.png"
+      "http://riak-tools.s3.amazonaws.com/riak-mesos/riak-mesos-screenshot.png"
     ]
   },
   "postInstallNotes": "Thank you for installing Riak on Mesos. Visit https://github.com/basho-labs/riak-mesos for usage information."

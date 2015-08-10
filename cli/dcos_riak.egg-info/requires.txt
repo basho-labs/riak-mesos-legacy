@@ -1,0 +1,11 @@
+dcos>=0.1.6, <1.0
+docopt
+toml
+requests
+six>=1.9, <2.0
+
+[test]
+coverage
+
+[dev]
+check-manifest

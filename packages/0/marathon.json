@@ -1,5 +1,5 @@
 {
-  "id": "{{riak.framework-id}}",
+  "id": "{{riak.appId}}",
   "instances": 1,
   "cpus": {{riak.cpus}},
   "mem": {{riak.mem}},
@@ -8,14 +8,24 @@
   "env": {},
   "args": [
       "riak_mesos_framework/framework_linux_amd64",
-      "-master={{mesos.master}}",
+      "-master={{riak.master}}",
       "-zk={{riak.zk}}",
-      "-id={{riak.id}}"
       "-ip={{riak.ip}}",
       "-hostname={{riak.hostname}}",
       "-log={{riak.log}}",
       "-user={{riak.user}}",
-      "-name=\"{{riak.name}}\"",
-      "-role={{riak.role}}"],
-  "healthChecks": []
+      "-name={{riak.name}}",
+      "-role={{riak.role}}"
+  ],
+  "healthChecks": [
+    {
+      "path": "/healthcheck",
+      "portIndex": 0,
+      "protocol": "HTTP",
+      "gracePeriodSeconds": 300,
+      "intervalSeconds": 60,
+      "timeoutSeconds": 20,
+      "maxConsecutiveFailures": 5,
+      "ignoreHttp1xx": false
+    }]
 }

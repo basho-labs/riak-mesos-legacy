@@ -186,6 +186,10 @@ func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *Schedul
 		log.Infof("%v %s %s %s ? %s %s %s", request.Host, request.RemoteAddr, request.Method, request.URL.Path, request.URL.RawQuery, request.Proto, request.Header.Get("User-Agent"))
 		router.ServeHTTP(w, request)
 	})
+
+	log.Println("Listener Info: ", ln.Addr().String())
+
+	// go http.ListenAndServe(":8080", nil)
 	go http.Serve(ln, middleWare)
 
 	return schttp
