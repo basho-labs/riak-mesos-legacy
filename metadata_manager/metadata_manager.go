@@ -10,6 +10,9 @@ import (
 	"time"
 )
 
+// TODO: Convert ZKNode functions to all work around MetadataNode interface for better testing
+type MetadataNode interface {
+}
 type ZkNode struct {
 	mgr  *MetadataManager
 	stat *zk.Stat
@@ -31,24 +34,28 @@ func (node *ZkNode) GetLock() *zk.Lock {
 	zkLock := zk.NewLock(node.mgr.zkConn, node.ns.GetZKPath(), zk.WorldACL(zk.PermAll))
 	return zkLock
 }
-func (node *ZkNode) SetData(data []byte) {
+func (node *ZkNode) SetData(data []byte) error {
 	var err error
 	log.Info("Persisting data")
 	if node.stat != nil {
 		node.stat, err = node.mgr.zkConn.Set(node.ns.GetZKPath(), data, node.stat.Version)
 		if err != nil {
 			log.Panic("Error persisting data: ", err)
+			return err
 		}
 	} else {
 		_, err = node.mgr.zkConn.Create(node.ns.GetZKPath(), data, 0, zk.WorldACL(zk.PermAll))
 		if err != nil {
 			log.Panic("Error persisting data: ", err)
+			return err
 		}
 		node.data, node.stat, err = node.mgr.zkConn.Get(node.ns.GetZKPath())
 		if err != nil {
 			log.Panic("Error persisting data: ", err)
+			return err
 		}
 	}
+	return nil
 }
 func (node *ZkNode) GetChildren() []*ZkNode {
 	return node.mgr.getChildren(node.ns)

@@ -7,14 +7,18 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/basho-labs/riak-mesos/scheduler"
+	"regexp"
 )
+
+// Must start with a-z, or A-Z
+// Can contain any of the following, a-z, A-Z, 0-9,  -, _
+var frameNameRegex *regexp.Regexp = regexp.MustCompile("[a-zA-Z][a-zA-Z0-9-_]*")
 
 var (
 	mesosMaster       string
 	zookeeperAddr     string
 	schedulerHostname string
 	schedulerIPAddr   string
-	frameworkID       string
 	user              string
 	logFile           string
 	frameworkName     string
@@ -26,10 +30,9 @@ func init() {
 	flag.StringVar(&zookeeperAddr, "zk", "33.33.33.2:2181", "Zookeeper")
 	flag.StringVar(&schedulerHostname, "hostname", "", "Framework hostname")
 	flag.StringVar(&schedulerIPAddr, "ip", "33.33.33.1", "Framework ip")
-	flag.StringVar(&frameworkID, "id", "riak-mesos-go3", "Framework Instance ID")
 	flag.StringVar(&user, "user", "", "Framework Username")
 	flag.StringVar(&logFile, "log", "", "Log File Location")
-	flag.StringVar(&frameworkName, "name", "Riak Mesos Framework", "Framework Instance Name")
+	flag.StringVar(&frameworkName, "name", "riakMesosFramework", "Framework Instance Name")
 	flag.StringVar(&frameworkRole, "role", "*", "Framework Role Name")
 
 	flag.Parse()
@@ -46,6 +49,9 @@ func main() {
 		log.SetOutput(fo)
 	}
 
+	if frameNameRegex.FindString(frameworkName) != frameworkName {
+		log.Fatal("Error, framework name not valid")
+	}
 	// When starting scheduler from Marathon, PORT0-N env vars will be set
 	rexPortStr := os.Getenv("PORT1")
 
@@ -60,6 +66,6 @@ func main() {
 		log.Fatal(portErr)
 	}
 
-	sched := scheduler.NewSchedulerCore(schedulerHostname, frameworkID, frameworkName, frameworkRole, []string{zookeeperAddr}, schedulerIPAddr, user, rexPort)
+	sched := scheduler.NewSchedulerCore(schedulerHostname, frameworkName, frameworkRole, []string{zookeeperAddr}, schedulerIPAddr, user, rexPort)
 	sched.Run(mesosMaster)
 }
