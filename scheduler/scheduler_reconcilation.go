@@ -1,29 +1,38 @@
 package scheduler
 
 import (
-	"sync"
-	"time"
 	log "github.com/Sirupsen/logrus"
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	sched "github.com/mesos/mesos-go/scheduler"
+	"sync"
+	"time"
+)
+
+type ReconcilationServerState int
+
+const (
+	waiting ReconcilationServerState = iota
+	reconcilining
 )
 
 func newReconciliationServer(driver sched.SchedulerDriver) *ReconcilationServer {
 	rs := &ReconcilationServer{
-		tasksToReconcile: make(chan *mesos.TaskStatus, 10),
+		nodesToReconcile: make(chan *FrameworkRiakNode, 10),
 		lock:             &sync.Mutex{},
 		enabled:          false,
 		driver:           driver,
+		status:           waiting,
 	}
 	go rs.loop()
 	return rs
 }
 
 type ReconcilationServer struct {
-	tasksToReconcile chan *mesos.TaskStatus
+	nodesToReconcile chan *FrameworkRiakNode
 	driver           sched.SchedulerDriver
 	lock             *sync.Mutex
 	enabled          bool
+	status           ReconcilationServerState
 }
 
 func (rServer *ReconcilationServer) enable() {
@@ -39,28 +48,36 @@ func (rServer *ReconcilationServer) disable() {
 	defer rServer.lock.Unlock()
 	rServer.enabled = true
 }
+func (rServer *ReconcilationServer) reconcile(nodesToReconcile map[string]*FrameworkRiakNode) {
+	rServer.lock.Lock()
+	defer rServer.lock.Unlock()
+	if rServer.enabled {
+		tasksToReconcile := []*mesos.TaskStatus{}
+		for key, node := range nodesToReconcile {
+			if node.reconciled {
+				delete(nodesToReconcile, key)
+			} else {
+				tasksToReconcile = append(tasksToReconcile, node.GetTaskStatus())
+				rServer.driver.ReconcileTasks(tasksToReconcile)
+			}
+		}
+	}
+}
 func (rServer *ReconcilationServer) loop() {
-	tasksToReconcile := []*mesos.TaskStatus{}
-	ticker := time.Tick(time.Millisecond * 100)
+	nodesToReconcile := make(map[string]*FrameworkRiakNode)
+
+	// TODO: Add exponential backoff
+	ticker := time.Tick(time.Second * 5)
 	for {
 		select {
-		case task := <-rServer.tasksToReconcile:
+		case node := <-rServer.nodesToReconcile:
 			{
-				tasksToReconcile = append(tasksToReconcile, task)
+				nodesToReconcile[node.UUID.String()] = node
+				rServer.reconcile(nodesToReconcile)
 			}
 		case <-ticker:
 			{
-				rServer.lock.Lock()
-				if rServer.enabled {
-					rServer.lock.Unlock()
-					if len(tasksToReconcile) > 0 {
-						log.Info("Reconciling tasks: ", tasksToReconcile)
-						rServer.driver.ReconcileTasks(tasksToReconcile)
-						tasksToReconcile = []*mesos.TaskStatus{}
-					}
-				} else {
-					rServer.lock.Unlock()
-				}
+				rServer.reconcile(nodesToReconcile)
 			}
 		}
 	}

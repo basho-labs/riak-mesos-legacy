@@ -12,8 +12,8 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/elazarl/go-bindata-assetfs"
 	"github.com/gorilla/mux"
-	"net/url"
 	"net/http/httputil"
+	"net/url"
 )
 
 type SchedulerHTTPServer struct {
@@ -177,7 +177,7 @@ func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *Schedul
 	rexURL := &url.URL{
 		Host:   fmt.Sprintf("localhost:%d", sc.rexPort),
 		Scheme: "http",
-		Path: "/",
+		Path:   "/",
 	}
 	router.PathPrefix("/").Handler(httputil.NewSingleHostReverseProxy(rexURL))
 

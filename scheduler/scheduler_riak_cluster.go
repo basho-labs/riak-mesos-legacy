@@ -62,9 +62,11 @@ func (frc *FrameworkRiakCluster) AddNode(zkNode *metamgr.ZkNode) metamgr.Metadat
 	if err != nil {
 		log.Panic("Error getting node: ", err)
 	}
+	// This should happen naturally because of Go "initializers"
+	frn.reconciled = false
 	frc.sc.frnDict[frn.GetTaskStatus().TaskId.GetValue()] = frn
 	frc.nodes[frn.UUID.String()] = frn
-	frc.sc.rServer.tasksToReconcile <- frn.GetTaskStatus()
+	frc.sc.rServer.nodesToReconcile <- frn
 	return frn
 }
 func NewFrameworkRiakCluster() *FrameworkRiakCluster {
