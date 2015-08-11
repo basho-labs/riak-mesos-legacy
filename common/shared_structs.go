@@ -8,7 +8,6 @@ type TaskData struct {
 	FullyQualifiedNodeName    string
 	RexFullyQualifiedNodeName string
 	Zookeepers                []string
-	ClusterName               string
 	NodeID                    string
 	FrameworkName             string
 }

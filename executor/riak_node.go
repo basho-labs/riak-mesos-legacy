@@ -248,17 +248,9 @@ func (riakNode *RiakNode) Run() {
 	} else {
 		rootNode := riakNode.metadataManager.GetRootNode()
 
-		clustersNode, err := rootNode.GetChild("clusters")
-		if err != nil {
-			log.Panic(err)
-		}
-		clusterNode, err := clustersNode.GetChild(riakNode.taskData.ClusterName)
-		if err != nil {
-			log.Panic(err)
-		}
 
-		clusterNode.CreateChildIfNotExists("coordinator")
-		coordinator, err := clusterNode.GetChild("coordinator")
+		rootNode.CreateChildIfNotExists("coordinator")
+		coordinator, err := rootNode.GetChild("coordinator")
 		if err != nil {
 			log.Panic(err)
 		}

@@ -13,10 +13,13 @@ import (
 type SchedulerState struct {
 	zkNode      *metadata_manager.ZkNode
 	FrameworkID *string
+	Nodes		map[string]*FrameworkRiakNode
 }
 
 func emptySchedulerState() *SchedulerState {
-	return &SchedulerState{}
+	return &SchedulerState{
+		Nodes: make(map[string]*FrameworkRiakNode),
+	}
 }
 func GetSchedulerState(mm *metadata_manager.MetadataManager) *SchedulerState {
 	var zkNode *metadata_manager.ZkNode
