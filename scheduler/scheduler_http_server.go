@@ -12,8 +12,6 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/elazarl/go-bindata-assetfs"
 	"github.com/gorilla/mux"
-	"net/http/httputil"
-	"net/url"
 )
 
 type SchedulerHTTPServer struct {
@@ -143,7 +141,7 @@ func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *Schedul
 	//This is a HACK.
 	hostURI := fmt.Sprintf("http://%s:%d/static/executor_linux_amd64", hostname, port)
 	riakURI := fmt.Sprintf("http://%s:%d/static/riak_linux_amd64.tar.gz", hostname, port)
-	URI := fmt.Sprintf("http://%s:%d/", hostname, port)
+	URI := fmt.Sprintf("http://%s:%d", hostname, port)
 	//Info.Printf("Hosting artifact '%s' at '%s'", path, hostURI)
 	log.Println("Serving at HostURI: ", hostURI)
 
@@ -173,13 +171,6 @@ func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *Schedul
 	router.Methods("GET").Path("/clusters/{cluster}/nodes").HandlerFunc(schttp.serveNodes)
 	router.Methods("POST").Path("/clusters/{cluster}/nodes").HandlerFunc(schttp.createNode)
 	router.Methods("GET").Path("/healthcheck").HandlerFunc(schttp.healthcheck)
-
-	rexURL := &url.URL{
-		Host:   fmt.Sprintf("localhost:%d", sc.rexPort),
-		Scheme: "http",
-		Path:   "/",
-	}
-	router.PathPrefix("/").Handler(httputil.NewSingleHostReverseProxy(rexURL))
 
 	//http.Serve(ln, newHandler())
 	middleWare := http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {

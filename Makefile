@@ -120,7 +120,7 @@ deploy-deps:
 	cd vagrant/ubuntu/trusty64/dependencies && make deploy
 
 package-rel:
-	-rm -rf $(BUILD_DIR)
+	-rm -rf $(BUILD_DIR)/riak_mesos_framework
 	mkdir -p $(BUILD_DIR)/riak_mesos_framework
 	cp bin/framework_linux_amd64 $(BUILD_DIR)/riak_mesos_framework/
 	cp bin/tools_linux_amd64 $(BUILD_DIR)/riak_mesos_framework/
