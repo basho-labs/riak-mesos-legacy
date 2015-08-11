@@ -79,8 +79,8 @@ Sample `marathon.json`
   "env": {},
   "args": [
       "framework_linux_amd64",
-      "-master=zk://mesos.master:2181/mesos",
-      "-zk=mesos.master:2181",
+      "-master=zk://master.mesos:2181/mesos",
+      "-zk=master.mesos:2181",
       "-id=riak-mesos-go",
       "-name=\"Riak Mesos Framework\"",
       "-role=*"],
@@ -105,13 +105,13 @@ Download and extract [riak_mesos_framework_linux_amd64_0.1.0.tar.gz](http://riak
 
 ```
 ./framework_linux_amd64 \
-    -master=zk://mesos.master:2181/mesos \
-    -zk=mesos.master:2181 \
+    -master=zk://master.mesos:2181/mesos \
+    -zk=master.mesos:2181 \
     -id=riak-mesos-go \
     -user=centos \
     -role=* \
-    -ip=mesos.master \
-    -hostname=mesos.master
+    -ip=master.mesos \
+    -hostname=master.mesos
 ```
 
 ### Riak Cluster Configuration
@@ -126,7 +126,7 @@ Configure a few environment variables matching your setup for convenience.
 
 ```
 NAME="riak-mesos-go"
-ZK="mesos.master:2181"
+ZK="master.mesos:2181"
 CLUSTERNAME="mycluster"
 ```
 
