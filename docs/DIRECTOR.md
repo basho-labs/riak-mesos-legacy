@@ -24,7 +24,7 @@ Example `marathon.json`
     "ports": [8098, 8087, 0],
     "instances": 1,
     "env": {
-        "DIRECTOR_ZK": "mesos.master:2181"
+        "DIRECTOR_ZK": "master.mesos:2181"
         "DIRECTOR_FRAMEWORK": "riak-mesos-go"
         "DIRECTOR_CLUSTER": "mycluster"
     },
