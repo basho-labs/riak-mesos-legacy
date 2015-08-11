@@ -69,7 +69,7 @@ func (frn *FrameworkRiakNode) NeedsToBeScheduled() bool {
 	return false
 }
 func (frn *FrameworkRiakNode) CurrentID() string {
-	return fmt.Sprintf("%s-%d", frn.FrameworkName, frn.UUID.String(), frn.Generation)
+	return fmt.Sprintf("%s-%s-%d", frn.FrameworkName, frn.UUID.String(), frn.Generation)
 }
 
 func (frn *FrameworkRiakNode) ExecutorID() string {
