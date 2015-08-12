@@ -10,18 +10,22 @@ operational simplicity, and scalability.
     * [Director](#director)
 * [Usage](#usage)
     * [Installation](#installation)
-        * [DCOS Setup](#dcos-setup)
         * [Marathon Setup](#marathon-setup)
         * [Manual Setup](#manual-setup)
     * [Riak Cluster Configuration](#riak-cluster-configuration)
     * [CLI Tool](#cli-tool)
-    * [HTTP API](docs/HTTP-API.md)
-* Documentation
-    * Development
-        * [Development Guide](docs/DEVELOPMENT.md)
-        * [Development Setup](docs/DEVELOPMENT-SETUP.md)
-    * [Director](docs/DIRECTOR.md)
-    * [HTTP API](docs/HTTP-API.md)
+    * [HTTP API](#http-api.md)
+
+### DCOS Users
+
+* [DCOS Resources](dcos/)
+
+### Documentation
+
+* [Development Setup](docs/DEVELOPMENT-SETUP.md)
+* [Development Guide](docs/DEVELOPMENT.md)
+* [Director](docs/DIRECTOR.md)
+* [HTTP API](docs/HTTP-API.md)
 
 ## Architecture
 
@@ -52,15 +56,6 @@ For installation and usage instructions related to the Riak Mesos Director, plea
 
 The Riak Mesos Framework can be configured in a few different ways depending on the restraints of
 the Mesos cluster.
-
-#### DCOS Setup
-
-[DCOS](http://docs.mesosphere.com/) support is still in development.
-
-```
-dcos package update
-dcos package install riak
-```
 
 #### Marathon Setup
 

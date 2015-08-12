@@ -15,11 +15,6 @@
               "description": "Zookeeper address. Specify in the format host:port.",
               "default": "master.mesos:2181"
             },
-            "app-id": {
-              "type": "string",
-              "description": "Riak Application ID.",
-              "default": "riak"
-            },
             "ip": {
               "type": "string",
               "description": "Framework HTTP API bind address."
@@ -34,7 +29,8 @@
             },
             "user": {
               "type": "string",
-              "description": "Framework User."
+              "description": "Framework User.",
+              "default": "root"
             },
             "framework-name": {
               "type": "string",
@@ -59,12 +55,12 @@
             "cpus": {
                 "type": "number",
                 "description": "CPU requirements",
-                "default": 0.1
+                "default": 0.5
             },
             "mem": {
                 "type": "number",
                 "description": "Memory requirements",
-                "default": 100
+                "default": 512
             },
             "healthcheck-grace-period-seconds": {
                 "type": "number",
@@ -88,13 +84,14 @@
             }
           },
           "required": [
-            "app-id",
+            "framework-name",
             "instances",
             "cpus",
             "mem",
             "url",
             "master",
             "zk",
+            "user",
             "healthcheck-grace-period-seconds",
             "healthcheck-interval-seconds",
             "healthcheck-timeout-seconds",

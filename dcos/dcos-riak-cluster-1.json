@@ -1,0 +1,17 @@
+{
+    "riak": {
+        "master": "zk://master.mesos:2181/mesos",
+        "zk": "master.mesos:2181",
+        "user": "root",
+        "framework-name": "riak-cluster-1",
+        "role": "*",
+        "url": "http://riak-tools.s3.amazonaws.com/riak-mesos/riak_mesos_linux_amd64_0.1.0.tar.gz",
+        "instances": 1,
+        "cpus": 0.5,
+        "mem": 512,
+        "healthcheck-grace-period-seconds": 300,
+        "healthcheck-interval-seconds": 60,
+        "healthcheck-timeout-seconds": 20,
+        "healthcheck-max-consecutive-failures": 5
+    }
+}

@@ -116,10 +116,8 @@ vagrant-mesos:
 
 package-deps:
 	cd vagrant/ubuntu/trusty64/dependencies && make
-deploy-deps:
-	cd vagrant/ubuntu/trusty64/dependencies && make deploy
-
 package-rel:
+	mkdir -p $(BUILD_DIR)
 	-rm -rf $(BUILD_DIR)/riak_mesos_framework
 	mkdir -p $(BUILD_DIR)/riak_mesos_framework
 	cp bin/framework_linux_amd64 $(BUILD_DIR)/riak_mesos_framework/
@@ -127,18 +125,27 @@ package-rel:
 	cp packages/0/*.json $(BUILD_DIR)/riak_mesos_framework/
 	echo "Thank you for downloading Riak Mesos Framework. Please visit https://github.com/basho-labs/riak-mesos for usage information." > $(BUILD_DIR)/riak_mesos_framework/INSTALL.txt
 	cd $(BUILD_DIR) && tar -zcvf riak_mesos_linux_amd64_$(PACKAGE_VERSION).tar.gz riak_mesos_framework
-
 package-dcos:
+	mkdir -p $(BUILD_DIR)
 	-rm -rf $(BUILD_DIR)/dcos-riak-*
-	cp $(BASE_DIR)/bin/tools_linux_amd64 $(BASE_DIR)/cli/dcos_riak
-	cp -R $(BASE_DIR)/cli $(BUILD_DIR)/dcos-riak-$(PACKAGE_VERSION)
+	cp $(BASE_DIR)/bin/tools_linux_amd64 $(BASE_DIR)/dcos/dcos-riak/dcos_riak
+	cp -R $(BASE_DIR)/dcos/dcos-riak $(BUILD_DIR)/dcos-riak-$(PACKAGE_VERSION)
 	cd $(BUILD_DIR) && tar -zcvf dcos-riak-$(PACKAGE_VERSION).tar.gz dcos-riak-$(PACKAGE_VERSION)
+package-repo:
+	mkdir -p $(BUILD_DIR)
+	-rm -rf $(BUILD_DIR)/dcos-repo-*
+	git clone https://github.com/mesosphere/universe.git $(BUILD_DIR)/dcos-repo-$(PACKAGE_VERSION)
+	cp -R $(BASE_DIR)/dcos/repo/* $(BUILD_DIR)/dcos-repo-$(PACKAGE_VERSION)/repo/
+	cd $(BUILD_DIR) && zip -r dcos-repo-$(PACKAGE_VERSION).zip dcos-repo-$(PACKAGE_VERSION)
 
 deploy:
 	cd $(BUILD_DIR) && s3cmd put --acl-public riak_mesos_linux_amd64_$(PACKAGE_VERSION).tar.gz s3://riak-tools/riak-mesos/
-
 deploy-dcos:
 	cd $(BUILD_DIR) && s3cmd put --acl-public dcos-riak-$(PACKAGE_VERSION).tar.gz s3://riak-tools/riak-mesos/
+deploy-repo:
+	cd $(BUILD_DIR) && s3cmd put --acl-public dcos-repo-$(PACKAGE_VERSION).zip s3://riak-tools/riak-mesos/
+deploy-deps:
+	cd vagrant/ubuntu/trusty64/dependencies && make deploy
 
 test:
 	go test ./...
