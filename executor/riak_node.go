@@ -254,6 +254,7 @@ func (riakNode *RiakNode) Run() {
 		process.Env = append(process.Env, "NO_EPMD=1")
 		process.Env = append(process.Env, fmt.Sprintf("CEPMD_PORT=%d", c.GetPort()))
 
+		log.Infof("Starting process: %+v", process)
 		return process.Run()
 	}
 	riakNode.pm, err = process_manager.NewProcessManager(func() { return }, "/riak/bin/riak", args, HealthCheckFun, &chroot)
