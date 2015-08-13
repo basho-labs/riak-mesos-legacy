@@ -2,10 +2,11 @@
 package process_manager
 
 import (
-	"syscall"
-	"os"
-	log "github.com/Sirupsen/logrus"
 	"fmt"
+	log "github.com/Sirupsen/logrus"
+	"os"
+	"strings"
+	"syscall"
 )
 
 func (pm *ProcessManager) start(executablePath string, args []string, chroot *string) {
@@ -43,6 +44,20 @@ func (pm *ProcessManager) start(executablePath string, args []string, chroot *st
 		}
 		homevar := fmt.Sprintf("HOME=%s", wd)
 		procattr.Env = append(os.Environ(), homevar)
+	}
+	pathDetected := false
+	for idx, val := range procattr.Env {
+		splitArray := strings.Split(val, "=")
+		if splitArray[0] == "PATH" {
+			splitPath := strings.Split(splitArray[1], ":")
+			splitPath = append(splitPath, "/usr/local/sbin", "/usr/local/bin", "/usr/sbin", "/usr/bin", "/sbin:/bin", "/usr/games", "/usr/local/games")
+			procattr.Env[idx] = fmt.Sprintf("PATH=%s", strings.Join(splitPath, ":"))
+			pathDetected = true
+			break
+		}
+	}
+	if !pathDetected {
+		procattr.Env = append(procattr.Env, "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games")
 	}
 	var err error
 	realArgs := append([]string{executablePath}, args...)
