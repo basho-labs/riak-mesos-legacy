@@ -189,7 +189,7 @@ func NewRiakExplorer(port int64, nodename string, c *cepm.CEPM) (*RiakExplorer, 
 	re.configure(port, nodename)
 	log.Debugf("Starting up Riak Explorer %v", exepath)
 	var err error
-	re.pm, err = process_manager.NewProcessManager(tearDownFun, exepath, args, healthCheckFun)
+	re.pm, err = process_manager.NewProcessManager(tearDownFun, exepath, args, healthCheckFun, nil)
 	if err != nil {
 		log.Error("Could not start Riak Explorer: ", err)
 	}
