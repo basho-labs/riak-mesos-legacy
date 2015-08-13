@@ -138,7 +138,7 @@ package-repo:
 	cp -R $(BASE_DIR)/dcos/repo/* $(BUILD_DIR)/dcos-repo-$(PACKAGE_VERSION)/repo/
 	cd $(BUILD_DIR) && zip -r dcos-repo-$(PACKAGE_VERSION).zip dcos-repo-$(PACKAGE_VERSION)
 
-deploy:
+deploy-rel:
 	cd $(BUILD_DIR) && s3cmd put --acl-public riak_mesos_linux_amd64_$(PACKAGE_VERSION).tar.gz s3://riak-tools/riak-mesos/
 deploy-dcos:
 	cd $(BUILD_DIR) && s3cmd put --acl-public dcos-riak-$(PACKAGE_VERSION).tar.gz s3://riak-tools/riak-mesos/

@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	"encoding/json"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/basho-labs/riak-mesos/metadata_manager"
 	// Unfortunately, we're leaking abstractions, but sometimes things like this need to be done
@@ -50,6 +51,10 @@ func (ss *SchedulerState) serialize() []byte {
 func (ss *SchedulerState) Persist() error {
 	b := ss.serialize()
 	err := ss.zkNode.SetData(b)
+	return err
+}
+func (ss *SchedulerState) Delete() error {
+	err := ss.zkNode.Delete()
 	return err
 }
 

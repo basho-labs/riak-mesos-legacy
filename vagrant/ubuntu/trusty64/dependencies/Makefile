@@ -28,7 +28,7 @@ clone:
 	tar zxvf otp_src_R16B02-basho8.tar.gz
 	mv riak-2.1.1 riak
 	-rm -rf riak/deps/node_package
-	git clone git@github.com:basho/node_package.git --branch no-epmd
+	git clone https://github.com/basho/node_package.git --branch no-epmd
 	cp -R node_package riak/deps/node_package
 
 package:

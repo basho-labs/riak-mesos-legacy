@@ -57,3 +57,10 @@ Installing CLI subcommand for package [riak]
 New command available: dcos riak
 Thank you for installing Riak on Mesos. Visit https://github.com/basho-labs/riak-mesos for usage information.
 ```
+
+### Building a cluster
+
+```
+dcos riak -name=riak -cluster-name=mycluster -command=create-cluster
+dcos riak -name=riak -cluster-name=mycluster -command=create-cluster
+```
