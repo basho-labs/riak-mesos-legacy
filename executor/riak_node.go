@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"text/template"
 	"time"
@@ -17,8 +16,9 @@ import (
 	"github.com/basho-labs/riak-mesos/process_manager"
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	util "github.com/mesos/mesos-go/mesosutil"
-	"strings"
-	"syscall"
+
+	"bytes"
+	"errors"
 )
 
 type RiakNode struct {
@@ -221,41 +221,18 @@ func (riakNode *RiakNode) Run() {
 	chroot := filepath.Join(wd, "riak_root")
 
 	HealthCheckFun := func() error {
-		process := exec.Command("/usr/bin/timeout", "--kill-after=5s", "--signal=TERM", "5s", "/riak/bin/riak-admin", "wait-for-service", "riak_kv")
-		process.Stdout = os.Stdout
-		process.Stderr = os.Stderr
-		process.SysProcAttr = &syscall.SysProcAttr{
-			Chroot: chroot,
-		}
-		if os.Getuid() != 0 {
-			//Namespace tricks
-			process.SysProcAttr.Cloneflags = syscall.CLONE_NEWUSER | syscall.CLONE_NEWNS
-			process.SysProcAttr.UidMappings = []syscall.SysProcIDMap{
-				{ContainerID: 0, HostID: os.Getuid(), Size: 1},
+		log.Info("Checking is Riak is started")
+		data, err := ioutil.ReadFile("riak_root/riak/log/console.log")
+		if err != nil {
+			if bytes.Contains(data, []byte("Wait complete for service riak_kv")) {
+				log.Info("Riak started")
+				return nil
+			} else {
+				return errors.New("Riak KV not yet started")
 			}
+		} else {
+			return err
 		}
-
-		homevar := fmt.Sprintf("HOME=%s", "/")
-		process.Env = append(os.Environ(), homevar)
-		pathDetected := false
-		for idx, val := range process.Env {
-			splitArray := strings.Split(val, "=")
-			if splitArray[0] == "PATH" {
-				splitPath := strings.Split(splitArray[1], ":")
-				splitPath = append(splitPath, "/usr/local/sbin", "/usr/local/bin", "/usr/sbin", "/usr/bin", "/sbin:/bin", "/usr/games", "/usr/local/games")
-				process.Env[idx] = fmt.Sprintf("PATH=%s", strings.Join(splitPath, ":"))
-				pathDetected = true
-				break
-			}
-		}
-		if !pathDetected {
-			process.Env = append(process.Env, "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games")
-		}
-		process.Env = append(process.Env, "NO_EPMD=1")
-		process.Env = append(process.Env, fmt.Sprintf("CEPMD_PORT=%d", c.GetPort()))
-
-		log.Infof("Starting process: %+v with SysProcAttr: %+v", process, process.SysProcAttr)
-		return process.Run()
 	}
 	riakNode.pm, err = process_manager.NewProcessManager(func() { return }, "/riak/bin/riak", args, HealthCheckFun, &chroot)
 
