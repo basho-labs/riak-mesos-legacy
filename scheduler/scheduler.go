@@ -35,13 +35,12 @@ type SchedulerCore struct {
 	rex                 *rex.RiakExplorer
 	rexPort             int
 	cepm                *cepm.CEPM
-	mesosMaster         string
 	frameworkName       string
 	frameworkRole       string
 	schedulerState      *SchedulerState
 }
 
-func NewSchedulerCore(mesosMaster string, schedulerHostname string, frameworkName string, frameworkRole string, zookeepers []string, schedulerIPAddr string, user string, rexPort int) *SchedulerCore {
+func NewSchedulerCore(schedulerHostname string, frameworkName string, frameworkRole string, zookeepers []string, schedulerIPAddr string, user string, rexPort int) *SchedulerCore {
 	mgr := metamgr.NewMetadataManager(frameworkName, zookeepers)
 	ss := GetSchedulerState(mgr)
 	hostname, err := os.Hostname()
@@ -72,7 +71,6 @@ func NewSchedulerCore(mesosMaster string, schedulerHostname string, frameworkNam
 		rex:             myRex,
 		rexPort:         rexPort,
 		cepm:            c,
-		mesosMaster:     mesosMaster,
 		frameworkName:   frameworkName,
 		frameworkRole:   frameworkRole,
 		schedulerState:  ss,
@@ -114,16 +112,8 @@ func (sc SchedulerCore) NewCluster(zkNode *metamgr.ZkNode, name string) metamgr.
 func (sc *SchedulerCore) setupMetadataManager() {
 	sc.mgr.SetupFramework(sc.schedulerHTTPServer.URI, sc)
 }
-func (sc *SchedulerCore) Run(forceClean bool) {
+func (sc *SchedulerCore) Run(mesosMaster string) {
 	var frameworkId *mesos.FrameworkID
-
-	if forceClean {
-		log.Info("Forcibly cleaning schedulerState. Old State: ", sc.schedulerState)
-		sc.schedulerState.Delete()
-		sc.schedulerState = GetSchedulerState(sc.mgr)
-		log.Info("Forcibly cleaned schedulerState. New State: ", sc.schedulerState)
-	}
-
 	if sc.schedulerState.FrameworkID == nil {
 		frameworkId = nil
 	} else {
@@ -156,7 +146,7 @@ func (sc *SchedulerCore) Run(forceClean bool) {
 	config := sched.DriverConfig{
 		Scheduler:  sc,
 		Framework:  fwinfo,
-		Master:     sc.mesosMaster,
+		Master:     mesosMaster,
 		Credential: cred,
 		// BindingAddress: bindingAddress,
 		//	WithAuthContext: func(ctx context.Context) context.Context {
@@ -350,10 +340,4 @@ func (sc *SchedulerCore) Error(driver sched.SchedulerDriver, err string) {
 	sc.lock.Lock()
 	defer sc.lock.Unlock()
 	log.Info("Scheduler received error:", err)
-
-	// Unfortunately there is no message type for this patricular issue
-	if err == "Completed framework attempted to re-register" {
-		log.Info("Attempting to re-regsiter")
-		sc.Run(true)
-	}
 }

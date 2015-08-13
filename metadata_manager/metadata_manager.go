@@ -20,9 +20,9 @@ type ZkNode struct {
 	ns   Namespace
 }
 
-func (node *ZkNode) Delete() error {
-	err := node.mgr.zkConn.Delete(node.ns.GetZKPath(), node.stat.Version)
-	return err
+func (node *ZkNode) Delete() {
+	node.mgr.zkConn.Delete(node.ns.GetZKPath(), node.stat.Version)
+
 }
 func (node *ZkNode) String() string {
 	return fmt.Sprintf("<%s> -> %v", node.ns.GetZKPath(), node.data)

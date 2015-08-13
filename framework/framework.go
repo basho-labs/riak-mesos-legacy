@@ -67,6 +67,6 @@ func main() {
 		log.Fatal(portErr)
 	}
 
-	sched := scheduler.NewSchedulerCore(mesosMaster, schedulerHostname, frameworkName, frameworkRole, []string{zookeeperAddr}, schedulerIPAddr, user, rexPort)
-	sched.Run(false)
+	sched := scheduler.NewSchedulerCore(schedulerHostname, frameworkName, frameworkRole, []string{zookeeperAddr}, schedulerIPAddr, user, rexPort)
+	sched.Run(mesosMaster)
 }
