@@ -20,9 +20,9 @@ type ProcessManager struct {
 	subscribe chan chan int
 }
 
-func NewProcessManager(tdcb TeardownCallback, executablePath string, args []string, healthcheck Healthchecker) (*ProcessManager, error) {
+func NewProcessManager(tdcb TeardownCallback, executablePath string, args []string, healthcheck Healthchecker, chroot *string) (*ProcessManager, error) {
 	retFuture := make(chan *ProcessManager)
-	go startProcessManager(tdcb, executablePath, args, healthcheck, retFuture)
+	go startProcessManager(tdcb, executablePath, args, healthcheck, retFuture, chroot)
 	retVal := <-retFuture
 	log.Info("Retval: ", retVal)
 	if retVal == nil {
@@ -44,7 +44,7 @@ func (pm *ProcessManager) TearDown() {
 	<-replyChan
 	return
 }
-func startProcessManager(tdcb TeardownCallback, executablePath string, args []string, healthcheck Healthchecker, retChan chan *ProcessManager) {
+func startProcessManager(tdcb TeardownCallback, executablePath string, args []string, healthcheck Healthchecker, retChan chan *ProcessManager, chroot *string) {
 	defer close(retChan)
 	pm := &ProcessManager{
 		teardown:  make(chan chan interface{}, 10),
@@ -62,7 +62,7 @@ func startProcessManager(tdcb TeardownCallback, executablePath string, args []st
 	sigchlds := make(chan os.Signal, 1000)
 	signal.Notify(sigchlds, syscall.SIGCHLD)
 
-	pm.start(executablePath, args)
+	pm.start(executablePath, args, chroot)
 	waitChan := subscribe(pm.pid)
 	defer unsubscribe(pm.pid)
 	defer close(waitChan)
@@ -185,35 +185,3 @@ func (pm *ProcessManager) killProcess(waitChan chan pidChangeNotification) {
 	<-waitChan
 }
 
-func (pm *ProcessManager) start(executablePath string, args []string) {
-
-	sysprocattr := &syscall.SysProcAttr{
-		Setpgid: true,
-	}
-	env := os.Environ()
-
-	procattr := &syscall.ProcAttr{
-		Sys:   sysprocattr,
-		Env:   env,
-		Files: []uintptr{os.Stdin.Fd(), os.Stdout.Fd(), os.Stderr.Fd()},
-	}
-
-	if os.Getenv("HOME") == "" {
-		wd, err := os.Getwd()
-		if err != nil {
-			log.Fatal("Could not get current working directory")
-		}
-		procattr.Dir = wd
-		homevar := fmt.Sprintf("HOME=%s", wd)
-		procattr.Env = append(os.Environ(), homevar)
-	}
-	var err error
-	realArgs := append([]string{executablePath}, args...)
-	pm.pid, err = syscall.ForkExec(executablePath, realArgs, procattr)
-	if err != nil {
-		log.Panicf("Error starting process %v", err)
-	} else {
-		log.Infof("Process Manager started to manage %v at PID: %v", executablePath, pm.pid)
-	}
-
-}
