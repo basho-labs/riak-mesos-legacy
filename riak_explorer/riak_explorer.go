@@ -92,7 +92,8 @@ func decompress() string {
 			// Hard link
 		} else if hdr.Typeflag == tar.TypeLink {
 			fmt.Printf("Encountered hardlink: %+v\n", hdr)
-			if err := os.Link(hdr.Linkname, filename); err != nil {
+			linkdest := filepath.Join(".", tempdir, hdr.Linkname)
+			if err := os.Link(linkdest, filename); err != nil {
 				log.Fatal(err)
 			}
 		} else {
