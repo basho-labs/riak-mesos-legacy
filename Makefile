@@ -120,7 +120,8 @@ deploy-deps:
 	cd vagrant/ubuntu/trusty64/dependencies && make deploy
 
 package-rel:
-	-rm -rf $(BUILD_DIR)
+	mkdir -p $(BUILD_DIR)
+	-rm -rf $(BUILD_DIR)/riak_mesos_framework
 	mkdir -p $(BUILD_DIR)/riak_mesos_framework
 	cp bin/framework_linux_amd64 $(BUILD_DIR)/riak_mesos_framework/
 	cp bin/tools_linux_amd64 $(BUILD_DIR)/riak_mesos_framework/
@@ -134,8 +135,11 @@ package-dcos:
 	cp -R $(BASE_DIR)/cli $(BUILD_DIR)/dcos-riak-$(PACKAGE_VERSION)
 	cd $(BUILD_DIR) && tar -zcvf dcos-riak-$(PACKAGE_VERSION).tar.gz dcos-riak-$(PACKAGE_VERSION)
 
-deploy:
+deploy-rel:
 	cd $(BUILD_DIR) && s3cmd put --acl-public riak_mesos_linux_amd64_$(PACKAGE_VERSION).tar.gz s3://riak-tools/riak-mesos/
+
+deploy-rel-coreos:
+	cd $(BUILD_DIR) && s3cmd put --acl-public riak_mesos_linux_amd64_$(PACKAGE_VERSION).tar.gz s3://riak-tools/riak-mesos/coreos/
 
 deploy-dcos:
 	cd $(BUILD_DIR) && s3cmd put --acl-public dcos-riak-$(PACKAGE_VERSION).tar.gz s3://riak-tools/riak-mesos/
