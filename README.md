@@ -10,18 +10,22 @@ operational simplicity, and scalability.
     * [Director](#director)
 * [Usage](#usage)
     * [Installation](#installation)
-        * [DCOS Setup](#dcos-setup)
         * [Marathon Setup](#marathon-setup)
         * [Manual Setup](#manual-setup)
     * [Riak Cluster Configuration](#riak-cluster-configuration)
     * [CLI Tool](#cli-tool)
-    * [HTTP API](docs/HTTP-API.md)
-* Documentation
-    * Development
-        * [Development Guide](docs/DEVELOPMENT.md)
-        * [Development Setup](docs/DEVELOPMENT-SETUP.md)
-    * [Director](docs/DIRECTOR.md)
-    * [HTTP API](docs/HTTP-API.md)
+    * [HTTP API](#http-api.md)
+
+### DCOS Users
+
+* [DCOS Resources](dcos/)
+
+### Documentation
+
+* [Development Setup](docs/DEVELOPMENT-SETUP.md)
+* [Development Guide](docs/DEVELOPMENT.md)
+* [Director](docs/DIRECTOR.md)
+* [HTTP API](docs/HTTP-API.md)
 
 ## Architecture
 
@@ -53,15 +57,6 @@ For installation and usage instructions related to the Riak Mesos Director, plea
 The Riak Mesos Framework can be configured in a few different ways depending on the restraints of
 the Mesos cluster.
 
-#### DCOS Setup
-
-[DCOS](http://docs.mesosphere.com/) support is still in development.
-
-```
-dcos package update
-dcos package install riak
-```
-
 #### Marathon Setup
 
 Sample `marathon.json`
@@ -79,8 +74,8 @@ Sample `marathon.json`
   "env": {},
   "args": [
       "framework_linux_amd64",
-      "-master=zk://mesos.master:2181/mesos",
-      "-zk=mesos.master:2181",
+      "-master=zk://master.mesos:2181/mesos",
+      "-zk=master.mesos:2181",
       "-id=riak-mesos-go",
       "-name=\"Riak Mesos Framework\"",
       "-role=*"],
@@ -105,13 +100,13 @@ Download and extract [riak_mesos_framework_linux_amd64_0.1.0.tar.gz](http://riak
 
 ```
 ./framework_linux_amd64 \
-    -master=zk://mesos.master:2181/mesos \
-    -zk=mesos.master:2181 \
+    -master=zk://master.mesos:2181/mesos \
+    -zk=master.mesos:2181 \
     -id=riak-mesos-go \
     -user=centos \
     -role=* \
-    -ip=mesos.master \
-    -hostname=mesos.master
+    -ip=master.mesos \
+    -hostname=master.mesos
 ```
 
 ### Riak Cluster Configuration
@@ -126,7 +121,7 @@ Configure a few environment variables matching your setup for convenience.
 
 ```
 NAME="riak-mesos-go"
-ZK="mesos.master:2181"
+ZK="master.mesos:2181"
 CLUSTERNAME="mycluster"
 ```
 
