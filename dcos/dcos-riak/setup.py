@@ -69,9 +69,7 @@ setup(
         'dev': ['check-manifest'],
         'test': ['coverage'],
     },
-    package_data={
-        'dcos_riak': ['tools_linux_amd64']
-    },
+    package_data={},
     data_files=[],
 
     # To provide executable scripts, use entry points in preference to the

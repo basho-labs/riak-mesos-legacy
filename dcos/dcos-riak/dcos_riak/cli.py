@@ -18,55 +18,143 @@ from __future__ import print_function
 import os
 import subprocess
 import sys
+import requests
+import json
 
 import pkg_resources
 from dcos import marathon, util
 from dcos_riak import constants
 
 
-def api_url():
-    client = marathon.create_client()
-    tasks = client.get_tasks("riak")
+def api_url(name):
+    if name == "":
+        name="riak"
 
+    client = marathon.create_client()
+    tasks = client.get_tasks(name)
 
     if len(tasks) == 0:
-        raise CliError("Riak is not running")
+        usage()
+        print("\nTry running the following to verify that "+ name + " is the name \nof your service instance:\n")
+        print("    dcos service\n")
+        raise CliError("Riak is not running.")
 
-    # return "http://" + tasks[0]["host"] + ":" + str(tasks[0]["ports"][0]) + "/"
     base_url = util.get_config().get('core.dcos_url').rstrip("/")
-    return base_url + '/service/riak/'
+    return base_url + "/service/" + name + "/"
 
-def find_tools():
-    for f in pkg_resources.resource_listdir('dcos_riak', None):
-        if f.startswith("tools_") and f.endswith("_amd64"):
-            return pkg_resources.resource_filename('dcos_riak', f)
+def usage():
+    print("dcos riak <subcommand> [<options>]")
+    print("Subcommands: ")
+    print("    --get-clusters")
+    print("    --get-nodes <cluster-name>")
+    print("    --get-nodes <cluster-name> <node>")
+    print("    --create-cluster <cluster-name>")
+    print("    --add-node <cluster-name>")
+    print("    --info")
+    print("    --version")
+    print("Options: ")
+    print("    --framework-name <framework-name>")
+    print("    --debug")
 
-    raise CliError("tools_*_amd64 not found in package resources")
-
+def maybe_debug(flag, r):
+    if flag == 1:
+        print("[DEBUG]\n")
+        print("Status: "+ str(r.status_code))
+        print("Text: "+ r.text)
+        print("[/DEBUG]")
 
 def run(args):
     help_arg = len(args) > 0 and args[0] == "help"
     if help_arg:
-        args[0] = "help"
+        usage()
+        return 0
 
-    command = [find_tools()]
-    command.extend(args)
+    service_url = ""
+    flag = 0
 
-    env = {}
-    if not help_arg:
-        env["RM_API"] = api_url()
+    if "--debug" in args:
+        flag = 1
 
-    process = subprocess.Popen(
-        command,
-        env=env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE)
+    if "--framework-name" in args and args.index('--framework-name')+1 < len(args):
+        service_url = api_url(args[args.index('--framework-name')+1])
+        if args.index('--framework-name')+2 == len(args):
+            print("Service URL: " + service_url)
+    else:
+        service_url = api_url("")
 
-    stdout, stderr = process.communicate()
-    print(stdout.decode("utf-8"), end="")
-    print(stderr.decode("utf-8"), end="", file=sys.stderr)
+    for i, opt in enumerate(args):
+        if opt == "--get-cluster":
+            if i+1 < len(args):
+                r = requests.get(service_url + "clusters/" + args[i+1])
+                maybe_debug(flag, r)
+                if r.status_code == 200:
+                    print("Cluster: "+ r.text, end="\n")
+                    r = requests.get(service_url + "clusters/" + args[i+1] + "/nodes")
+                    maybe_debug(flag, r)
+                    try:
+                        nodes = json.loads(r.text)
+                        print("Nodes: [" + ', '.join(nodes.keys()) + "]", end="")
+                        break
+                    except:
+                        print("Nodes: []")
+                else:
+                    print("Cluster not created")
+            else:
+                usage()
 
-    return process.returncode
+        if opt == "--get-clusters":
+            r = requests.get(service_url + "clusters")
+            maybe_debug(flag, r)
+            if r.status_code == 200:
+                try:
+                    clusters = json.loads(r.text)
+                    print("Clusters: [" + ', '.join(clusters.keys()) + "]", end="")
+                    break
+                except:
+                    print("[]")
+            else:
+                print("No clusters created")
+
+        if opt == "--get-nodes":
+            if i+1 < len(args):
+                r = requests.get(service_url + "clusters/" + args[i+1] + "/nodes")
+                maybe_debug(flag, r)
+                try:
+                    nodes = json.loads(r.text)
+                    print("Nodes: [" + ', '.join(nodes.keys()) + "]", end="")
+                    break
+                except:
+                    print("Nodes: []")
+            else:
+                usage()
+
+        if opt == "--create-cluster":
+            if i+1 < len(args):
+                r = requests.post(service_url + "clusters/" + args[i+1], data="")
+                maybe_debug(flag, r)
+                if r.text == "" or r.status_code != 200:
+                    print("Cluster already exists")
+                else:
+                    print("Created cluster: "+ r.text, end="\n")
+            else:
+                usage()
+
+        if opt == "--add-node":
+            if i+1 < len(args):
+                r = requests.post(service_url + "clusters/" + args[i+1] + "/nodes", data="")
+                maybe_debug(flag, r)
+                try:
+                    node = json.loads(r.text)
+                    print("Added node: " + node["UUID"], end="")
+                    break
+                except:
+                    print("Error adding node.")
+            else:
+                usage()
+
+    print("")
+
+    return 0
 
 
 class CliError(Exception):
@@ -75,6 +163,10 @@ class CliError(Exception):
 
 def main():
     args = sys.argv[2:]  # remove dcos-riak & riak
+    if len(args) == 0:
+        usage()
+        return 0
+
     if len(args) == 1 and args[0] == "--info":
         print("Start and manage Riak nodes")
         return 0
