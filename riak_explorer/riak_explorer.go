@@ -89,6 +89,13 @@ func decompress() string {
 			if err := os.Symlink(hdr.Linkname, filename); err != nil {
 				log.Fatal(err)
 			}
+			// Hard link
+		} else if hdr.Typeflag == tar.TypeLink {
+			fmt.Printf("Encountered hardlink: %+v\n", hdr)
+			linkdest := filepath.Join(".", tempdir, hdr.Linkname)
+			if err := os.Link(linkdest, filename); err != nil {
+				log.Fatal(err)
+			}
 		} else {
 			log.Fatal("Experienced unknown tar file type: ", hdr.Typeflag)
 		}
@@ -111,7 +118,7 @@ func (re *RiakExplorer) configure(port int64, nodename string) {
 
 	vars.NodeName = nodename
 	vars.HTTPPort = port
-	configpath := filepath.Join(".", re.tempdir, "riak_explorer", "etc", "riak_explorer.conf")
+	configpath := filepath.Join(".", re.tempdir, "rex_root", "riak_explorer", "etc", "riak_explorer.conf")
 	file, err := os.OpenFile(configpath, os.O_TRUNC|os.O_CREATE|os.O_RDWR, 0)
 
 	if err != nil {
@@ -138,7 +145,7 @@ func (re *RiakExplorer) configureAdvanced(cepmdPort int) {
 	// Populate template data from the MesosTask
 	vars := advancedTemplateData{}
 	vars.CEPMDPort = cepmdPort
-	configpath := filepath.Join(".", re.tempdir, "riak_explorer", "etc", "advanced.config")
+	configpath := filepath.Join(".", re.tempdir, "rex_root", "riak_explorer", "etc", "advanced.config")
 	file, err := os.OpenFile(configpath, os.O_TRUNC|os.O_CREATE|os.O_RDWR, 0)
 
 	if err != nil {
@@ -154,7 +161,7 @@ func (re *RiakExplorer) configureAdvanced(cepmdPort int) {
 
 func NewRiakExplorer(port int64, nodename string, c *cepm.CEPM) (*RiakExplorer, error) {
 	tempdir := decompress()
-	exepath := filepath.Join(".", tempdir, "riak_explorer", "bin", "riak_explorer")
+	exepath := "/riak_explorer/bin/riak_explorer"
 
 	args := []string{"console", "-noinput"}
 	healthCheckFun := func() error {
@@ -177,7 +184,7 @@ func NewRiakExplorer(port int64, nodename string, c *cepm.CEPM) (*RiakExplorer, 
 	if c != nil {
 		// This is gross -- we're passing "hidden" state by passing it through the unix environment variables.
 		// Fix it -- we should convert the NewRiakExplorer into using a fluent pattern?
-		libpath := filepath.Join(".", tempdir, "riak_explorer", "lib", "basho-patches")
+		libpath := filepath.Join(".", tempdir, "rex_root", "riak_explorer", "lib", "basho-patches")
 		os.Mkdir(libpath, 0777)
 		err := cepm.InstallInto(libpath)
 		if err != nil {
@@ -189,7 +196,8 @@ func NewRiakExplorer(port int64, nodename string, c *cepm.CEPM) (*RiakExplorer, 
 	re.configure(port, nodename)
 	log.Debugf("Starting up Riak Explorer %v", exepath)
 	var err error
-	re.pm, err = process_manager.NewProcessManager(tearDownFun, exepath, args, healthCheckFun)
+	chroot := filepath.Join(".", tempdir, "rex_root")
+	re.pm, err = process_manager.NewProcessManager(tearDownFun, exepath, args, healthCheckFun, &chroot)
 	if err != nil {
 		log.Error("Could not start Riak Explorer: ", err)
 	}

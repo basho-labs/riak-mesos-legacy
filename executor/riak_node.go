@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"text/template"
 	"time"
@@ -17,6 +16,9 @@ import (
 	"github.com/basho-labs/riak-mesos/process_manager"
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	util "github.com/mesos/mesos-go/mesosutil"
+
+	"bytes"
+	"errors"
 )
 
 type RiakNode struct {
@@ -141,7 +143,7 @@ func (riakNode *RiakNode) configureRiak(ports chan int64) templateData {
 	vars.HandoffPort = <-ports
 	vars.DisterlPort = <-ports
 
-	file, err := os.OpenFile("riak/etc/riak.conf", os.O_TRUNC|os.O_CREATE|os.O_RDWR, 0664)
+	file, err := os.OpenFile("riak_root/riak/etc/riak.conf", os.O_TRUNC|os.O_CREATE|os.O_RDWR, 0664)
 
 	defer file.Close()
 	if err != nil {
@@ -170,7 +172,7 @@ func (riakNode *RiakNode) configureAdvanced(cepmdPort int) {
 	// Populate template data from the MesosTask
 	vars := advancedTemplateData{}
 	vars.CEPMDPort = cepmdPort
-	file, err := os.OpenFile("riak/etc/advanced.config", os.O_TRUNC|os.O_CREATE|os.O_RDWR, 0664)
+	file, err := os.OpenFile("riak_root/riak/etc/advanced.config", os.O_TRUNC|os.O_CREATE|os.O_RDWR, 0664)
 
 	defer file.Close()
 	if err != nil {
@@ -197,7 +199,7 @@ func (riakNode *RiakNode) Run() {
 
 	args := []string{"console", "-noinput"}
 
-	kernelDirs, err := filepath.Glob("riak/lib/kernel*")
+	kernelDirs, err := filepath.Glob("riak_root/riak/lib/kernel*")
 	if err != nil {
 		log.Fatal("Could not find kernel directory")
 	}
@@ -212,23 +214,27 @@ func (riakNode *RiakNode) Run() {
 	os.MkdirAll(fmt.Sprint(kernelDirs[0], "/priv"), 0777)
 	ioutil.WriteFile(fmt.Sprint(kernelDirs[0], "/priv/cepmd_port"), []byte(fmt.Sprintf("%d.", c.GetPort())), 0777)
 
-	HealthCheckFun := func() error {
-		process := exec.Command("/usr/bin/timeout", "--kill-after=5s", "--signal=TERM", "5s", "riak/bin/riak-admin", "wait-for-service", "riak_kv")
-		process.Stdout = os.Stdout
-		process.Stderr = os.Stderr
-
-		wd, err := os.Getwd()
-		if err != nil {
-			log.Fatal("Could not get current working directory")
-		}
-		home := filepath.Join(wd, "riak/data")
-		homevar := fmt.Sprintf("HOME=%s", home)
-		process.Env = append(os.Environ(), homevar)
-		process.Env = append(process.Env, "NO_EPMD=1")
-		process.Env = append(process.Env, fmt.Sprintf("CEPMD_PORT=%d", c.GetPort()))
-		return process.Run()
+	wd, err := os.Getwd()
+	if err != nil {
+		log.Panic("Could not get wd: ", err)
 	}
-	riakNode.pm, err = process_manager.NewProcessManager(func() { return }, "riak/bin/riak", args, HealthCheckFun)
+	chroot := filepath.Join(wd, "riak_root")
+
+	HealthCheckFun := func() error {
+		log.Info("Checking is Riak is started")
+		data, err := ioutil.ReadFile("riak_root/riak/log/console.log")
+		if err != nil {
+			if bytes.Contains(data, []byte("Wait complete for service riak_kv")) {
+				log.Info("Riak started")
+				return nil
+			} else {
+				return errors.New("Riak KV not yet started")
+			}
+		} else {
+			return err
+		}
+	}
+	riakNode.pm, err = process_manager.NewProcessManager(func() { return }, "/riak/bin/riak", args, HealthCheckFun, &chroot)
 
 	if err != nil {
 		log.Error("Could not start Riak: ", err)
