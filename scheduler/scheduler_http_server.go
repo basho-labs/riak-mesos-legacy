@@ -172,6 +172,9 @@ func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *Schedul
 	router.Methods("POST").Path("/clusters/{cluster}/nodes").HandlerFunc(schttp.createNode)
 	router.Methods("GET").Path("/healthcheck").HandlerFunc(schttp.healthcheck)
 
+	// For now, just list clusters at root path
+	router.HandleFunc("/", schttp.serveClusters)
+
 	//http.Serve(ln, newHandler())
 	middleWare := http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
 		log.Infof("%v %s %s %s ? %s %s %s", request.Host, request.RemoteAddr, request.Method, request.URL.Path, request.URL.RawQuery, request.Proto, request.Header.Get("User-Agent"))

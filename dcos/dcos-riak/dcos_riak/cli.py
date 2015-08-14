@@ -109,7 +109,10 @@ def get_nodes(service_url, name, flag):
 def add_node(service_url, name, flag):
     r = requests.post(service_url + "clusters/" + name + "/nodes", data="")
     maybe_debug(flag, r)
-    format_json_value("New node: ", r.text, "UUID", "Error adding node.")
+    if r.status_code == 404:
+        print(r.text)
+    else:
+        format_json_value("New node: ", r.text, "UUID", "Error adding node.")
 
 def run(args):
     help_arg = 0
@@ -184,6 +187,10 @@ def run(args):
             else:
                 usage()
             break
+        elif opt == "--framework-name":
+            continue
+        elif not opt.startswith("-"):
+            continue
         else:
             usage()
             print("")

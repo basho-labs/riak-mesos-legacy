@@ -4,15 +4,20 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strings"
 	"sync"
+
+	"golang.org/x/net/context"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/basho-labs/riak-mesos/cepmd/cepm"
 	metamgr "github.com/basho-labs/riak-mesos/metadata_manager"
 	rex "github.com/basho-labs/riak-mesos/riak_explorer"
 	"github.com/golang/protobuf/proto"
+	auth "github.com/mesos/mesos-go/auth"
+	sasl "github.com/mesos/mesos-go/auth/sasl"
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	sched "github.com/mesos/mesos-go/scheduler"
 	"github.com/satori/go.uuid"
@@ -38,9 +43,23 @@ type SchedulerCore struct {
 	frameworkName       string
 	frameworkRole       string
 	schedulerState      *SchedulerState
+	authProvider        string
+	mesosAuthPrincipal  string
+	mesosAuthSecretFile string
 }
 
-func NewSchedulerCore(schedulerHostname string, frameworkName string, frameworkRole string, zookeepers []string, schedulerIPAddr string, user string, rexPort int) *SchedulerCore {
+func NewSchedulerCore(
+	schedulerHostname string,
+	frameworkName string,
+	frameworkRole string,
+	zookeepers []string,
+	schedulerIPAddr string,
+	user string,
+	rexPort int,
+	authProvider string,
+	mesosAuthPrincipal string,
+	mesosAuthSecretFile string) *SchedulerCore {
+
 	mgr := metamgr.NewMetadataManager(frameworkName, zookeepers)
 	ss := GetSchedulerState(mgr)
 	hostname, err := os.Hostname()
@@ -61,19 +80,22 @@ func NewSchedulerCore(schedulerHostname string, frameworkName string, frameworkR
 		log.Fatal("Could not start up Riak Explorer in scheduler")
 	}
 	scheduler := &SchedulerCore{
-		lock:            &sync.Mutex{},
-		schedulerIPAddr: schedulerIPAddr,
-		clusters:        make(map[string]*FrameworkRiakCluster),
-		mgr:             mgr,
-		frnDict:         make(map[string]*FrameworkRiakNode),
-		user:            user,
-		zookeepers:      zookeepers,
-		rex:             myRex,
-		rexPort:         rexPort,
-		cepm:            c,
-		frameworkName:   frameworkName,
-		frameworkRole:   frameworkRole,
-		schedulerState:  ss,
+		lock:                &sync.Mutex{},
+		schedulerIPAddr:     schedulerIPAddr,
+		clusters:            make(map[string]*FrameworkRiakCluster),
+		mgr:                 mgr,
+		frnDict:             make(map[string]*FrameworkRiakNode),
+		user:                user,
+		zookeepers:          zookeepers,
+		rex:                 myRex,
+		rexPort:             rexPort,
+		cepm:                c,
+		frameworkName:       frameworkName,
+		frameworkRole:       frameworkRole,
+		schedulerState:      ss,
+		authProvider:        authProvider,
+		mesosAuthPrincipal:  mesosAuthPrincipal,
+		mesosAuthSecretFile: mesosAuthSecretFile,
 	}
 	scheduler.schedulerHTTPServer = ServeExecutorArtifact(scheduler, schedulerHostname)
 	return scheduler
@@ -122,9 +144,6 @@ func (sc *SchedulerCore) Run(mesosMaster string) {
 		}
 	}
 
-	// TODO: Get "Real" credentials here
-
-	cred := (*mesos.Credential)(nil)
 	fwinfo := &mesos.FrameworkInfo{
 		Name:            proto.String(sc.frameworkName),
 		Id:              frameworkId,
@@ -141,24 +160,41 @@ func (sc *SchedulerCore) Run(mesosMaster string) {
 		fwinfo.User = &guestUser
 	}
 
-	log.Info("Running scheduler with FrameworkInfo: ", fwinfo)
+	cred := (*mesos.Credential)(nil)
+	if sc.mesosAuthPrincipal != "" {
+		fwinfo.Principal = proto.String(sc.mesosAuthPrincipal)
+		secret, err := ioutil.ReadFile(sc.mesosAuthSecretFile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		cred = &mesos.Credential{
+			Principal: proto.String(sc.mesosAuthPrincipal),
+			Secret:    secret,
+		}
+	}
 
 	config := sched.DriverConfig{
 		Scheduler:  sc,
 		Framework:  fwinfo,
 		Master:     mesosMaster,
 		Credential: cred,
-		// BindingAddress: bindingAddress,
-		//	WithAuthContext: func(ctx context.Context) context.Context {
-		//		ctx = auth.WithLoginProvider(ctx, *authProvider)
-		//		ctx = sasl.WithBindingAddress(ctx, bindingAddress)
-		//		return ctx
-		//	},
 	}
 
 	if sc.schedulerIPAddr != "" {
 		config.BindingAddress = parseIP(sc.schedulerIPAddr)
 	}
+
+	if sc.mesosAuthPrincipal != "" {
+		config.WithAuthContext = func(ctx context.Context) context.Context {
+			ctx = auth.WithLoginProvider(ctx, sc.authProvider)
+			if sc.schedulerIPAddr != "" {
+				ctx = sasl.WithBindingAddress(ctx, parseIP(sc.schedulerIPAddr))
+			}
+			return ctx
+		}
+	}
+
+	log.Infof("Running scheduler with FrameworkInfo: %v and DriverConfig: %v", fwinfo, config)
 
 	driver, err := sched.NewMesosSchedulerDriver(config)
 	if err != nil {

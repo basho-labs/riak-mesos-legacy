@@ -2,13 +2,15 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
-	"strconv"
-
 	"regexp"
+	"strconv"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/basho-labs/riak-mesos/scheduler"
+	"github.com/mesos/mesos-go/auth/sasl"
+	"github.com/mesos/mesos-go/auth/sasl/mech"
 )
 
 // Must start with a-z, or A-Z
@@ -16,14 +18,17 @@ import (
 var frameNameRegex *regexp.Regexp = regexp.MustCompile("[a-zA-Z][a-zA-Z0-9-_]*")
 
 var (
-	mesosMaster       string
-	zookeeperAddr     string
-	schedulerHostname string
-	schedulerIPAddr   string
-	user              string
-	logFile           string
-	frameworkName     string
-	frameworkRole     string
+	mesosMaster         string
+	zookeeperAddr       string
+	schedulerHostname   string
+	schedulerIPAddr     string
+	user                string
+	logFile             string
+	frameworkName       string
+	frameworkRole       string
+	authProvider        string
+	mesosAuthPrincipal  string
+	mesosAuthSecretFile string
 )
 
 func init() {
@@ -35,6 +40,10 @@ func init() {
 	flag.StringVar(&logFile, "log", "", "Log File Location")
 	flag.StringVar(&frameworkName, "name", "riakMesosFramework", "Framework Instance Name")
 	flag.StringVar(&frameworkRole, "role", "*", "Framework Role Name")
+	flag.StringVar(&authProvider, "mesos_authentication_provider", sasl.ProviderName,
+		fmt.Sprintf("Authentication provider to use, default is SASL that supports mechanisms: %+v", mech.ListSupported()))
+	flag.StringVar(&mesosAuthPrincipal, "mesos_authentication_principal", "", "Mesos authentication principal.")
+	flag.StringVar(&mesosAuthSecretFile, "mesos_authentication_secret_file", "", "Mesos authentication secret file.")
 
 	flag.Parse()
 }
@@ -67,6 +76,16 @@ func main() {
 		log.Fatal(portErr)
 	}
 
-	sched := scheduler.NewSchedulerCore(schedulerHostname, frameworkName, frameworkRole, []string{zookeeperAddr}, schedulerIPAddr, user, rexPort)
+	sched := scheduler.NewSchedulerCore(
+		schedulerHostname,
+		frameworkName,
+		frameworkRole,
+		[]string{zookeeperAddr},
+		schedulerIPAddr,
+		user,
+		rexPort,
+		authProvider,
+		mesosAuthPrincipal,
+		mesosAuthSecretFile)
 	sched.Run(mesosMaster)
 }
