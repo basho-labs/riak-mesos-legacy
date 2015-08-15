@@ -31,12 +31,13 @@ clone:
 	git clone git@github.com:basho/node_package.git --branch no-epmd
 	cp -R node_package riak/deps/node_package
 
-package:
-	#vagrant up
+package-riak:
 	cd riak/rel && tar -zcvf riak_linux_amd64.tar.gz riak
 	mv riak/rel/riak_linux_amd64.tar.gz $(BUILD_DIR)/
+package-explorer:
 	cd riak_explorer/rel && tar -zcvf riak_explorer_linux_amd64.tar.gz riak_explorer
 	mv riak_explorer/rel/riak_explorer_linux_amd64.tar.gz $(BUILD_DIR)/
+package-director:
 	cd riak-mesos-director/rel && tar -zcvf riak_mesos_director_linux_amd64.tar.gz riak_mesos_director
 	mv riak-mesos-director/rel/riak_mesos_director_linux_amd64.tar.gz $(BUILD_DIR)/
 
@@ -45,6 +46,10 @@ package-mac:
 	cd riak-mesos-director/rel && tar -zcvf riak_mesos_director_darwin_amd64.tar.gz riak_mesos_director
 	mv riak-mesos-director/rel/riak_mesos_director_darwin_amd64.tar.gz $(BUILD_DIR)/
 
+deploy-explorer-coreos:
+	cp $(BUILD_DIR)/riak_explorer_linux_amd64.tar.gz $(BUILD_DIR)/riak_explorer_coreos_linux_amd64.tar.gz
+        cd $(BUILD_DIR) && s3cmd put --acl-public riak_explorer_coreos_linux_amd64.tar.gz s3://riak-tools/riak-mesos
+
 # Deployment
 deploy-riak:
 	cd $(BUILD_DIR) && s3cmd put --acl-public riak_linux_amd64.tar.gz s3://riak-tools/
@@ -52,8 +57,6 @@ deploy-explorer:
 	cd $(BUILD_DIR) && s3cmd put --acl-public riak_explorer_linux_amd64.tar.gz s3://riak-tools/
 deploy-director:
 	cd $(BUILD_DIR) && s3cmd put --acl-public riak_mesos_director_linux_amd64.tar.gz s3://riak-tools/
-deploy-director-coreos:
-	cd $(BUILD_DIR) && s3cmd put --acl-public riak_mesos_director_linux_amd64.tar.gz s3://riak-tools/coreos/
 deploy: deploy-riak deploy-explorer deploy-director
 
 deploy-mac:
