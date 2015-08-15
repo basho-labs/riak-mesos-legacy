@@ -3,13 +3,6 @@
 [DCOS](http://docs.mesosphere.com/) support is still in development and is not
 supported on all platforms.
 
-## Compatibility
-
-CoreOS based DCOS clusters have known compatibility issues with the
-Riak Mesos Framework.
-
-Clusters running RHEL and Debian variants should work
-
 ## Installation
 
 ### Setup DCOS CLI
