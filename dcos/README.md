@@ -64,10 +64,10 @@ Options:
 ### Add Riak Nodes
 
 ```
-dcos riak create-cluster mycluster
-dcos riak add-node mycluster
-dcos riak add-node mycluster
-dcos riak add-node mycluster
+dcos riak --create-cluster mycluster
+dcos riak --add-node mycluster
+dcos riak --add-node mycluster
+dcos riak --add-node mycluster
 ```
 
 ### Accessing Your Riak Nodes
