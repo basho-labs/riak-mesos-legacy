@@ -22,8 +22,8 @@ dcos config set package.sources '["http://riak-tools.s3.amazonaws.com/riak-mesos
 
 ### Create a Configuration File
 
-For the framework to work properly in your environment, a config file should be
-used. Here is a minimal example:
+For the framework to work properly in your environment, a custom config file
+may need to be used. Here is a minimal example:
 
 `dcos-riak.json`
 
@@ -47,13 +47,17 @@ dcos package update
 dcos package install riak --options=dcos-riak.json
 ```
 
-A successful run of the install command should look like the following:
+### Accessing Your Riak Nodes
+
+The Riak Mesos Director application can be easily installed on your DCOS cluster
+with these commands:
 
 ```
-The Mesos Riak Framework implementation is alpha and there may be bugs, incomplete features, incorrect documentation or other discrepancies.
-Continue installing? [yes/no] yes
-Installing package [riak] version [0.1.0]
-Installing CLI subcommand for package [riak]
-New command available: dcos riak
-Thank you for installing Riak on Mesos. Visit https://github.com/basho-labs/riak-mesos for usage information.
+dcos riak --generate-director-config mycluster master.mesos:2181 \
+    > director.marathon.json
+dcos marathon app add director.marathon.json
 ```
+
+After the application boots up, Riak can be accessed using the first port given
+by Marathon:
+(TODO: add command to show director endpoints using marathon API)

@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"time"
@@ -122,6 +123,12 @@ func (directorNode *DirectorNode) Run() {
 		log.Panic("Could not get wd: ", err)
 	}
 	chroot := filepath.Join(wd, "director_root")
+
+	cpCmd := exec.Command("cp", "/etc/resolv.conf", "director_root/etc/resolv.conf")
+	err = cpCmd.Run()
+	if err != nil {
+		log.Panic("Could not copy resolv.conf: ", err)
+	}
 
 	HealthCheckFun := func() error {
 		log.Info("Checking is Director is started")

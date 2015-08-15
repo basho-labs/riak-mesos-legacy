@@ -34,6 +34,7 @@ def usage():
     print("    --get-nodes <cluster-name>")
     print("    --add-node <cluster-name>")
     print("    --generate-director-config <cluster-name> <zookeeper-host:port>")
+    print("    --get-director-urls <public-node-dns>")
     print("    --info")
     print("    --version")
     print("Options: ")
@@ -116,7 +117,36 @@ def add_node(service_url, name, flag):
         format_json_value("New node: ", r.text, "UUID", "Error adding node.")
 
 def generate_director_config(framework, cluster, zookeeper):
-    print('{"id": "/riak-director","cmd": "./riak_mesos_director/director_linux_amd64","cpus": 0.5,"mem": 1024.0,"ports": [0, 0, 0],"instances": 1,"constraints": [["hostname", "UNIQUE"]],"acceptedResourceRoles": ["slave_public"],"env": {"DIRECTOR_ZK": "' + zookeeper + '","DIRECTOR_FRAMEWORK": "' + framework + '","DIRECTOR_CLUSTER": "' + cluster + '"},"uris": ["http://riak-tools.s3.amazonaws.com/riak-mesos/coreos/riak_mesos_director_linux_amd64_0.1.0.tar.gz"],"healthChecks": [{"protocol": "HTTP","path": "/health","gracePeriodSeconds": 3,"intervalSeconds": 10,"portIndex": 2,"timeoutSeconds": 10,"maxConsecutiveFailures": 3}]}')
+    try:
+        framework_host = framework + ".marathon.mesos"
+        client = marathon.create_client()
+        app = client.get_app(framework)
+        ports = app['ports']
+        explorer_port = str(ports[1])
+        print('{"id": "/riak-director","cmd": "./riak_mesos_director/director_linux_amd64","cpus": 0.5,"mem": 1024.0,"ports": [0, 0, 0, 0],"instances": 1,"constraints": [["hostname", "UNIQUE"]],"acceptedResourceRoles": ["slave_public"],"env": {"FRAMEWORK_HOST": "' + framework_host + '","FRAMEWORK_PORT": "' + explorer_port + '","DIRECTOR_ZK": "' + zookeeper + '","DIRECTOR_FRAMEWORK": "' + framework + '","DIRECTOR_CLUSTER": "' + cluster + '"},"uris": ["http://riak-tools.s3.amazonaws.com/riak-mesos/coreos/riak_mesos_director_linux_amd64_0.1.0.tar.gz"],"healthChecks": [{"protocol": "HTTP","path": "/health","gracePeriodSeconds": 3,"intervalSeconds": 10,"portIndex": 2,"timeoutSeconds": 10,"maxConsecutiveFailures": 3}]}')
+    except:
+        raise CliError("Unable to get ports for: " + framework)
+
+def get_director_urls(public_dns):
+    # port1: riak HTTP proxy / load balance
+    # port2: riak PB proxy / load balance
+    # port3: director API
+    # port4: riak explorer proxy
+    try:
+        client = marathon.create_client()
+        app = client.get_app('riak-director')
+        ports = app['ports']
+        print("\nLoad Balanced Riak Cluster (HTTP)")
+        print("    http://" + public_dns + ":" + str(ports[0]))
+        print("\nLoad Balanced Riak Cluster (Protobuf)")
+        print("    http://" + public_dns + ":" + str(ports[1]))
+        print("\nRiak Mesos Director API (HTTP)")
+        print("    http://" + public_dns + ":" + str(ports[2]))
+        print("\nRiak Explorer and API (HTTP)")
+        print("    http://" + public_dns + ":" + str(ports[3]))
+    except:
+        raise CliError("Unable to get ports for: riak-director")
+
 
 def run(args):
     help_arg = 0
@@ -168,6 +198,15 @@ def run(args):
                 validate_arg(opt + " (cluster)", args[i+1])
                 validate_arg(opt + " (zookeeper-host:port)", args[i+2])
                 generate_director_config(name, args[i+1], args[i+2])
+            else:
+                usage()
+                print("")
+                raise CliError("Not enough arguments for: " + opt)
+            break
+        elif opt == "--get-director-urls":
+            if i+1 < len(args):
+                validate_arg(opt + " (public-node-dns)", args[i+1])
+                get_director_urls(args[i+1])
             else:
                 usage()
                 print("")
