@@ -42,6 +42,34 @@ dcos package update
 dcos package install riak --options=dcos-riak.json
 ```
 
+### CLI Usage
+
+```
+dcos riak <subcommand> [<options>]
+Subcommands:
+    --get-clusters
+    --get-cluster <cluster-name>
+    --create-cluster <cluster-name>
+    --get-nodes <cluster-name>
+    --add-node <cluster-name>
+    --generate-director-config <cluster-name> <zookeeper-host:port>
+    --get-director-urls <public-node-dns>
+    --info
+    --version
+Options:
+    --framework-name <framework-name>
+    --debug
+```
+
+### Add Riak Nodes
+
+```
+dcos riak create-cluster mycluster
+dcos riak add-node mycluster
+dcos riak add-node mycluster
+dcos riak add-node mycluster
+```
+
 ### Accessing Your Riak Nodes
 
 The [Riak Mesos Director](http://github.com/basho-labs/riak-mesos-director) application can be easily installed on your DCOS cluster
