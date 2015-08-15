@@ -49,7 +49,7 @@ dcos package install riak --options=dcos-riak.json
 
 ### Accessing Your Riak Nodes
 
-The Riak Mesos Director application can be easily installed on your DCOS cluster
+The [Riak Mesos Director](http://github.com/basho-labs/riak-mesos-director) application can be easily installed on your DCOS cluster
 with these commands:
 
 ```
@@ -58,6 +58,45 @@ dcos riak --generate-director-config mycluster master.mesos:2181 \
 dcos marathon app add director.marathon.json
 ```
 
-After the application boots up, Riak can be accessed using the first port given
-by Marathon:
-(TODO: add command to show director endpoints using marathon API)
+Once it is up and running, explore your Riak cluster using the following command:
+
+```
+dcos riak --get-director-urls <public-node-dns>
+```
+
+The output should look something like this:
+
+```
+Load Balanced Riak Cluster (HTTP)
+    http://<public-node-dns>:10002
+
+Load Balanced Riak Cluster (Protobuf)
+    http://<public-node-dns>:10003
+
+Riak Mesos Director API (HTTP)
+    http://<public-node-dns>:10004
+
+Riak Explorer and API (HTTP)
+    http://<public-node-dns>:10005
+```
+
+### Uninstalling the framework
+
+All of the tasks created by Riak and the Director applications can be killed
+with the following:
+
+```
+dcos marathon app remove riak-director
+dcos package uninstall riak
+```
+
+Currently, Zookeeper entries are left behind by the framework even after uninstall.
+To completely remove these entries, use a Zookeeper client to delete the relevant
+nodes.
+
+To remove just one framework instance, delete the `/riak/frameworks/riak` node.
+
+If you have changed the value of `framework-name` in your config, the last
+`/riak` will change.
+
+To remove all framework instances, delete the `/riak` node in Zookeeper.
