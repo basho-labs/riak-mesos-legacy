@@ -9,6 +9,8 @@ supported on all platforms.
 
 First, the Riak DCOS package needs to be added to sources.
 
+This step will no longer be necessary once the framework passes DCOS certification.
+
 ```
 dcos config set package.sources '["http://riak-tools.s3.amazonaws.com/riak-mesos/dcos-repo-0.1.0.zip"]'
 ```
