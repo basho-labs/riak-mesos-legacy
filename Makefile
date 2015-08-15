@@ -68,6 +68,14 @@ rel-tools: vet
 		-rebuild \
 		./tools/...
 
+rel-director:
+	go generate ./director/...
+	gox \
+		-osarch=$(FGARC) \
+		-output="$(FTAR)/{{.Dir}}_{{.OS}}_{{.Arch}}" \
+		-rebuild \
+		./director/...
+
 dev: clean deps vet build_cepmd_dev build_executor
 	go generate -tags=dev ./...
 	gox \
@@ -137,6 +145,13 @@ package-repo:
 	git clone https://github.com/mesosphere/universe.git $(BUILD_DIR)/dcos-repo-$(PACKAGE_VERSION)
 	cp -R $(BASE_DIR)/dcos/repo/* $(BUILD_DIR)/dcos-repo-$(PACKAGE_VERSION)/repo/
 	cd $(BUILD_DIR) && zip -r dcos-repo-$(PACKAGE_VERSION).zip dcos-repo-$(PACKAGE_VERSION)
+package-director:
+	mkdir -p $(BUILD_DIR)
+	-rm -rf $(BUILD_DIR)/riak_mesos_director*
+	mkdir -p $(BUILD_DIR)/riak_mesos_director
+	cp bin/director_linux_amd64 $(BUILD_DIR)/riak_mesos_director/
+	echo "Thank you for downloading Riak Mesos Director. Please visit https://github.com/basho-labs/riak-mesos for usage information." > $(BUILD_DIR)/riak_mesos_framework/INSTALL.txt
+	cd $(BUILD_DIR) && tar -zcvf riak_mesos_director_linux_amd64_$(PACKAGE_VERSION).tar.gz riak_mesos_director
 
 deploy-rel-coreos-test:
 	cd $(BUILD_DIR) && s3cmd put --acl-public riak_mesos_linux_amd64_$(PACKAGE_VERSION).tar.gz s3://riak-tools/riak-mesos/coreos/test/
@@ -150,6 +165,8 @@ deploy-repo:
 	cd $(BUILD_DIR) && s3cmd put --acl-public dcos-repo-$(PACKAGE_VERSION).zip s3://riak-tools/riak-mesos/
 deploy-deps:
 	cd vagrant/ubuntu/trusty64/dependencies && make deploy
+deploy-director-coreos:
+	cd $(BUILD_DIR) && s3cmd put --acl-public riak_mesos_director_linux_amd64_$(PACKAGE_VERSION).tar.gz s3://riak-tools/riak-mesos/coreos/
 
 test:
 	go test ./...

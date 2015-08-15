@@ -33,6 +33,7 @@ def usage():
     print("    --create-cluster <cluster-name>")
     print("    --get-nodes <cluster-name>")
     print("    --add-node <cluster-name>")
+    print("    --generate-director-config <cluster-name> <zookeeper-host:port>")
     print("    --info")
     print("    --version")
     print("Options: ")
@@ -114,10 +115,14 @@ def add_node(service_url, name, flag):
     else:
         format_json_value("New node: ", r.text, "UUID", "Error adding node.")
 
+def generate_director_config(framework, cluster, zookeeper):
+    print('{"id": "/riak-director","cmd": "./riak_mesos_director/director_linux_amd64","cpus": 0.5,"mem": 1024.0,"ports": [0, 0, 0],"instances": 1,"constraints": [["hostname", "UNIQUE"]],"acceptedResourceRoles": ["slave_public"],"env": {"DIRECTOR_ZK": "' + zookeeper + '","DIRECTOR_FRAMEWORK": "' + framework + '","DIRECTOR_CLUSTER": "' + cluster + '"},"uris": ["http://riak-tools.s3.amazonaws.com/riak-mesos/coreos/riak_mesos_director_linux_amd64_0.1.0.tar.gz"],"healthChecks": [{"protocol": "HTTP","path": "/health","gracePeriodSeconds": 3,"intervalSeconds": 10,"portIndex": 2,"timeoutSeconds": 10,"maxConsecutiveFailures": 3}]}')
+
 def run(args):
     help_arg = 0
     flag = 0
     service_url = ""
+    name = ""
 
     if "--help" in args or "-h" in args:
         help_arg = 1
@@ -144,9 +149,10 @@ def run(args):
     if "--framework-name" in args and args.index('--framework-name')+1 < len(args):
         name = args[args.index('--framework-name')+1]
         validate_arg("--framework-name", name)
-        service_url = api_url(name)
     else:
-        service_url = api_url("riak")
+        name = "riak"
+
+    service_url = api_url(name)
 
     if "--info" in args:
         print("Start and manage Riak nodes")
@@ -156,6 +162,16 @@ def run(args):
     for i, opt in enumerate(args):
         if opt == "--get-clusters":
             get_clusters(service_url, flag)
+            break
+        elif opt == "--generate-director-config":
+            if i+2 < len(args):
+                validate_arg(opt + " (cluster)", args[i+1])
+                validate_arg(opt + " (zookeeper-host:port)", args[i+2])
+                generate_director_config(name, args[i+1], args[i+2])
+            else:
+                usage()
+                print("")
+                raise CliError("Not enough arguments for: " + opt)
             break
         elif opt == "--get-cluster":
             if i+1 < len(args):

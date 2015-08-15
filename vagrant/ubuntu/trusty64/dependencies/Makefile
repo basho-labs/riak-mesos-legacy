@@ -52,6 +52,8 @@ deploy-explorer:
 	cd $(BUILD_DIR) && s3cmd put --acl-public riak_explorer_linux_amd64.tar.gz s3://riak-tools/
 deploy-director:
 	cd $(BUILD_DIR) && s3cmd put --acl-public riak_mesos_director_linux_amd64.tar.gz s3://riak-tools/
+deploy-director-coreos:
+	cd $(BUILD_DIR) && s3cmd put --acl-public riak_mesos_director_linux_amd64.tar.gz s3://riak-tools/coreos/
 deploy: deploy-riak deploy-explorer deploy-director
 
 deploy-mac:
