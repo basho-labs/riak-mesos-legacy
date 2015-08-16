@@ -34,52 +34,20 @@ func parseIP(address string) net.IP {
 }
 
 func (schttp *SchedulerHTTPServer) createNode(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clusterName := vars["cluster"]
-	cluster, assigned := schttp.sc.clusters[clusterName]
-	if !assigned {
-		w.WriteHeader(404)
-		fmt.Fprintf(w, "Cluster %s not found", clusterName)
-	} else {
-		json.NewEncoder(w).Encode(schttp.sc.mgr.CreateNode(cluster))
-	}
-}
-
-func (schttp *SchedulerHTTPServer) serveClusters(w http.ResponseWriter, r *http.Request) {
-	json.NewEncoder(w).Encode(schttp.sc.clusters)
-}
-
-func (schttp *SchedulerHTTPServer) createCluster(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clusterName := vars["cluster"]
-	_, assigned := schttp.sc.clusters[clusterName]
-	log.Info("CREATE CLUSTER: ")
-	if assigned {
-		w.WriteHeader(409)
-	} else {
-		cluster := schttp.sc.mgr.CreateCluster(clusterName)
-		json.NewEncoder(w).Encode(cluster)
-	}
-}
-
-func (schttp *SchedulerHTTPServer) getCluster(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clusterName := vars["cluster"]
-	cluster, assigned := schttp.sc.clusters[clusterName]
-
-	if !assigned {
-		http.NotFound(w, r)
-	} else {
-		json.NewEncoder(w).Encode(cluster)
-	}
+	schttp.sc.lock.Lock()
+	defer schttp.sc.lock.Unlock()
+	frn := NewFrameworkRiakNode(schttp.sc.frameworkName)
+	schttp.sc.schedulerState.Nodes[frn.UUID.String()] = frn
+	schttp.sc.schedulerState.Persist()
+	w.WriteHeader(200)
+	json.NewEncoder(w).Encode(frn)
 
 }
 
 func (schttp *SchedulerHTTPServer) serveNodes(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clusterName := vars["cluster"]
-	nodes := schttp.sc.clusters[clusterName].nodes
-	json.NewEncoder(w).Encode(nodes)
+	schttp.sc.lock.Lock()
+	defer schttp.sc.lock.Unlock()
+	json.NewEncoder(w).Encode(schttp.sc.schedulerState.Nodes)
 }
 func (schttp *SchedulerHTTPServer) GetURI() string {
 	return schttp.URI
@@ -165,15 +133,13 @@ func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *Schedul
 		executorName: "./executor_linux_amd64",
 		URI:          URI,
 	}
-	router.HandleFunc("/clusters", schttp.serveClusters)
-	router.Methods("POST", "PUT").Path("/clusters/{cluster}").HandlerFunc(schttp.createCluster)
-	router.Methods("GET").Path("/clusters/{cluster}").HandlerFunc(schttp.getCluster)
-	router.Methods("GET").Path("/clusters/{cluster}/nodes").HandlerFunc(schttp.serveNodes)
-	router.Methods("POST").Path("/clusters/{cluster}/nodes").HandlerFunc(schttp.createNode)
+	router.Methods("GET").Path("/api/v1/nodes").HandlerFunc(schttp.serveNodes)
+	router.Methods("POST").Path("/api/v1/nodes").HandlerFunc(schttp.createNode)
 	router.Methods("GET").Path("/healthcheck").HandlerFunc(schttp.healthcheck)
 
+	// TODO: Add a function handler for /
 	// For now, just list clusters at root path
-	router.HandleFunc("/", schttp.serveClusters)
+	// router.HandleFunc("/", )
 
 	//http.Serve(ln, newHandler())
 	middleWare := http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {

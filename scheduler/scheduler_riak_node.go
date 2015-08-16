@@ -1,13 +1,11 @@
 package scheduler
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/basho-labs/riak-mesos/common"
-	metamgr "github.com/basho-labs/riak-mesos/metadata_manager"
 	"github.com/basho-labs/riak-mesos/scheduler/process_state"
 	"github.com/golang/protobuf/proto"
 	mesos "github.com/mesos/mesos-go/mesosproto"
@@ -18,10 +16,10 @@ import (
 // Next Status
 
 type FrameworkRiakNode struct {
-	frc              *FrameworkRiakCluster `json:"-"`
-	sc               *SchedulerCore
-	zkNode           *metamgr.ZkNode `json:"-"`
-	reconciled       bool
+	// This is super hacky, we're relying on the following to be NOT serialized, and defaults. FIX THIS. Somehow..
+	reconciled       bool `json:"-"`
+
+
 	UUID             uuid.UUID
 	DestinationState process_state.ProcessState
 	CurrentState     process_state.ProcessState
@@ -30,25 +28,22 @@ type FrameworkRiakNode struct {
 	LastTaskInfo     *mesos.TaskInfo
 	LastOfferUsed    *mesos.Offer
 	TaskData         common.TaskData
+	FrameworkName	 string
 }
 
-func NewFrameworkRiakNode() *FrameworkRiakNode {
+
+func NewFrameworkRiakNode(FrameworkName string) *FrameworkRiakNode {
 	return &FrameworkRiakNode{
 		// We can assume this for now? I think
 		DestinationState: process_state.Started,
 		CurrentState:     process_state.Unknown,
 		Generation:       0,
 		reconciled:       false,
+		FrameworkName:    FrameworkName,
+		UUID:             uuid.NewV4(),
 	}
 }
 
-func (frn *FrameworkRiakNode) Persist() {
-	data, err := json.Marshal(frn)
-	if err != nil {
-		log.Panic("error:", err)
-	}
-	frn.zkNode.SetData(data)
-}
 func (frn *FrameworkRiakNode) NeedsToBeScheduled() bool {
 	// Poor man's FSM:
 	// TODO: Fill out rest of possible states
@@ -74,21 +69,17 @@ func (frn *FrameworkRiakNode) NeedsToBeScheduled() bool {
 	return false
 }
 func (frn *FrameworkRiakNode) CurrentID() string {
-	return fmt.Sprintf("%s-%s-%d", frn.frc.Name, frn.UUID.String(), frn.Generation)
+	return fmt.Sprintf("%s-%s-%d", frn.FrameworkName, frn.UUID.String(), frn.Generation)
 }
 
 func (frn *FrameworkRiakNode) ExecutorID() string {
 	return frn.CurrentID()
 }
 
-func (frn *FrameworkRiakNode) GetZkNode() *metamgr.ZkNode {
-	return frn.zkNode
-}
 
-func (frn *FrameworkRiakNode) handleUpToDownTransition() {
-	rexc := frn.frc.sc.rex.NewRiakExplorerClient()
-	for riakNodeName := range frn.frc.nodes {
-		riakNode := frn.frc.nodes[riakNodeName]
+func (frn *FrameworkRiakNode) handleUpToDownTransition(sc *SchedulerCore) {
+	rexc := sc.rex.NewRiakExplorerClient()
+	for _, riakNode := range sc.schedulerState.Nodes{
 		if riakNode.CurrentState == process_state.Started && riakNode != frn {
 			// We should try to join against this node
 			leaveReply, leaveErr := rexc.ForceRemove(riakNode.TaskData.FullyQualifiedNodeName, frn.TaskData.FullyQualifiedNodeName)
@@ -100,10 +91,9 @@ func (frn *FrameworkRiakNode) handleUpToDownTransition() {
 		}
 	}
 }
-func (frn *FrameworkRiakNode) handleStartingToRunningTransition() {
-	rexc := frn.frc.sc.rex.NewRiakExplorerClient()
-	for riakNodeName := range frn.frc.nodes {
-		riakNode := frn.frc.nodes[riakNodeName]
+func (frn *FrameworkRiakNode) handleStartingToRunningTransition(sc *SchedulerCore) {
+	rexc := sc.rex.NewRiakExplorerClient()
+	for _, riakNode := range sc.schedulerState.Nodes{
 		if riakNode.CurrentState == process_state.Started {
 			// We should try to join against this node
 			joinReply, joinErr := rexc.Join(frn.TaskData.FullyQualifiedNodeName, riakNode.TaskData.FullyQualifiedNodeName)
@@ -114,7 +104,7 @@ func (frn *FrameworkRiakNode) handleStartingToRunningTransition() {
 		}
 	}
 }
-func (frn *FrameworkRiakNode) handleStatusUpdate(statusUpdate *mesos.TaskStatus) {
+func (frn *FrameworkRiakNode) handleStatusUpdate(sc *SchedulerCore, statusUpdate *mesos.TaskStatus) {
 	frn.reconciled = true
 	// TODO: Check the task ID in the TaskStatus to make sure it matches our current task
 
@@ -129,9 +119,8 @@ func (frn *FrameworkRiakNode) handleStatusUpdate(statusUpdate *mesos.TaskStatus)
 		}
 	case mesos.TaskState_TASK_RUNNING:
 		{
-			frn.frc.Trigger()
 			if frn.CurrentState == process_state.Starting {
-				frn.handleStartingToRunningTransition()
+				frn.handleStartingToRunningTransition(sc)
 			}
 			frn.CurrentState = process_state.Started
 		}
@@ -143,7 +132,7 @@ func (frn *FrameworkRiakNode) handleStatusUpdate(statusUpdate *mesos.TaskStatus)
 	case mesos.TaskState_TASK_FAILED:
 		{
 			if frn.CurrentState == process_state.Started {
-				frn.handleUpToDownTransition()
+				frn.handleUpToDownTransition(sc)
 			}
 			frn.CurrentState = process_state.Failed
 		}
@@ -157,7 +146,7 @@ func (frn *FrameworkRiakNode) handleStatusUpdate(statusUpdate *mesos.TaskStatus)
 	case mesos.TaskState_TASK_LOST:
 		{
 			if frn.CurrentState == process_state.Started {
-				frn.handleUpToDownTransition()
+				frn.handleUpToDownTransition(sc)
 			}
 			frn.CurrentState = process_state.Failed
 		}
@@ -234,7 +223,7 @@ func (frn *FrameworkRiakNode) GetCombinedAsk() common.CombinedResourceAsker {
 	return ret
 }
 
-func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(offer *mesos.Offer, executorAsk []*mesos.Resource, taskAsk []*mesos.Resource) *mesos.TaskInfo {
+func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(sc *SchedulerCore, offer *mesos.Offer, executorAsk []*mesos.Resource, taskAsk []*mesos.Resource) *mesos.TaskInfo {
 	// THIS IS A MUTATING CALL
 	if frn.CurrentState != process_state.Shutdown && frn.CurrentState != process_state.Failed && frn.CurrentState != process_state.Unknown {
 		log.Panicf("Trying to generate Task Info while node is up. ZK FRN State: %v", frn.CurrentState)
@@ -246,11 +235,11 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(offer *mesos.Off
 
 	executorUris := []*mesos.CommandInfo_URI{
 		&mesos.CommandInfo_URI{
-			Value:      &(frn.frc.sc.schedulerHTTPServer.hostURI),
+			Value:      &(sc.schedulerHTTPServer.hostURI),
 			Executable: proto.Bool(true),
 		},
 		&mesos.CommandInfo_URI{
-			Value:      &(frn.frc.sc.schedulerHTTPServer.riakURI),
+			Value:      &(sc.schedulerHTTPServer.riakURI),
 			Executable: proto.Bool(false),
 			Extract:    proto.Bool(true),
 		},
@@ -264,10 +253,10 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(offer *mesos.Off
 		Name:       proto.String("Executor (Go)"),
 		Source:     proto.String("Riak Mesos Framework (Go)"),
 		Command: &mesos.CommandInfo{
-			Value:     proto.String(frn.frc.sc.schedulerHTTPServer.executorName),
+			Value:     proto.String(sc.schedulerHTTPServer.executorName),
 			Uris:      executorUris,
 			Shell:     proto.Bool(false),
-			Arguments: []string{frn.frc.sc.schedulerHTTPServer.executorName, "-logtostderr=true", "-taskinfo", frn.CurrentID()},
+			Arguments: []string{sc.schedulerHTTPServer.executorName, "-logtostderr=true", "-taskinfo", frn.CurrentID()},
 		},
 		Resources: executorAsk,
 	}
@@ -284,10 +273,9 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(offer *mesos.Off
 	taskData := common.TaskData{
 		FullyQualifiedNodeName:    nodename,
 		RexFullyQualifiedNodeName: "rex-" + nodename,
-		Zookeepers:                frn.frc.sc.zookeepers,
-		ClusterName:               frn.frc.Name,
+		Zookeepers:                sc.zookeepers,
 		NodeID:                    frn.UUID.String(),
-		FrameworkName:             frn.frc.sc.frameworkName,
+		FrameworkName:             sc.frameworkName,
 	}
 	frn.TaskData = taskData
 

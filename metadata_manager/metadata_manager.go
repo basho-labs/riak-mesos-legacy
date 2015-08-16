@@ -142,7 +142,6 @@ func makeSubSpace(ns Namespace, subSpaceName string) Namespace {
 }
 
 type MetadataManager struct {
-	framework   MetadataManagerFramework
 	frameworkID string
 	zkConn      *zk.Conn
 	namespace   Namespace

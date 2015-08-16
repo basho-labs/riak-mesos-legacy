@@ -1,7 +1,6 @@
 package scheduler
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -29,7 +28,6 @@ const (
 
 type SchedulerCore struct {
 	lock                *sync.Mutex
-	clusters            map[string]*FrameworkRiakCluster
 	schedulerHTTPServer *SchedulerHTTPServer
 	mgr                 *metamgr.MetadataManager
 	schedulerIPAddr     string
@@ -80,59 +78,26 @@ func NewSchedulerCore(
 		log.Fatal("Could not start up Riak Explorer in scheduler")
 	}
 	scheduler := &SchedulerCore{
-		lock:                &sync.Mutex{},
-		schedulerIPAddr:     schedulerIPAddr,
-		clusters:            make(map[string]*FrameworkRiakCluster),
-		mgr:                 mgr,
-		frnDict:             make(map[string]*FrameworkRiakNode),
-		user:                user,
-		zookeepers:          zookeepers,
-		rex:                 myRex,
-		rexPort:             rexPort,
-		cepm:                c,
-		frameworkName:       frameworkName,
-		frameworkRole:       frameworkRole,
-		schedulerState:      ss,
-		authProvider:        authProvider,
-		mesosAuthPrincipal:  mesosAuthPrincipal,
-		mesosAuthSecretFile: mesosAuthSecretFile,
+		lock:            &sync.Mutex{},
+		schedulerIPAddr: schedulerIPAddr,
+		mgr:             mgr,
+		frnDict:         make(map[string]*FrameworkRiakNode),
+		user:            user,
+		zookeepers:      zookeepers,
+		rex:             myRex,
+		rexPort:         rexPort,
+		cepm:            c,
+		frameworkName:   frameworkName,
+		frameworkRole:   frameworkRole,
+		schedulerState:  ss,
 	}
 	scheduler.schedulerHTTPServer = ServeExecutorArtifact(scheduler, schedulerHostname)
 	return scheduler
 }
 
-// This is an add cluster callback from the metadata manager
-func (sc *SchedulerCore) AddCluster(zkNode *metamgr.ZkNode) metamgr.MetadataManagerCluster {
-	sc.lock.Lock()
-	defer sc.lock.Unlock()
-	frc := NewFrameworkRiakCluster()
-	frc.sc = sc
-	frc.zkNode = zkNode
-	err := json.Unmarshal(zkNode.GetData(), &frc)
-	if err != nil {
-		log.Panic("Error getting node: ", err)
-	}
-	sc.clusters[frc.Name] = frc
-	return frc
-}
-func (sc *SchedulerCore) GetCluster(name string) metamgr.MetadataManagerCluster {
-	sc.lock.Lock()
-	defer sc.lock.Unlock()
-	return sc.clusters[name]
-}
-
-// Should basically just be a callback - DO NOT change state
-func (sc SchedulerCore) NewCluster(zkNode *metamgr.ZkNode, name string) metamgr.MetadataManagerCluster {
-	frc := &FrameworkRiakCluster{
-		zkNode: zkNode,
-		nodes:  make(map[string]*FrameworkRiakNode),
-		Name:   name,
-	}
-	return frc
-}
 
 func (sc *SchedulerCore) setupMetadataManager() {
-	sc.mgr.SetupFramework(sc.schedulerHTTPServer.URI, sc)
+	sc.mgr.SetupFramework(sc.schedulerHTTPServer.URI)
 }
 func (sc *SchedulerCore) Run(mesosMaster string) {
 	var frameworkId *mesos.FrameworkID
@@ -200,7 +165,7 @@ func (sc *SchedulerCore) Run(mesosMaster string) {
 	if err != nil {
 		log.Error("Unable to create a SchedulerDriver ", err.Error())
 	}
-	sc.rServer = newReconciliationServer(driver)
+	sc.rServer = newReconciliationServer(driver, sc)
 
 	sc.setupMetadataManager()
 
@@ -260,7 +225,7 @@ func (sc *SchedulerCore) spreadNodesAcrossOffers(allOffers []*mesos.Offer, allRe
 	allResources[currentOfferIndex], executorAsk, taskAsk, success = riakNode.GetCombinedAsk()(allResources[currentOfferIndex])
 
 	if success {
-		taskInfo := riakNode.PrepareForLaunchAndGetNewTaskInfo(offer, executorAsk, taskAsk)
+		taskInfo := riakNode.PrepareForLaunchAndGetNewTaskInfo(sc, offer, executorAsk, taskAsk)
 		sc.frnDict[riakNode.CurrentID()] = riakNode
 
 		if launchTasks[*offer.Id.Value] == nil {
@@ -268,7 +233,7 @@ func (sc *SchedulerCore) spreadNodesAcrossOffers(allOffers []*mesos.Offer, allRe
 		}
 
 		launchTasks[*offer.Id.Value] = append(launchTasks[*offer.Id.Value], taskInfo)
-		riakNode.Persist()
+		sc.schedulerState.Persist()
 
 		// Everything went well, add to the launch tasks
 		allNodes = append(allNodes[:currentRiakNodeIndex], allNodes[currentRiakNodeIndex+1:]...)
@@ -292,13 +257,12 @@ func (sc *SchedulerCore) ResourceOffers(driver sched.SchedulerDriver, offers []*
 	log.Info("Received resource offers: ", offers)
 	launchTasks := make(map[string][]*mesos.TaskInfo)
 	toBeScheduled := []*FrameworkRiakNode{}
-	for _, cluster := range sc.clusters {
-		for _, riakNode := range cluster.nodes {
-			if riakNode.NeedsToBeScheduled() {
-				log.Infof("Adding Riak node for scheduling: %+v", riakNode)
-				// We need to schedule this task I guess?
-				toBeScheduled = append(toBeScheduled, riakNode)
-			}
+
+	for _, riakNode := range sc.schedulerState.Nodes {
+		if riakNode.NeedsToBeScheduled() {
+			log.Infof("Adding Riak node for scheduling: %+v", riakNode)
+			// We need to schedule this task I guess?
+			toBeScheduled = append(toBeScheduled, riakNode)
 		}
 	}
 
@@ -338,8 +302,8 @@ func (sc *SchedulerCore) StatusUpdate(driver sched.SchedulerDriver, status *meso
 	if assigned {
 		log.Info("Received status updates: ", status)
 		log.Info("Riak Node: ", riak_node)
-		riak_node.handleStatusUpdate(status)
-		riak_node.Persist()
+		riak_node.handleStatusUpdate(sc, status)
+		sc.schedulerState.Persist()
 	} else {
 		log.Error("Received status update for unknown job: ", status)
 	}
