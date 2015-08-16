@@ -1,5 +1,4 @@
 BASE_DIR         = $(shell pwd)
-BUILD_DIR       ?= _build
 PACKAGE_VERSION ?= 0.1.0
 
 ### Framework / Executor Architecture
@@ -32,10 +31,17 @@ deps:
 	cd $(BASE_DIR)/riak_explorer/data && $(MAKE)
 	cd $(BASE_DIR)/erlang_dist && $(MAKE)
 
+clean:
+	-rm $(BASE_DIR)/bin/*_amd64
+	-rm $(BASE_DIR)/scheduler/data/*_amd64
+	-rm $(BASE_DIR)/scheduler/bindata_generated.go
+	-rm $(BASE_DIR)/executor/bindata_generated.go
+	-rm $(BASE_DIR)/riak_explorer/bindata_generated.go
+
 clean_deps:
 	-rm $(BASE_DIR)/scheduler/data/*.tar.gz
 	-rm $(BASE_DIR)/riak_explorer/data/*.tar.gz
-	cd $(BASE_DIR)/erlang_dist/ && $(MAKE) clean
+	# cd $(BASE_DIR)/erlang_dist/ && $(MAKE) clean
 
 build_cepmd_dev:
 	go generate ./cepmd/...
@@ -58,7 +64,7 @@ rel: clean deps vet build_cepmd_rel build_executor
 		-osarch=$(FGARC) \
 		-output="$(FTAR)/{{.Dir}}_{{.OS}}_{{.Arch}}" \
 		-rebuild \
-		./framework/... ./tools/...
+		./framework/...
 
 rel-tools: vet
 	gox \
@@ -85,13 +91,6 @@ dev: clean deps vet build_cepmd_dev build_executor
 		-rebuild \
 		./framework/... ./tools/...
 
-clean:
-	-rm $(BASE_DIR)/bin/*_amd64
-	-rm $(BASE_DIR)/scheduler/data/*_amd64
-	-rm $(BASE_DIR)/scheduler/bindata_generated.go
-	-rm $(BASE_DIR)/executor/bindata_generated.go
-	-rm $(BASE_DIR)/riak_explorer/bindata_generated.go
-
 run:
 	cd $(BASE_DIR)/bin && ./framework_$(FARC) \
 		-master=$(MAST) \
@@ -101,16 +100,6 @@ run:
 		-hostname=$(FHST) \
 		-user=$(FUSR)
 
-marathon-run:
-	curl -XPOST -v -H 'Content-Type: application/json' -d @marathon.json 'http://33.33.33.2:8080/v2/apps'
-marathon-run-director:
-	curl -XPOST -v -H 'Content-Type: application/json' -d @director.marathon.json 'http://33.33.33.2:8080/v2/apps'
-
-mesos-kill:
-	curl -XPOST -v 'http://33.33.33.2:5050/master/shutdown' --data "frameworkId=20150810-185220-35725601-5050-1200-0000"
-marathon-kill:
-	curl -XDELETE -v 'http://33.33.33.2:8080/v2/apps/riak'
-
 install-dcos-cli:
 	mkdir -p $(BASE_DIR)/bin/dcos
 	cd $(BASE_DIR)/bin/dcos && \
@@ -119,54 +108,23 @@ install-dcos-cli:
 		sudo /bin/bash install.sh . http://33.33.33.2
 	echo "\n\nPlease run the following command to finish installation:\n\nsource $(BASE_DIR)/bin/dcos/bin/env-setup\n\nsudo pip install --upgrade cli/\n"
 
-vagrant-mesos:
-	cd vagrant/ubuntu/trusty64/riak-mesos && vagrant up
-
-package-deps:
-	cd vagrant/ubuntu/trusty64/dependencies && make
-package-rel:
-	mkdir -p $(BUILD_DIR)
-	-rm -rf $(BUILD_DIR)/riak_mesos_framework
-	mkdir -p $(BUILD_DIR)/riak_mesos_framework
-	cp bin/framework_linux_amd64 $(BUILD_DIR)/riak_mesos_framework/
-	cp bin/tools_linux_amd64 $(BUILD_DIR)/riak_mesos_framework/
-	cp packages/0/*.json $(BUILD_DIR)/riak_mesos_framework/
-	echo "Thank you for downloading Riak Mesos Framework. Please visit https://github.com/basho-labs/riak-mesos for usage information." > $(BUILD_DIR)/riak_mesos_framework/INSTALL.txt
-	cd $(BUILD_DIR) && tar -zcvf riak_mesos_linux_amd64_$(PACKAGE_VERSION).tar.gz riak_mesos_framework
-package-dcos:
-	mkdir -p $(BUILD_DIR)
-	-rm -rf $(BUILD_DIR)/dcos-riak-*
-	cp $(BASE_DIR)/bin/tools_linux_amd64 $(BASE_DIR)/dcos/dcos-riak/dcos_riak
-	cp -R $(BASE_DIR)/dcos/dcos-riak $(BUILD_DIR)/dcos-riak-$(PACKAGE_VERSION)
-	cd $(BUILD_DIR) && tar -zcvf dcos-riak-$(PACKAGE_VERSION).tar.gz dcos-riak-$(PACKAGE_VERSION)
-package-repo:
-	mkdir -p $(BUILD_DIR)
-	-rm -rf $(BUILD_DIR)/dcos-repo-*
-	git clone https://github.com/mesosphere/universe.git $(BUILD_DIR)/dcos-repo-$(PACKAGE_VERSION)
-	cp -R $(BASE_DIR)/dcos/repo/* $(BUILD_DIR)/dcos-repo-$(PACKAGE_VERSION)/repo/
-	cd $(BUILD_DIR) && zip -r dcos-repo-$(PACKAGE_VERSION).zip dcos-repo-$(PACKAGE_VERSION)
+package-rel: package-framework package-director package-dcos package-repo
+package-framework:
+	cd $(BASE_DIR)/build && make -f coreos.make package-framework
 package-director:
-	mkdir -p $(BUILD_DIR)
-	-rm -rf $(BUILD_DIR)/riak_mesos_director*
-	mkdir -p $(BUILD_DIR)/riak_mesos_director
-	cp bin/director_linux_amd64 $(BUILD_DIR)/riak_mesos_director/
-	echo "Thank you for downloading Riak Mesos Director. Please visit https://github.com/basho-labs/riak-mesos for usage information." > $(BUILD_DIR)/riak_mesos_framework/INSTALL.txt
-	cd $(BUILD_DIR) && tar -zcvf riak_mesos_director_linux_amd64_$(PACKAGE_VERSION).tar.gz riak_mesos_director
-
-deploy-rel-coreos-test:
-	cd $(BUILD_DIR) && s3cmd put --acl-public riak_mesos_linux_amd64_$(PACKAGE_VERSION).tar.gz s3://riak-tools/riak-mesos/coreos/test/
-deploy-rel-coreos:
-	cd $(BUILD_DIR) && s3cmd put --acl-public riak_mesos_linux_amd64_$(PACKAGE_VERSION).tar.gz s3://riak-tools/riak-mesos/coreos/
-deploy-rel:
-	cd $(BUILD_DIR) && s3cmd put --acl-public riak_mesos_linux_amd64_$(PACKAGE_VERSION).tar.gz s3://riak-tools/riak-mesos/
-deploy-dcos:
-	cd $(BUILD_DIR) && s3cmd put --acl-public dcos-riak-$(PACKAGE_VERSION).tar.gz s3://riak-tools/riak-mesos/
-deploy-repo:
-	cd $(BUILD_DIR) && s3cmd put --acl-public dcos-repo-$(PACKAGE_VERSION).zip s3://riak-tools/riak-mesos/
-deploy-deps:
-	cd vagrant/ubuntu/trusty64/dependencies && make deploy
-deploy-director-coreos:
-	cd $(BUILD_DIR) && s3cmd put --acl-public riak_mesos_director_linux_amd64_$(PACKAGE_VERSION).tar.gz s3://riak-tools/riak-mesos/coreos/
+	cd $(BASE_DIR)/build && make -f coreos.make package-director
+package-dcos:
+	cd $(BASE_DIR)/build && make -f coreos.make package-dcos
+package-repo:
+	cd $(BASE_DIR)/build && make -f coreos.make package-repo
+sync-framework:
+	cd $(BASE_DIR)/build && make -f coreos.make sync-framework
+sync-director:
+	cd $(BASE_DIR)/build && make -f coreos.make sync-director
+sync-dcos:
+	cd $(BASE_DIR)/build && make -f coreos.make sync-dcos
+sync-repo:
+	cd $(BASE_DIR)/build && make -f coreos.make sync-repo
 
 test:
 	go test ./...

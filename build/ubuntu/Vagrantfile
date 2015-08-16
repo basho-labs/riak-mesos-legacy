@@ -4,36 +4,39 @@
 Vagrant.configure(2) do |config|
   config.vm.box = "ubuntu/trusty64"
 
-  # Marathon
-  config.vm.network "forwarded_port", guest: 8080, host: 8080
-
-  # Mesos Master
-  config.vm.network "forwarded_port", guest: 5050, host: 5050
-
-  # Mesos Slave
-  config.vm.network "forwarded_port", guest: 5051, host: 5051
-
-  # zookeeper
-  config.vm.network "forwarded_port", guest: 2181, host:2181
-
-  config.vm.network "private_network", ip: "33.33.33.2"
-
-  config.vm.hostname = "ubuntu.local"
-
-  config.vm.synced_folder "./../../../../", "/riak-mesos"
-
   config.vm.provider "virtualbox" do |vb|
-    vb.memory = "2048"
+    vb.memory = "4096"
+    vb.cpus = 4
   end
 
-  $script = <<-SCRIPT
-    # Host communication
+  config.vm.network "private_network", ip: "33.33.33.2"
+  config.vm.hostname: "master.mesos"
+
+  config.vm.synced_folder "./../../", "/riak-mesos"
+
+  config.vm.provision "shell", inline: <<-SHELL
+    # Mesos Host Requirements
     HOSTMACHINE=`netstat -rn | grep "^0.0.0.0 " | cut -d " " -f10`
     echo "$HOSTMACHINE	33.33.33.1" >> /etc/hosts
     DISTRO=$(lsb_release -is | tr '[:upper:]' '[:lower:]')
     CODENAME=$(lsb_release -cs)
     echo "deb http://repos.mesosphere.io/${DISTRO} ${CODENAME} main" | \
     tee /etc/apt/sources.list.d/mesosphere.list
+    hostname master.mesos
+    hostname -f master.mesos
+
+    # Build Erlang
+    apt-get -y update
+    apt-get -y install build-essential autoconf libncurses5-dev openssl libssl-dev fop xsltproc unixodbc-dev libpam0g-dev git
+    cd /vagrant/OTP_R16B02_basho8
+    ./otp_build autoconf
+    ./configure && make && sudo make install
+
+    # Build the projects
+    cd /vagrant/riak && make rel
+    cd /vagrant/riak-mesos-director && make rel
+    cd /vagrant/riak_explorer && make rel-backend
+
     # Mesos
     apt-key adv --keyserver keyserver.ubuntu.com --recv E56151BF
     apt-get -y update
@@ -50,7 +53,5 @@ Vagrant.configure(2) do |config|
     service marathon restart
     # MASTER=$(mesos-resolve `cat /etc/mesos/zk` 2>/dev/null)
     # mesos-execute --master=$MASTER --name="cluster-test" --command="sleep 5"
-  SCRIPT
-
-  config.vm.provision "shell", inline: $script
+  SHELL
 end

@@ -9,7 +9,7 @@ EARC      ?= linux_amd64
 all: riak_explorer_$(FARC).tar.gz riak_explorer_$(EARC).tar.gz
 
 riak_explorer_$(FARC).tar.gz:
-	curl -O http://riak-tools.s3.amazonaws.com/riak_explorer_$(FARC).tar.gz
+	curl -O http://riak-tools.s3.amazonaws.com/riak-mesos/coreos/riak_explorer_$(FARC).tar.gz
 
 riak_explorer_$(EARC).tar.gz:
-	curl -O http://riak-tools.s3.amazonaws.com/riak_explorer_$(EARC).tar.gz
+	curl -O http://riak-tools.s3.amazonaws.com/riak-mesos/coreos/riak_explorer_$(EARC).tar.gz
