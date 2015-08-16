@@ -184,4 +184,3 @@ func (pm *ProcessManager) killProcess(waitChan chan pidChangeNotification) {
 	}
 	<-waitChan
 }
-
