@@ -28,7 +28,7 @@ may need to be used. Here is a minimal example:
         "master": "zk://master.mesos:2181/mesos",
         "zk": "master.mesos:2181",
         "user": "root",
-        "framework-name": "riak-cluster-2"
+        "framework-name": "riak"
     }
 }
 ```
@@ -45,75 +45,93 @@ dcos package install riak --options=dcos-riak.json
 ### CLI Usage
 
 ```
-dcos riak <subcommand> [<options>]
+Command line utility for the Riak Mesos Framework / DCOS Service.
+This utility provides tools for modifying and accessing your Riak
+on Mesos installation.
+
+Usage: dcos riak <subcommands> [options]
+
 Subcommands:
-    --get-clusters
-    --get-cluster <cluster-name>
-    --create-cluster <cluster-name>
-    --get-nodes <cluster-name>
-    --add-node <cluster-name>
-    --generate-director-config <cluster-name> <zookeeper-host:port>
-    --get-director-urls <public-node-dns>
+    cluster list
+    cluster create
+    node list
+    node add [--nodes <number>]
+    proxy config [--zk <host:port>]
+    proxy install [--zk <host:port>]
+    proxy endpoints [--public-dns <host>]
+
+Options (available on most commands):
+    --cluster <cluster-name>      Default: riak-cluster
+    --framework <framework-name>  Default: riak
+    --debug
+    --help
     --info
     --version
-Options:
-    --framework-name <framework-name>
-    --debug
 ```
 
 ### Add Riak Nodes
 
+Create a 3 node cluster named 'riak-cluster' (this is the default name).
+
 ```
-dcos riak --create-cluster mycluster
-dcos riak --add-node mycluster
-dcos riak --add-node mycluster
-dcos riak --add-node mycluster
+dcos riak cluster create
+dcos riak node add --nodes 3
+```
+
+Create a second 1 node cluster named 'riak-test-cluster'.
+
+```
+dcos riak cluster create --cluster riak-test-cluster
+dcos riak node add --cluster riak-test-cluster
 ```
 
 ### Accessing Your Riak Nodes
 
-The [Riak Mesos Director](http://github.com/basho-labs/riak-mesos-director) application can be easily installed on your DCOS cluster
-with these commands:
+The [Riak Mesos Director](http://github.com/basho-labs/riak-mesos-director) smart proxy can be easily installed on your DCOS cluster with these commands:
 
 ```
-dcos riak --generate-director-config mycluster master.mesos:2181 \
-    > director.marathon.json
-dcos marathon app add director.marathon.json
+dcos riak proxy install
 ```
 
-Once it is up and running, explore your Riak cluster using the following command:
+Once it is up and running, explore your proxy and Riak cluster using the following command:
 
 ```
-dcos riak --get-director-urls <public-node-dns>
+dcos riak proxy endpoints --public-dns <host>
 ```
 
 The output should look something like this:
 
 ```
 Load Balanced Riak Cluster (HTTP)
-    http://<public-node-dns>:10002
+    http://<host>:10002
 
 Load Balanced Riak Cluster (Protobuf)
-    http://<public-node-dns>:10003
+    http://<host>:10003
 
 Riak Mesos Director API (HTTP)
-    http://<public-node-dns>:10004
+    http://<host>:10004
 
 Riak Explorer and API (HTTP)
-    http://<public-node-dns>:10005
+    http://<host>:10005
+```
+
+### Uninstalling the director proxy
+
+To remove the proxy from marathon, run this command:
+
+```
+dcos riak proxy uninstall
 ```
 
 ### Uninstalling the framework
 
-All of the tasks created by Riak and the Director applications can be killed
-with the following:
+All of the tasks created by the Riak framework can be killed with the following:
 
 ```
-dcos marathon app remove riak-director
 dcos package uninstall riak
 ```
 
-Currently, Zookeeper entries are left behind by the framework even after uninstall.
+***Note:*** Currently, Zookeeper entries are left behind by the framework even after uninstall.
 To completely remove these entries, use a Zookeeper client to delete the relevant
 nodes.
 
