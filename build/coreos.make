@@ -17,8 +17,10 @@ clean:
 	-rm $(BUILD_DIR)/$(DEPLOY_BASE)/dcos-riak-$(PACKAGE_VERSION).tar.gz
 	-rm $(BUILD_DIR)/$(DEPLOY_BASE)/dcos-repo-$(PACKAGE_VERSION).zip
 
-package-framework: deps $(BUILD_DIR)/$(DEPLOY_BASE)/$(DEPLOY_OS)/riak_mesos_linux_amd64_$(PACKAGE_VERSION).tar.gz
-package-director: deps $(BUILD_DIR)/$(DEPLOY_BASE)/$(DEPLOY_OS)/riak_mesos_director_linux_amd64_$(PACKAGE_VERSION).tar.gz
+package-framework: deps $(BIN_DIR)/framework_linux_amd64
+package-framework: $(BUILD_DIR)/$(DEPLOY_BASE)/$(DEPLOY_OS)/riak_mesos_linux_amd64_$(PACKAGE_VERSION).tar.gz
+package-director: deps $(BIN_DIR)/director_linux_amd64
+package-director: $(BUILD_DIR)/$(DEPLOY_BASE)/$(DEPLOY_OS)/riak_mesos_director_linux_amd64_$(PACKAGE_VERSION).tar.gz
 package-dcos: $(BUILD_DIR)/$(DEPLOY_BASE)/dcos-riak-$(PACKAGE_VERSION).tar.gz
 package-repo: $(BUILD_DIR)/$(DEPLOY_BASE)/dcos-repo-$(PACKAGE_VERSION).zip
 

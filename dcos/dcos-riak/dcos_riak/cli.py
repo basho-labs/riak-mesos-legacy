@@ -39,6 +39,7 @@ def usage():
     print("    node add [--nodes <number>]")
     print("    proxy config [--zk <host:port>]")
     print("    proxy install [--zk <host:port>]")
+    print("    proxy uninstall")
     print("    proxy endpoints [--public-dns <host>]")
     print("")
     print("Options (available on most commands): ")
