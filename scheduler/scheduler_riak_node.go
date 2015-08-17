@@ -82,6 +82,7 @@ func (frn *FrameworkRiakNode) handleUpToDownTransition(sc *SchedulerCore) {
 	for _, riakNode := range sc.schedulerState.Nodes{
 		if riakNode.CurrentState == process_state.Started && riakNode != frn {
 			// We should try to join against this node
+			log.Infof("Making leave: %+v to %+v", frn.TaskData.FullyQualifiedNodeName, riakNode.TaskData.FullyQualifiedNodeName)
 			leaveReply, leaveErr := rexc.ForceRemove(riakNode.TaskData.FullyQualifiedNodeName, frn.TaskData.FullyQualifiedNodeName)
 			log.Infof("Triggered leave: %+v, %+v", leaveReply, leaveErr)
 			if leaveErr == nil {
@@ -96,6 +97,7 @@ func (frn *FrameworkRiakNode) handleStartingToRunningTransition(sc *SchedulerCor
 	for _, riakNode := range sc.schedulerState.Nodes{
 		if riakNode.CurrentState == process_state.Started {
 			// We should try to join against this node
+			log.Infof("Joining %+v to %+v", frn.TaskData.FullyQualifiedNodeName, riakNode.TaskData.FullyQualifiedNodeName)
 			joinReply, joinErr := rexc.Join(frn.TaskData.FullyQualifiedNodeName, riakNode.TaskData.FullyQualifiedNodeName)
 			log.Infof("Triggered join: %+v, %+v", joinReply, joinErr)
 			if joinErr == nil {
