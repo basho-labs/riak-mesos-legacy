@@ -84,6 +84,7 @@ Subcommands:
     node add [--nodes <number>]
     proxy config [--zk <host:port>]
     proxy install [--zk <host:port>]
+    proxy uninstall
     proxy endpoints [--public-dns <host>]
 
 Options (available on most commands):
