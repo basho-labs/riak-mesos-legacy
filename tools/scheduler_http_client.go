@@ -22,13 +22,13 @@ func NewSchedulerHTTPClient(baseURL string) *SchedulerHTTPClient {
 
 // GetNodes issues a GET to the Scheduler HTTP Server clusters/{cluster}/nodes endpoint
 func (client *SchedulerHTTPClient) GetNodes() (string, error) {
-	commandURI := "api/v1/nodes"
+	commandURI := "/api/v1/nodes"
 	return client.doGet(commandURI)
 }
 
 // AddNode issues a POST to the Scheduler HTTP Server clusters/{cluster}/nodes endpoint
 func (client *SchedulerHTTPClient) AddNode() (string, error) {
-	commandURI := "api/v1/nodes"
+	commandURI := "/api/v1/nodes"
 	return client.doPost(commandURI)
 }
 
