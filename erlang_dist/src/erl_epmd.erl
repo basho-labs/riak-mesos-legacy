@@ -126,6 +126,7 @@ do_wait_for_data(Conn) ->
         {tcp_error, Conn, Reason} ->
             {error, Reason}
     after 5000 ->
+        erlang:display("Error, timed out waiting for data"),
         {error, timeout}
     end.
 
