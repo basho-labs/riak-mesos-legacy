@@ -24,6 +24,9 @@ package-director: $(BUILD_DIR)/$(DEPLOY_BASE)/$(DEPLOY_OS)/riak_mesos_director_l
 package-dcos: $(BUILD_DIR)/$(DEPLOY_BASE)/dcos-riak-$(PACKAGE_VERSION).tar.gz
 package-repo: $(BUILD_DIR)/$(DEPLOY_BASE)/dcos-repo-$(PACKAGE_VERSION).zip
 
+sync-framework-test:
+	cd $(BUILD_DIR)/$(DEPLOY_BASE)/$(DEPLOY_OS)/ && \
+		s3cmd put --acl-public riak_mesos_linux_amd64_$(PACKAGE_VERSION).tar.gz s3://$(DEPLOY_BASE)/$(DEPLOY_OS)/test2/
 sync-framework:
 	cd $(BUILD_DIR)/$(DEPLOY_BASE)/$(DEPLOY_OS)/ && \
 		s3cmd put --acl-public riak_mesos_linux_amd64_$(PACKAGE_VERSION).tar.gz s3://$(DEPLOY_BASE)/$(DEPLOY_OS)/

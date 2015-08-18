@@ -117,6 +117,8 @@ package-dcos:
 	cd $(BASE_DIR)/build && make -f coreos.make package-dcos
 package-repo:
 	cd $(BASE_DIR)/build && make -f coreos.make package-repo
+sync-framework-test:
+	cd $(BASE_DIR)/build && make -f coreos.make sync-framework-test
 sync-framework:
 	cd $(BASE_DIR)/build && make -f coreos.make sync-framework
 sync-director:

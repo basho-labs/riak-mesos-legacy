@@ -5,15 +5,17 @@ import (
 	"bytes"
 	"compress/gzip"
 	"fmt"
-	log "github.com/Sirupsen/logrus"
-	"github.com/basho-labs/riak-mesos/cepmd/cepm"
-	"github.com/basho-labs/riak-mesos/process_manager"
 	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"text/template"
+
+	log "github.com/Sirupsen/logrus"
+	"github.com/basho-labs/riak-mesos/cepmd/cepm"
+	"github.com/basho-labs/riak-mesos/process_manager"
 )
 
 type RiakExplorer struct {
@@ -194,6 +196,14 @@ func NewRiakExplorer(port int64, nodename string, c *cepm.CEPM) (*RiakExplorer, 
 		re.configureAdvanced(c.GetPort())
 	}
 	re.configure(port, nodename)
+
+	resolvpath := filepath.Join(".", tempdir, "rex_root", "etc", "resolv.conf")
+	cpCmd := exec.Command("cp", "/etc/resolv.conf", resolvpath)
+	cperr := cpCmd.Run()
+	if cperr != nil {
+		log.Panic("Could not copy resolv.conf: ", cperr)
+	}
+
 	log.Debugf("Starting up Riak Explorer %v", exepath)
 	var err error
 	chroot := filepath.Join(".", tempdir, "rex_root")

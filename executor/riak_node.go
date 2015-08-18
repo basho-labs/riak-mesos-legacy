@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"text/template"
 	"time"
@@ -142,6 +143,12 @@ func (riakNode *RiakNode) configureRiak(ports chan int64) templateData {
 	vars.PBPort = <-ports
 	vars.HandoffPort = <-ports
 	vars.DisterlPort = <-ports
+
+	cpCmd := exec.Command("cp", "/etc/resolv.conf", "riak_root/etc/resolv.conf")
+	err = cpCmd.Run()
+	if err != nil {
+		log.Panic("Could not copy resolv.conf: ", err)
+	}
 
 	file, err := os.OpenFile("riak_root/riak/etc/riak.conf", os.O_TRUNC|os.O_CREATE|os.O_RDWR, 0664)
 
