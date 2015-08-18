@@ -7,7 +7,7 @@ trusty.tar.gz:
 	sudo debootstrap trusty trusty_root/
 	sudo chroot trusty_root apt-get install -y busybox-static strace curl wget openssl
 	sudo chroot trusty_root apt-get clean
-	sudo chown -R $(id -un): trusty_root/
+	sudo chown -R $(shell id -un): trusty_root/
 	rm -rf trusty_root/dev trusty_root/proc trusty_root/sys
 	mkdir -p trusty_root/dev trusty_root/proc trusty_root/sys trusty_root/parent_root
 	ln -sf /parent_root/etc/resolv.conf trusty_root/etc/resolv.conf
