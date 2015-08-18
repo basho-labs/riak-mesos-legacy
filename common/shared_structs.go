@@ -10,6 +10,7 @@ type TaskData struct {
 	Zookeepers                []string
 	NodeID                    string
 	FrameworkName             string
+	URI						  string
 }
 
 func (s *TaskData) Serialize() ([]byte, error) {

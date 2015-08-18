@@ -12,6 +12,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/elazarl/go-bindata-assetfs"
 	"github.com/gorilla/mux"
+	"github.com/basho-labs/riak-mesos/artifacts"
 )
 
 type SchedulerHTTPServer struct {
@@ -119,6 +120,11 @@ func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *Schedul
 
 	// This rewrites /static/FOO -> FOO
 	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", fs))
+
+	fs2 := http.FileServer(&assetfs.AssetFS{Asset: artifacts.Asset, AssetDir: artifacts.AssetDir, Prefix: ""})
+	router.PathPrefix("/static2/").Handler(http.StripPrefix("/static2/", fs2))
+
+
 	debugMux := http.NewServeMux()
 	router.PathPrefix("/debug").Handler(debugMux)
 	debugMux.Handle("/debug/pprof/", http.HandlerFunc(pprof.Index))

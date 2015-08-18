@@ -17,6 +17,7 @@ import (
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	util "github.com/mesos/mesos-go/mesosutil"
 
+	"net/http"
 	"bytes"
 	"errors"
 )
@@ -143,7 +144,7 @@ func (riakNode *RiakNode) configureRiak(ports chan int64) templateData {
 	vars.HandoffPort = <-ports
 	vars.DisterlPort = <-ports
 
-	file, err := os.OpenFile("riak_root/riak/etc/riak.conf", os.O_TRUNC|os.O_CREATE|os.O_RDWR, 0664)
+	file, err := os.OpenFile("riak/riak/etc/riak.conf", os.O_TRUNC|os.O_CREATE|os.O_RDWR, 0664)
 
 	defer file.Close()
 	if err != nil {
@@ -172,7 +173,7 @@ func (riakNode *RiakNode) configureAdvanced(cepmdPort int) {
 	// Populate template data from the MesosTask
 	vars := advancedTemplateData{}
 	vars.CEPMDPort = cepmdPort
-	file, err := os.OpenFile("riak_root/riak/etc/advanced.config", os.O_TRUNC|os.O_CREATE|os.O_RDWR, 0664)
+	file, err := os.OpenFile("riak/riak/etc/advanced.config", os.O_TRUNC|os.O_CREATE|os.O_RDWR, 0664)
 
 	defer file.Close()
 	if err != nil {
@@ -190,6 +191,29 @@ func (riakNode *RiakNode) Run() {
 	var err error
 	log.Info("Other hilarious facts: ", riakNode.taskInfo)
 
+	os.Mkdir("riak", 0777)
+	fetchURI := fmt.Sprintf("%s/static2/trusty.tar.gz", riakNode.taskData.URI)
+	log.Info("Preparing to fetch trusty_root from: ", fetchURI)
+	resp, err := http.Get(fetchURI)
+	if err != nil {
+		log.Panic("Unable to fetch trusty root: ", err)
+	}
+	err = common.ExtractGZ("riak", resp.Body)
+	if err != nil {
+		log.Panic("Unable to extract trusty root: ", err)
+	}
+	fetchURI = fmt.Sprintf("%s/static2/riak-2.1.1-bin.tar.gz", riakNode.taskData.URI)
+	log.Info("Preparing to fetch riak from: ", fetchURI)
+	resp, err = http.Get(fetchURI)
+	if err != nil {
+		log.Panic("Unable to fetch riak root: ", err)
+	}
+	err = common.ExtractGZ("riak", resp.Body)
+	if err != nil {
+		log.Panic("Unable to extract riak root: ", err)
+	}
+
+
 	ports := portIter(riakNode.taskInfo.Resources)
 	config := riakNode.configureRiak(ports)
 
@@ -199,7 +223,7 @@ func (riakNode *RiakNode) Run() {
 
 	args := []string{"console", "-noinput"}
 
-	kernelDirs, err := filepath.Glob("riak_root/riak/lib/kernel*")
+	kernelDirs, err := filepath.Glob("riak/riak/lib/kernel*")
 	if err != nil {
 		log.Fatal("Could not find kernel directory")
 	}
@@ -218,11 +242,11 @@ func (riakNode *RiakNode) Run() {
 	if err != nil {
 		log.Panic("Could not get wd: ", err)
 	}
-	chroot := filepath.Join(wd, "riak_root")
+	chroot := filepath.Join(wd, "riak")
 
 	HealthCheckFun := func() error {
 		log.Info("Checking is Riak is started")
-		data, err := ioutil.ReadFile("riak_root/riak/log/console.log")
+		data, err := ioutil.ReadFile("riak/riak/log/console.log")
 		if err != nil {
 			if bytes.Contains(data, []byte("Wait complete for service riak_kv")) {
 				log.Info("Riak started")

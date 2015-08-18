@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 	"syscall"
+	"path/filepath"
 )
 
 func (pm *ProcessManager) start(executablePath string, args []string, chroot *string) {
@@ -15,14 +16,13 @@ func (pm *ProcessManager) start(executablePath string, args []string, chroot *st
 		Setpgid: true,
 	}
 	if chroot != nil {
-		sysprocattr.Chroot = *chroot
-		if os.Getuid() != 0 {
-			//Namespace tricks
-			sysprocattr.Cloneflags = syscall.CLONE_NEWUSER | syscall.CLONE_NEWNS
-			sysprocattr.UidMappings = []syscall.SysProcIDMap{
-				{ContainerID: 0, HostID: os.Getuid(), Size: 1},
-			}
+		log.Info("Assets: ", AssetNames())
+		err := RestoreAsset(*chroot, "super_chroot")
+		if err != nil {
+			log.Panic("Unable to decompress: ", err)
 		}
+		args = append([]string{*chroot, executablePath}, args...)
+		executablePath = filepath.Join(*chroot, "super_chroot")
 	}
 	env := os.Environ()
 

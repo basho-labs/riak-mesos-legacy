@@ -1,6 +1,8 @@
 package riak_explorer
 
 import (
+	metamgr "github.com/basho-labs/riak-mesos/metadata_manager"
+	"github.com/basho-labs/riak-mesos/cepmd/cepm"
 	ps "github.com/mitchellh/go-ps"
 	"github.com/stretchr/testify/assert"
 	"os"
@@ -10,8 +12,12 @@ import (
 func TestNothing(t *testing.T) {
 	assert := assert.New(t)
 
+	mgr := metamgr.NewMetadataManager("rmf5", []string{"127.0.0.1"})
+	c := cepm.NewCPMd(7902, mgr)
+
+	go c.Background()
 	// Port number for testing
-	re, err := NewRiakExplorer(7901, "rex@127.0.0.1") // 998th  prime number.
+	re, err := NewRiakExplorer(7901, "rex@ubuntu.", c) // 998th  prime number.
 	assert.Equal(nil, err)
 	re.TearDown()
 	_, err = re.NewRiakExplorerClient().Ping()

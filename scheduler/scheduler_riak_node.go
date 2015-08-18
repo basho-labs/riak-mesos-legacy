@@ -240,11 +240,6 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(sc *SchedulerCor
 			Value:      &(sc.schedulerHTTPServer.hostURI),
 			Executable: proto.Bool(true),
 		},
-		&mesos.CommandInfo_URI{
-			Value:      &(sc.schedulerHTTPServer.riakURI),
-			Executable: proto.Bool(false),
-			Extract:    proto.Bool(true),
-		},
 	}
 	//executorUris = append(executorUris,
 	//	&mesos.CommandInfo_URI{Value: &(frn.frc.sc.schedulerHTTPServer.hostURI), Executable: proto.Bool(true)})
@@ -278,6 +273,7 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(sc *SchedulerCor
 		Zookeepers:                sc.zookeepers,
 		NodeID:                    frn.UUID.String(),
 		FrameworkName:             sc.frameworkName,
+		URI:					   sc.schedulerHTTPServer.GetURI(),
 	}
 	frn.TaskData = taskData
 

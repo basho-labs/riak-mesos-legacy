@@ -1,18 +1,16 @@
 package riak_explorer
 
 import (
-	"archive/tar"
 	"bytes"
-	"compress/gzip"
 	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"github.com/basho-labs/riak-mesos/cepmd/cepm"
 	"github.com/basho-labs/riak-mesos/process_manager"
-	"io"
-	"io/ioutil"
+	"github.com/basho-labs/riak-mesos/common"
+	"github.com/basho-labs/riak-mesos/artifacts"
+
 	"os"
 	"path/filepath"
-	"runtime"
 	"text/template"
 )
 
@@ -38,69 +36,30 @@ func (re *RiakExplorer) TearDown() {
 	re.pm.TearDown()
 }
 
-func decompress() string {
-	assetPath := fmt.Sprintf("riak_explorer_%s_%s.tar.gz", runtime.GOOS, runtime.GOARCH)
+func decompress() {
+	log.Info("Decompressing Riak Explorer")
 
-	log.Info("Decompressing Riak Explorer: ", assetPath)
+	var err error
+	if err := os.Mkdir("riak_explorer", 0777); err != nil {
+		log.Fatal("Unable to make rex directory: ", err)
+	}
 
-	asset, err := Asset(assetPath)
+	asset, err := artifacts.Asset("trusty.tar.gz")
 	if err != nil {
 		log.Fatal(err)
 	}
-	bytesReader := bytes.NewReader(asset)
-
-	gzReader, err := gzip.NewReader(bytesReader)
-
-	if err != nil {
-		log.Fatal("Error encountered decompressing riak explorer: ", err)
-		os.Exit(1)
+	if err = common.ExtractGZ("riak_explorer", bytes.NewReader(asset)); err != nil {
+		log.Fatal("Unable to extract trusty root: ", err)
 	}
+	asset, err = artifacts.Asset("riak_explorer-bin.tar.gz")
 
-	tr := tar.NewReader(gzReader)
-	tempdir, err := ioutil.TempDir("./", "riak_explorer.")
 	if err != nil {
 		log.Fatal(err)
 	}
-	for {
-		hdr, err := tr.Next()
-		if err == io.EOF {
-			// end of tar archive
-			break
-		} else if err != nil {
-			log.Fatalln(err)
-		}
-		filename := filepath.Join(".", tempdir, hdr.Name)
-		if hdr.Typeflag == tar.TypeReg || hdr.Typeflag == tar.TypeRegA {
-			file, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE, os.FileMode(hdr.Mode))
-			io.Copy(file, tr)
-			if err != nil {
-				log.Fatal(err)
-			}
-			if _, err := io.Copy(file, tr); err != nil {
-				log.Fatal(err)
-			}
-			file.Close()
-		} else if hdr.Typeflag == tar.TypeDir {
-			err := os.Mkdir(filename, 0777)
-			if err != nil {
-				log.Fatalln(err)
-			}
-		} else if hdr.Typeflag == tar.TypeSymlink {
-			if err := os.Symlink(hdr.Linkname, filename); err != nil {
-				log.Fatal(err)
-			}
-			// Hard link
-		} else if hdr.Typeflag == tar.TypeLink {
-			fmt.Printf("Encountered hardlink: %+v\n", hdr)
-			linkdest := filepath.Join(".", tempdir, hdr.Linkname)
-			if err := os.Link(linkdest, filename); err != nil {
-				log.Fatal(err)
-			}
-		} else {
-			log.Fatal("Experienced unknown tar file type: ", hdr.Typeflag)
-		}
+	if err = common.ExtractGZ("riak_explorer", bytes.NewReader(asset)); err != nil {
+		log.Fatal("Unable to extract rex: ", err)
 	}
-	return tempdir
+
 }
 func (re *RiakExplorer) configure(port int64, nodename string) {
 	data, err := Asset("riak_explorer.conf")
@@ -118,12 +77,14 @@ func (re *RiakExplorer) configure(port int64, nodename string) {
 
 	vars.NodeName = nodename
 	vars.HTTPPort = port
-	configpath := filepath.Join(".", re.tempdir, "rex_root", "riak_explorer", "etc", "riak_explorer.conf")
+	configpath := filepath.Join(".", "riak_explorer", "riak_explorer", "etc", "riak_explorer.conf")
 	file, err := os.OpenFile(configpath, os.O_TRUNC|os.O_CREATE|os.O_RDWR, 0)
 
+	defer file.Close()
 	if err != nil {
 		log.Panic("Unable to open file: ", err)
 	}
+
 
 	err = tmpl.Execute(file, vars)
 
@@ -145,9 +106,11 @@ func (re *RiakExplorer) configureAdvanced(cepmdPort int) {
 	// Populate template data from the MesosTask
 	vars := advancedTemplateData{}
 	vars.CEPMDPort = cepmdPort
-	configpath := filepath.Join(".", re.tempdir, "rex_root", "riak_explorer", "etc", "advanced.config")
+	configpath := filepath.Join(".", "riak_explorer", "riak_explorer", "etc", "advanced.config")
 	file, err := os.OpenFile(configpath, os.O_TRUNC|os.O_CREATE|os.O_RDWR, 0)
 
+
+	defer file.Close()
 	if err != nil {
 		log.Panic("Unable to open file: ", err)
 	}
@@ -160,7 +123,7 @@ func (re *RiakExplorer) configureAdvanced(cepmdPort int) {
 }
 
 func NewRiakExplorer(port int64, nodename string, c *cepm.CEPM) (*RiakExplorer, error) {
-	tempdir := decompress()
+	decompress()
 	exepath := "/riak_explorer/bin/riak_explorer"
 
 	args := []string{"console", "-noinput"}
@@ -171,20 +134,19 @@ func NewRiakExplorer(port int64, nodename string, c *cepm.CEPM) (*RiakExplorer, 
 		return err
 	}
 	tearDownFun := func() {
-		log.Info("Deleting all data in: ", tempdir)
-		err := os.RemoveAll(tempdir)
-		if err != nil {
-			log.Error(err)
-		}
+		log.Info("Deleting all data in: riak explorer")
+		//err := os.RemoveAll("riak_explorer")
+		//if err != nil {
+	///		log.Error(err)
+		//}
 	}
 	re := &RiakExplorer{
-		tempdir: tempdir,
 		port:    port,
 	}
 	if c != nil {
 		// This is gross -- we're passing "hidden" state by passing it through the unix environment variables.
 		// Fix it -- we should convert the NewRiakExplorer into using a fluent pattern?
-		libpath := filepath.Join(".", tempdir, "rex_root", "riak_explorer", "lib", "basho-patches")
+		libpath := filepath.Join(".", "riak_explorer", "riak_explorer", "lib", "basho-patches")
 		os.Mkdir(libpath, 0777)
 		err := cepm.InstallInto(libpath)
 		if err != nil {
@@ -196,7 +158,7 @@ func NewRiakExplorer(port int64, nodename string, c *cepm.CEPM) (*RiakExplorer, 
 	re.configure(port, nodename)
 	log.Debugf("Starting up Riak Explorer %v", exepath)
 	var err error
-	chroot := filepath.Join(".", tempdir, "rex_root")
+	chroot := filepath.Join(".", "riak_explorer")
 	re.pm, err = process_manager.NewProcessManager(tearDownFun, exepath, args, healthCheckFun, &chroot)
 	if err != nil {
 		log.Error("Could not start Riak Explorer: ", err)

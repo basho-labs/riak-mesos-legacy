@@ -1,12 +1,5 @@
 BASE_DIR         = $(shell pwd)
 PACKAGE_VERSION ?= 0.1.0
-
-### Framework / Executor Architecture
-FARC  ?= darwin_amd64
-EARC  ?= linux_amd64
-FGARC ?= "darwin/amd64"
-EGARC ?= "linux/amd64"
-
 ### Framework / Executor Binary locations
 FTAR  ?= $(BASE_DIR)/bin
 ETAR  ?= $(BASE_DIR)/scheduler/data
@@ -21,78 +14,130 @@ FUSR  ?= ""
 # FHST ?= "33.33.33.1"
 # FUSR     ?= "vagrant"
 
-.PHONY: all deps clean_deps build_executor rel dev clean run install-dcos-cli test vet lint fmt
+TAGS ?= dev
+export TAGS
 
-all: dev
+#.PHONY: all deps clean_deps build_executor rel dev clean run install-dcos-cli test vet lint fmt
 
-deps:
-	godep restore
-	cd $(BASE_DIR)/scheduler/data && $(MAKE)
-	cd $(BASE_DIR)/riak_explorer/data && $(MAKE)
-	cd $(BASE_DIR)/erlang_dist && $(MAKE)
+.PHONY: all clean
+all: .godep framework
 
 clean:
+	-rm -f bin/*_amd64
+
+## Godeps target:
+.godep: Godeps/Godeps.json
+	godep restore
+	touch .godep
+
+
+### CEPMd start
+.PHONY: cepm clean_cepmd erl_dist
+erl_dist:
+	cd erlang_dist && $(MAKE)
+
+cepmd/cepm/data/erl_epmd.beam: erl_dist
+cepmd/cepm/data/inet_tcp_dist.beam: erl_dist
+cepmd/cepm/data/net_kernel.beam: erl_dist
+
+cepmd/cepm/bindata_generated.go: cepmd/cepm/data/erl_epmd.beam cepmd/cepm/data/inet_tcp_dist.beam cepmd/cepm/data/net_kernel.beam
+	go generate -tags=$(TAGS) ./cepmd/cepm
+
+cepm: cepmd/cepm/bindata_generated.go
+
+clean: clean_cepmd
+
+clean_cepmd:
+	-rm -f cepmd/cepm/bindata_generated.go
+
+
+### CEPMD end
+
+### Executor start
+## Fake Target
+.PHONY: executor clean_executor scheduler/data/executor_linux_amd64
+clean: clean_executor
+executor: scheduler/data/executor_linux_amd64
+
+executor/bindata_generated.go: executor/data/advanced.config executor/data/riak.conf
+	go generate -tags=$(TAGS) ./executor/...
+
+scheduler/data/executor_linux_amd64: cepm executor/bindata_generated.go
+	go build -o scheduler/data/executor_linux_amd64 -tags=$(TAGS) ./executor/
+
+clean_executor:
+	-rm -f executor/bindata_generated.go
+	-rm -f scheduler/data/executor_linux_amd64
+### Executor end
+
+## Riak Explorer Start
+.PHONY: riak_explorer clean_riak_explorer
+
+riak_explorer/bindata_generated.go: riak_explorer/data/advanced.config riak_explorer/data/riak_explorer.conf
+	go generate -tags=$(TAGS) ./riak_explorer/...
+riak_explorer: artifacts riak_explorer/bindata_generated.go
+
+clean_riak_explorer:
+	-rm -f riak_explorer/bindata_generated.go
+## Riak Explorer End
+
+### Framework begin
+.PHONY: framework clean_framework
+clean: clean_framework
+# Depends on artifacts, because it depends on scheduler which depends on artifacts
+framework: cepm executor riak_explorer artifacts scheduler
+	go build -o bin/framework_linux_amd64 -tags=$(TAGS) ./framework/
+clean_framework:
+	-rm -f bin/framework_linux_amd64
+### Framework end
+
+
+### Scheduler Begin
+.PHONY: scheduler clean_scheduler
+
+scheduler/bindata_generated.go: scheduler/data/executor_linux_amd64
+	go generate -tags=$(TAGS) ./scheduler
+
+scheduler: scheduler/bindata_generated.go
+
+clean: clean_scheduler
+clean_scheduler:
+	-rm -rf scheduler/bindata_generated.go
+
+### Scheduler End
+
+## Artifact begin
+.PHONY: artifacts clean_artifacts
+clean: clean_artifacts
+artifacts:
+	cd artifacts && $(MAKE)
+
+clean_artifacts:
+	cd artifacts && $(MAKE) clean
+
+
+## Artifact end
+## Tools begin
+.PHONY: tools clean_tools bin/tools_linux_amd64
+bin/tools_linux_amd64:
+	go build -o bin/tools_linux_amd64 -tags=$(TAGS) ./tools/
+
+tools: bin/tools_linux_amd64
+
+all: tools
+clean_tools:
+	-rm -rf bin/tools_linux_amd64
+## Tools end
+
+####
 	-rm $(BASE_DIR)/bin/*_amd64
 	-rm $(BASE_DIR)/scheduler/data/*_amd64
 	-rm $(BASE_DIR)/scheduler/bindata_generated.go
 	-rm $(BASE_DIR)/executor/bindata_generated.go
 	-rm $(BASE_DIR)/riak_explorer/bindata_generated.go
 
-clean_deps:
-	-rm $(BASE_DIR)/scheduler/data/*.tar.gz
-	-rm $(BASE_DIR)/riak_explorer/data/*.tar.gz
-	# cd $(BASE_DIR)/erlang_dist/ && $(MAKE) clean
-
-build_cepmd_dev:
-	go generate ./cepmd/...
-
-build_cepmd_rel:
-	go generate -tags=rel ./cepmd/...
-
-build_executor:
-	go generate ./executor/...
-	gox \
-		-osarch=$(EGARC) \
-		-output="$(ETAR)/{{.Dir}}_{{.OS}}_{{.Arch}}" \
-		-rebuild \
-		./executor/
-
-rel: clean deps vet build_cepmd_rel build_executor
-	go generate -tags=rel ./...
-	gox \
-		-tags=rel \
-		-osarch=$(FGARC) \
-		-output="$(FTAR)/{{.Dir}}_{{.OS}}_{{.Arch}}" \
-		-rebuild \
-		./framework/...
-
-rel-tools: vet
-	gox \
-		-tags=rel \
-		-osarch=$(FGARC) \
-		-output="$(FTAR)/{{.Dir}}_{{.OS}}_{{.Arch}}" \
-		-rebuild \
-		./tools/...
-
-rel-director:
-	go generate ./director/...
-	gox \
-		-osarch=$(FGARC) \
-		-output="$(FTAR)/{{.Dir}}_{{.OS}}_{{.Arch}}" \
-		-rebuild \
-		./director/...
-
-dev: clean deps vet build_cepmd_dev build_executor
-	go generate -tags=dev ./...
-	gox \
-		-tags=dev \
-		-osarch=$(FGARC) \
-		-output="$(FTAR)/{{.Dir}}_{{.OS}}_{{.Arch}}" \
-		-rebuild \
-		./framework/... ./tools/...
-
 run:
-	cd $(BASE_DIR)/bin && ./framework_$(FARC) \
+	cd $(BASE_DIR)/bin && ./framework_linux_amd64 \
 		-master=$(MAST) \
 		-zk=$(ZOOK) \
 		-ip=$(FIP) \
