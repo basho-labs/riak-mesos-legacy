@@ -30,7 +30,24 @@ clean:
 	godep restore
 	touch .godep
 
+### Schroot begin
+.PHONY: schroot clean_schroot
+schroot:
+	cd process_manager/schroot && $(MAKE)
+clean_schroot:
+	cd process_manager/schroot && $(MAKE) clean
+### Schroot end
 
+### process manager
+.PHONY: process_manager/bindata_generated.go
+process_manager/bindata_generated.go:
+	go generate -tags=$(TAGS) ./process_manager/...
+clean_process_manager:
+	rm -rf process_manager/bindata_generated.go
+
+clean: clean_process_manager
+
+###
 ### CEPMd start
 .PHONY: cepm clean_cepmd erl_dist
 erl_dist:
@@ -62,7 +79,7 @@ executor: scheduler/data/executor_linux_amd64
 executor/bindata_generated.go: executor/data/advanced.config executor/data/riak.conf
 	go generate -tags=$(TAGS) ./executor/...
 
-scheduler/data/executor_linux_amd64: cepm executor/bindata_generated.go
+scheduler/data/executor_linux_amd64: cepm executor/bindata_generated.go process_manager/bindata_generated.go
 	go build -o scheduler/data/executor_linux_amd64 -tags=$(TAGS) ./executor/
 
 clean_executor:
@@ -95,7 +112,7 @@ clean_framework:
 ### Scheduler Begin
 .PHONY: scheduler clean_scheduler
 
-scheduler/bindata_generated.go: scheduler/data/executor_linux_amd64
+scheduler/bindata_generated.go: scheduler/data/executor_linux_amd64 process_manager/bindata_generated.go
 	go generate -tags=$(TAGS) ./scheduler
 
 scheduler: scheduler/bindata_generated.go
