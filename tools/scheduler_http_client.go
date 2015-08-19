@@ -20,20 +20,43 @@ func NewSchedulerHTTPClient(baseURL string) *SchedulerHTTPClient {
 	return c
 }
 
+// GetClusters issues a Get to the Scheduler HTTP Server clusters endpoint
+func (client *SchedulerHTTPClient) GetClusters() (string, error) {
+	return client.doGet("clusters")
+}
+
+// GetCluster issues a Get to the Scheduler HTTP Server clusters/{cluster} endpoint
+func (client *SchedulerHTTPClient) GetCluster(clusterName string) (string, error) {
+	commandURI := fmt.Sprintf("clusters/%s", clusterName)
+	return client.doGet(commandURI)
+}
+
+// CreateCluster issues a POST to the Scheduler HTTP Server clusters{cluster} endpoint
+func (client *SchedulerHTTPClient) CreateCluster(clusterName string) (string, error) {
+	commandURI := fmt.Sprintf("clusters/%s", clusterName)
+	return client.doPost(commandURI)
+}
+
+// DeleteCluster issues a DELETE to the Scheduler HTTP Server clusters/{cluster} endpoint
+func (client *SchedulerHTTPClient) DeleteCluster(clusterName string) (string, error) {
+	return "not yet implemented", nil
+}
+
 // GetNodes issues a GET to the Scheduler HTTP Server clusters/{cluster}/nodes endpoint
-func (client *SchedulerHTTPClient) GetNodes() (string, error) {
-	commandURI := "/api/v1/nodes"
+func (client *SchedulerHTTPClient) GetNodes(clusterName string) (string, error) {
+	commandURI := fmt.Sprintf("clusters/%s/nodes", clusterName)
 	return client.doGet(commandURI)
 }
 
 // AddNode issues a POST to the Scheduler HTTP Server clusters/{cluster}/nodes endpoint
-func (client *SchedulerHTTPClient) AddNode() (string, error) {
-	commandURI := "/api/v1/nodes"
+func (client *SchedulerHTTPClient) AddNode(clusterName string) (string, error) {
+	commandURI := fmt.Sprintf("clusters/%s/nodes", clusterName)
 	return client.doPost(commandURI)
 }
 
+
 func (client *SchedulerHTTPClient) doGet(path string) (string, error) {
-	commandURL := fmt.Sprintf("%s%s", client.BaseURL, path)
+	commandURL := fmt.Sprintf("%s/api/v1/%s", client.BaseURL, path)
 	resp, err := http.Get(commandURL)
 	if err != nil {
 		return "", err
@@ -47,7 +70,7 @@ func (client *SchedulerHTTPClient) doGet(path string) (string, error) {
 }
 
 func (client *SchedulerHTTPClient) doPost(path string) (string, error) {
-	commandURL := fmt.Sprintf("%s%s", client.BaseURL, path)
+	commandURL := fmt.Sprintf("%s/api/v1/%s", client.BaseURL, path)
 	resp, err := http.Post(commandURL, "", nil)
 	if err != nil {
 		return "", err

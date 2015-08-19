@@ -10,6 +10,7 @@ type TaskData struct {
 	Zookeepers                []string
 	NodeID                    string
 	FrameworkName             string
+	ClusterName				  string
 	URI						  string
 }
 
@@ -25,6 +26,8 @@ func DeserializeTaskData(data []byte) (TaskData, error) {
 }
 
 type CoordinatedData struct {
+	FrameworkName string
+	ClusterName string
 	NodeName    string
 	DisterlPort int
 	PBPort      int

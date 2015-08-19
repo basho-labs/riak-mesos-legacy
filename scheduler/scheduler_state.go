@@ -8,17 +8,19 @@ import (
 	// -Sargun Dhillon
 	// TODO: Make metadata manager "better"
 	"github.com/samuel/go-zookeeper/zk"
+	"compress/zlib"
+	"bytes"
 )
 
 type SchedulerState struct {
 	zkNode      *metadata_manager.ZkNode
 	FrameworkID *string
-	Nodes		map[string]*FrameworkRiakNode
+	Clusters		map[string]*FrameworkRiakCluster
 }
 
 func emptySchedulerState() *SchedulerState {
 	return &SchedulerState{
-		Nodes: make(map[string]*FrameworkRiakNode),
+		Clusters: make(map[string]*FrameworkRiakCluster),
 	}
 }
 func GetSchedulerState(mm *metadata_manager.MetadataManager) *SchedulerState {
@@ -44,11 +46,15 @@ func GetSchedulerState(mm *metadata_manager.MetadataManager) *SchedulerState {
 	}
 }
 func (ss *SchedulerState) serialize() []byte {
-	b, err := json.Marshal(ss)
+	var returnBuffer bytes.Buffer
+	w := zlib.NewWriter(&returnBuffer)
+	encoder := json.NewEncoder(w)
+	encoder.Encode(ss)
+	err := w.Close()
 	if err != nil {
 		log.Panic(err)
 	}
-	return b
+	return returnBuffer.Bytes()
 }
 func (ss *SchedulerState) Persist() error {
 	b := ss.serialize()
@@ -57,7 +63,15 @@ func (ss *SchedulerState) Persist() error {
 }
 
 func deserializeSchedulerState(data []byte) (*SchedulerState, error) {
+	r, err := zlib.NewReader(bytes.NewBuffer(data))
+	if err != nil {
+		log.Panic(err)
+	}
+	decoder := json.NewDecoder(r)
 	t := &SchedulerState{}
-	err := json.Unmarshal(data, t)
+	err = decoder.Decode(&t)
+	if err != nil {
+		log.Panic(err)
+	}
 	return t, err
 }

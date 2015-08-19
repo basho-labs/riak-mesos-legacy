@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"errors"
 )
 
 // Links are location metadata about a Riak Explorer resource
@@ -383,6 +384,11 @@ func (client *RiakExplorerClient) doGet(path string) ([]byte, error) {
 	defer resp.Body.Close()
 	if err != nil {
 		return nil, err
+	}
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		return body, nil
+	} else {
+		return body, errors.New(fmt.Sprintf("Unknown HTTP Status: %d", resp.StatusCode))
 	}
 	return body, nil
 }

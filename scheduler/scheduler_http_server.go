@@ -13,6 +13,8 @@ import (
 	"github.com/elazarl/go-bindata-assetfs"
 	"github.com/gorilla/mux"
 	"github.com/basho-labs/riak-mesos/artifacts"
+	"net/url"
+	"net/http/httputil"
 )
 
 type SchedulerHTTPServer struct {
@@ -34,21 +36,77 @@ func parseIP(address string) net.IP {
 	return addr[0]
 }
 
+
+func (schttp *SchedulerHTTPServer) createCluster(w http.ResponseWriter, r *http.Request) {
+	schttp.sc.lock.Lock()
+	defer schttp.sc.lock.Unlock()
+	vars := mux.Vars(r)
+	clusterName := vars["cluster"]
+	_, assigned := schttp.sc.schedulerState.Clusters[clusterName]
+	log.Info("CREATE CLUSTER: ", clusterName)
+	if assigned {
+		w.WriteHeader(409)
+	} else {
+		cluster := NewFrameworkRiakCluster(clusterName)
+		schttp.sc.schedulerState.Clusters[clusterName] = cluster
+		schttp.sc.schedulerState.Persist()
+		w.WriteHeader(200)
+		json.NewEncoder(w).Encode(cluster)
+	}
+}
+
+func (schttp *SchedulerHTTPServer) serveClusters(w http.ResponseWriter, r *http.Request) {
+	schttp.sc.lock.Lock()
+	defer schttp.sc.lock.Unlock()
+	json.NewEncoder(w).Encode(schttp.sc.schedulerState.Clusters)
+}
+
+func (schttp *SchedulerHTTPServer) getCluster(w http.ResponseWriter, r *http.Request) {
+	schttp.sc.lock.Lock()
+	defer schttp.sc.lock.Unlock()
+	vars := mux.Vars(r)
+	clusterName := vars["cluster"]
+	cluster, assigned := schttp.sc.schedulerState.Clusters[clusterName]
+
+	if !assigned {
+		http.NotFound(w, r)
+	} else {
+		json.NewEncoder(w).Encode(cluster)
+	}
+
+}
+
 func (schttp *SchedulerHTTPServer) createNode(w http.ResponseWriter, r *http.Request) {
 	schttp.sc.lock.Lock()
 	defer schttp.sc.lock.Unlock()
-	frn := NewFrameworkRiakNode(schttp.sc.frameworkName)
-	schttp.sc.schedulerState.Nodes[frn.UUID.String()] = frn
-	schttp.sc.schedulerState.Persist()
-	w.WriteHeader(200)
-	json.NewEncoder(w).Encode(frn)
-
+	vars := mux.Vars(r)
+	clusterName := vars["cluster"]
+	cluster, assigned := schttp.sc.schedulerState.Clusters[clusterName]
+	if !assigned {
+		w.WriteHeader(404)
+		fmt.Fprintf(w, "Cluster %s not found", clusterName)
+	} else {
+		node := NewFrameworkRiakNode(schttp.sc.frameworkName, cluster.Name)
+		cluster.Nodes[node.UUID.String()] = node
+		schttp.sc.schedulerState.Persist()
+		w.WriteHeader(200)
+		json.NewEncoder(w).Encode(node)
+	}
 }
 
 func (schttp *SchedulerHTTPServer) serveNodes(w http.ResponseWriter, r *http.Request) {
 	schttp.sc.lock.Lock()
 	defer schttp.sc.lock.Unlock()
-	json.NewEncoder(w).Encode(schttp.sc.schedulerState.Nodes)
+	vars := mux.Vars(r)
+	clusterName := vars["cluster"]
+	cluster, assigned := schttp.sc.schedulerState.Clusters[clusterName]
+	if !assigned {
+		w.WriteHeader(404)
+		fmt.Fprintf(w, "Cluster %s not found", clusterName)
+	} else {
+		w.WriteHeader(200)
+		json.NewEncoder(w).Encode(cluster.Nodes)
+	}
 }
 func (schttp *SchedulerHTTPServer) GetURI() string {
 	return schttp.URI
@@ -62,12 +120,12 @@ func (schttp *SchedulerHTTPServer) healthcheck(w http.ResponseWriter, r *http.Re
 	if err == nil {
 		fmt.Fprintln(w, "REX Client: OK")
 	} else {
+		pass = false
+		w.WriteHeader(503)
 		fmt.Fprintln(w, "REX Client: NOT OK")
 	}
 	if pass {
 		w.WriteHeader(200)
-	} else {
-		w.WriteHeader(503)
 	}
 }
 
@@ -139,14 +197,23 @@ func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *Schedul
 		executorName: "./executor_linux_amd64",
 		URI:          URI,
 	}
-	router.Methods("GET").Path("/api/v1/nodes").HandlerFunc(schttp.serveNodes)
-	router.Methods("POST").Path("/api/v1/nodes").HandlerFunc(schttp.createNode)
+
+	router.HandleFunc("/api/v1/clusters", schttp.serveClusters)
+	router.Methods("POST", "PUT").Path("/api/v1/clusters/{cluster}").HandlerFunc(schttp.createCluster)
+	router.Methods("GET").Path("/api/v1/clusters/{cluster}").HandlerFunc(schttp.getCluster)
+	router.Methods("GET").Path("/api/v1/clusters/{cluster}/nodes").HandlerFunc(schttp.serveNodes)
+	router.Methods("POST").Path("/api/v1/clusters/{cluster}/nodes").HandlerFunc(schttp.createNode)
 	router.Methods("GET").Path("/healthcheck").HandlerFunc(schttp.healthcheck)
 
 	// TODO: Add a function handler for /
 	// For now, just list clusters at root path
 	// router.HandleFunc("/", )
-
+	rexURL := &url.URL{
+		Host:   fmt.Sprintf("localhost:%d", sc.rexPort),
+		Scheme: "http",
+		Path:   "/",
+	}
+	router.PathPrefix("/").Handler(httputil.NewSingleHostReverseProxy(rexURL))
 	//http.Serve(ln, newHandler())
 	middleWare := http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
 		log.Infof("%v %s %s %s ? %s %s %s", request.Host, request.RemoteAddr, request.Method, request.URL.Path, request.URL.RawQuery, request.Proto, request.Header.Get("User-Agent"))

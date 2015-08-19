@@ -257,12 +257,13 @@ func (sc *SchedulerCore) ResourceOffers(driver sched.SchedulerDriver, offers []*
 	log.Info("Received resource offers: ", offers)
 	launchTasks := make(map[string][]*mesos.TaskInfo)
 	toBeScheduled := []*FrameworkRiakNode{}
-
-	for _, riakNode := range sc.schedulerState.Nodes {
-		if riakNode.NeedsToBeScheduled() {
-			log.Infof("Adding Riak node for scheduling: %+v", riakNode)
-			// We need to schedule this task I guess?
-			toBeScheduled = append(toBeScheduled, riakNode)
+	for _, cluster := range sc.schedulerState.Clusters {
+		for _, riakNode := range cluster.Nodes {
+			if riakNode.NeedsToBeScheduled() {
+				log.Infof("Adding Riak node for scheduling: %+v", riakNode)
+				// We need to schedule this task I guess?
+				toBeScheduled = append(toBeScheduled, riakNode)
+			}
 		}
 	}
 
@@ -302,7 +303,7 @@ func (sc *SchedulerCore) StatusUpdate(driver sched.SchedulerDriver, status *meso
 	if assigned {
 		log.Info("Received status updates: ", status)
 		log.Info("Riak Node: ", riak_node)
-		riak_node.handleStatusUpdate(sc, status)
+		riak_node.handleStatusUpdate(sc, sc.schedulerState.Clusters[riak_node.ClusterName], status)
 		sc.schedulerState.Persist()
 	} else {
 		log.Error("Received status update for unknown job: ", status)

@@ -308,6 +308,8 @@ func (riakNode *RiakNode) Run() {
 			PBPort:      int(config.PBPort),
 			HTTPPort:    int(config.HTTPPort),
 			Hostname:    riakNode.executor.slaveInfo.GetHostname(),
+			ClusterName: riakNode.taskData.ClusterName,
+			FrameworkName: riakNode.taskData.FrameworkName,
 		}
 		cdBytes, err := coordinatedData.Serialize()
 		if err != nil {

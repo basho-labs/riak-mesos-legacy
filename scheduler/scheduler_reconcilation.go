@@ -53,13 +53,15 @@ func (rServer *ReconcilationServer) reconcile() {
 	defer rServer.lock.Unlock()
 	if rServer.enabled {
 		tasksToReconcile := []*mesos.TaskStatus{}
-		for _, node := range rServer.sc.schedulerState.Nodes {
-			if !node.reconciled {
-				if _, assigned := rServer.sc.frnDict[node.GetTaskStatus().TaskId.GetValue()]; !assigned {
-					rServer.sc.frnDict[node.GetTaskStatus().TaskId.GetValue()] = node
+		for _, cluster := range rServer.sc.schedulerState.Clusters {
+			for _, node := range cluster.Nodes {
+				if !node.reconciled {
+					if _, assigned := rServer.sc.frnDict[node.GetTaskStatus().TaskId.GetValue()]; !assigned {
+						rServer.sc.frnDict[node.GetTaskStatus().TaskId.GetValue()] = node
+					}
+					tasksToReconcile = append(tasksToReconcile, node.GetTaskStatus())
+					rServer.driver.ReconcileTasks(tasksToReconcile)
 				}
-				tasksToReconcile = append(tasksToReconcile, node.GetTaskStatus())
-				rServer.driver.ReconcileTasks(tasksToReconcile)
 			}
 		}
 	}

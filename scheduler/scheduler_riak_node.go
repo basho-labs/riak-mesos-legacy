@@ -19,7 +19,6 @@ type FrameworkRiakNode struct {
 	// This is super hacky, we're relying on the following to be NOT serialized, and defaults. FIX THIS. Somehow..
 	reconciled       bool `json:"-"`
 
-
 	UUID             uuid.UUID
 	DestinationState process_state.ProcessState
 	CurrentState     process_state.ProcessState
@@ -29,10 +28,11 @@ type FrameworkRiakNode struct {
 	LastOfferUsed    *mesos.Offer
 	TaskData         common.TaskData
 	FrameworkName	 string
+	ClusterName      string
 }
 
 
-func NewFrameworkRiakNode(FrameworkName string) *FrameworkRiakNode {
+func NewFrameworkRiakNode(FrameworkName string, ClusterName string) *FrameworkRiakNode {
 	return &FrameworkRiakNode{
 		// We can assume this for now? I think
 		DestinationState: process_state.Started,
@@ -41,6 +41,7 @@ func NewFrameworkRiakNode(FrameworkName string) *FrameworkRiakNode {
 		reconciled:       false,
 		FrameworkName:    FrameworkName,
 		UUID:             uuid.NewV4(),
+		ClusterName:	  ClusterName,
 	}
 }
 
@@ -69,7 +70,7 @@ func (frn *FrameworkRiakNode) NeedsToBeScheduled() bool {
 	return false
 }
 func (frn *FrameworkRiakNode) CurrentID() string {
-	return fmt.Sprintf("%s-%s-%d", frn.FrameworkName, frn.UUID.String(), frn.Generation)
+	return fmt.Sprintf("%s-%s-%s-%d", frn.FrameworkName, frn.ClusterName, frn.UUID.String(), frn.Generation)
 }
 
 func (frn *FrameworkRiakNode) ExecutorID() string {
@@ -77,9 +78,9 @@ func (frn *FrameworkRiakNode) ExecutorID() string {
 }
 
 
-func (frn *FrameworkRiakNode) handleUpToDownTransition(sc *SchedulerCore) {
+func (frn *FrameworkRiakNode) handleUpToDownTransition(sc *SchedulerCore, frc *FrameworkRiakCluster) {
 	rexc := sc.rex.NewRiakExplorerClient()
-	for _, riakNode := range sc.schedulerState.Nodes{
+	for _, riakNode := range sc.schedulerState.Clusters[frc.Name].Nodes {
 		if riakNode.CurrentState == process_state.Started && riakNode != frn {
 			// We should try to join against this node
 			log.Infof("Making leave: %+v to %+v", frn.TaskData.FullyQualifiedNodeName, riakNode.TaskData.FullyQualifiedNodeName)
@@ -92,9 +93,9 @@ func (frn *FrameworkRiakNode) handleUpToDownTransition(sc *SchedulerCore) {
 		}
 	}
 }
-func (frn *FrameworkRiakNode) handleStartingToRunningTransition(sc *SchedulerCore) {
+func (frn *FrameworkRiakNode) handleStartingToRunningTransition(sc *SchedulerCore, frc *FrameworkRiakCluster) {
 	rexc := sc.rex.NewRiakExplorerClient()
-	for _, riakNode := range sc.schedulerState.Nodes{
+	for _, riakNode := range sc.schedulerState.Clusters[frc.Name].Nodes {
 		if riakNode.CurrentState == process_state.Started {
 			// We should try to join against this node
 			log.Infof("Joining %+v to %+v", frn.TaskData.FullyQualifiedNodeName, riakNode.TaskData.FullyQualifiedNodeName)
@@ -106,7 +107,7 @@ func (frn *FrameworkRiakNode) handleStartingToRunningTransition(sc *SchedulerCor
 		}
 	}
 }
-func (frn *FrameworkRiakNode) handleStatusUpdate(sc *SchedulerCore, statusUpdate *mesos.TaskStatus) {
+func (frn *FrameworkRiakNode) handleStatusUpdate(sc *SchedulerCore, frc *FrameworkRiakCluster, statusUpdate *mesos.TaskStatus) {
 	frn.reconciled = true
 	// TODO: Check the task ID in the TaskStatus to make sure it matches our current task
 
@@ -122,7 +123,7 @@ func (frn *FrameworkRiakNode) handleStatusUpdate(sc *SchedulerCore, statusUpdate
 	case mesos.TaskState_TASK_RUNNING:
 		{
 			if frn.CurrentState == process_state.Starting {
-				frn.handleStartingToRunningTransition(sc)
+				frn.handleStartingToRunningTransition(sc, frc)
 			}
 			frn.CurrentState = process_state.Started
 		}
@@ -134,7 +135,7 @@ func (frn *FrameworkRiakNode) handleStatusUpdate(sc *SchedulerCore, statusUpdate
 	case mesos.TaskState_TASK_FAILED:
 		{
 			if frn.CurrentState == process_state.Started {
-				frn.handleUpToDownTransition(sc)
+				frn.handleUpToDownTransition(sc, frc)
 			}
 			frn.CurrentState = process_state.Failed
 		}
@@ -148,7 +149,7 @@ func (frn *FrameworkRiakNode) handleStatusUpdate(sc *SchedulerCore, statusUpdate
 	case mesos.TaskState_TASK_LOST:
 		{
 			if frn.CurrentState == process_state.Started {
-				frn.handleUpToDownTransition(sc)
+				frn.handleUpToDownTransition(sc, frc)
 			}
 			frn.CurrentState = process_state.Failed
 		}
@@ -274,6 +275,7 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(sc *SchedulerCor
 		NodeID:                    frn.UUID.String(),
 		FrameworkName:             sc.frameworkName,
 		URI:					   sc.schedulerHTTPServer.GetURI(),
+		ClusterName:			frn.ClusterName,
 	}
 	frn.TaskData = taskData
 
