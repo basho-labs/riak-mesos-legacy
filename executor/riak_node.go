@@ -17,9 +17,9 @@ import (
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	util "github.com/mesos/mesos-go/mesosutil"
 
-	"net/http"
 	"bytes"
 	"errors"
+	"net/http"
 )
 
 type RiakNode struct {
@@ -213,7 +213,6 @@ func (riakNode *RiakNode) Run() {
 		log.Panic("Unable to extract riak root: ", err)
 	}
 
-
 	ports := portIter(riakNode.taskInfo.Resources)
 	config := riakNode.configureRiak(ports)
 
@@ -279,7 +278,6 @@ func (riakNode *RiakNode) Run() {
 	} else {
 		rootNode := riakNode.metadataManager.GetRootNode()
 
-
 		rootNode.CreateChildIfNotExists("coordinator")
 		coordinator, err := rootNode.GetChild("coordinator")
 		if err != nil {
@@ -304,12 +302,12 @@ func (riakNode *RiakNode) Run() {
 			log.Panic(err)
 		}
 		coordinatedData := common.CoordinatedData{
-			NodeName:    riakNode.taskData.FullyQualifiedNodeName,
-			DisterlPort: int(config.DisterlPort),
-			PBPort:      int(config.PBPort),
-			HTTPPort:    int(config.HTTPPort),
-			Hostname:    riakNode.executor.slaveInfo.GetHostname(),
-			ClusterName: riakNode.taskData.ClusterName,
+			NodeName:      riakNode.taskData.FullyQualifiedNodeName,
+			DisterlPort:   int(config.DisterlPort),
+			PBPort:        int(config.PBPort),
+			HTTPPort:      int(config.HTTPPort),
+			Hostname:      riakNode.executor.slaveInfo.GetHostname(),
+			ClusterName:   riakNode.taskData.ClusterName,
 			FrameworkName: riakNode.taskData.FrameworkName,
 		}
 		cdBytes, err := coordinatedData.Serialize()

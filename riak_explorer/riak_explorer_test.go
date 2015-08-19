@@ -1,8 +1,8 @@
 package riak_explorer
 
 import (
-	metamgr "github.com/basho-labs/riak-mesos/metadata_manager"
 	"github.com/basho-labs/riak-mesos/cepmd/cepm"
+	metamgr "github.com/basho-labs/riak-mesos/metadata_manager"
 	ps "github.com/mitchellh/go-ps"
 	"github.com/stretchr/testify/assert"
 	"os"

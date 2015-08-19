@@ -1,7 +1,5 @@
 package common
 
-
-
 import (
 	"archive/tar"
 	"compress/gzip"
@@ -14,7 +12,6 @@ import (
 func ExtractGZ(directory string, reader io.Reader) error {
 	log.Info("Decompressing")
 
-
 	gzReader, err := gzip.NewReader(reader)
 
 	if err != nil {
@@ -23,7 +20,7 @@ func ExtractGZ(directory string, reader io.Reader) error {
 	return Extract(directory, gzReader)
 }
 
-func Extract(directory string, reader io.Reader)  error {
+func Extract(directory string, reader io.Reader) error {
 	tr := tar.NewReader(reader)
 
 	for {

@@ -2,10 +2,10 @@ package riak_explorer
 
 import (
 	json "encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"errors"
 )
 
 // Links are location metadata about a Riak Explorer resource

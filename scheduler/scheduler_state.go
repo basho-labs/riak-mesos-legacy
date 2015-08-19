@@ -7,15 +7,15 @@ import (
 	// Unfortunately, we're leaking abstractions, but sometimes things like this need to be done
 	// -Sargun Dhillon
 	// TODO: Make metadata manager "better"
-	"github.com/samuel/go-zookeeper/zk"
-	"compress/zlib"
 	"bytes"
+	"compress/zlib"
+	"github.com/samuel/go-zookeeper/zk"
 )
 
 type SchedulerState struct {
 	zkNode      *metadata_manager.ZkNode
 	FrameworkID *string
-	Clusters		map[string]*FrameworkRiakCluster
+	Clusters    map[string]*FrameworkRiakCluster
 }
 
 func emptySchedulerState() *SchedulerState {

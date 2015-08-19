@@ -54,7 +54,6 @@ func (client *SchedulerHTTPClient) AddNode(clusterName string) (string, error) {
 	return client.doPost(commandURI)
 }
 
-
 func (client *SchedulerHTTPClient) doGet(path string) (string, error) {
 	commandURL := fmt.Sprintf("%s/api/v1/%s", client.BaseURL, path)
 	resp, err := http.Get(commandURL)

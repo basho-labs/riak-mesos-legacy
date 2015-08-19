@@ -5,9 +5,9 @@ import (
 	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"os"
+	"path/filepath"
 	"strings"
 	"syscall"
-	"path/filepath"
 )
 
 func (pm *ProcessManager) start(executablePath string, args []string, chroot *string) {

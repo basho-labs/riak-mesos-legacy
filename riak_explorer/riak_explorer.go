@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"fmt"
 	log "github.com/Sirupsen/logrus"
-	"github.com/basho-labs/riak-mesos/cepmd/cepm"
-	"github.com/basho-labs/riak-mesos/process_manager"
-	"github.com/basho-labs/riak-mesos/common"
 	"github.com/basho-labs/riak-mesos/artifacts"
+	"github.com/basho-labs/riak-mesos/cepmd/cepm"
+	"github.com/basho-labs/riak-mesos/common"
+	"github.com/basho-labs/riak-mesos/process_manager"
 
 	"os"
 	"path/filepath"
@@ -85,7 +85,6 @@ func (re *RiakExplorer) configure(port int64, nodename string) {
 		log.Panic("Unable to open file: ", err)
 	}
 
-
 	err = tmpl.Execute(file, vars)
 
 	if err != nil {
@@ -108,7 +107,6 @@ func (re *RiakExplorer) configureAdvanced(cepmdPort int) {
 	vars.CEPMDPort = cepmdPort
 	configpath := filepath.Join(".", "riak_explorer", "riak_explorer", "etc", "advanced.config")
 	file, err := os.OpenFile(configpath, os.O_TRUNC|os.O_CREATE|os.O_RDWR, 0)
-
 
 	defer file.Close()
 	if err != nil {
@@ -137,11 +135,11 @@ func NewRiakExplorer(port int64, nodename string, c *cepm.CEPM) (*RiakExplorer, 
 		log.Info("Deleting all data in: riak explorer")
 		//err := os.RemoveAll("riak_explorer")
 		//if err != nil {
-	///		log.Error(err)
+		///		log.Error(err)
 		//}
 	}
 	re := &RiakExplorer{
-		port:    port,
+		port: port,
 	}
 	if c != nil {
 		// This is gross -- we're passing "hidden" state by passing it through the unix environment variables.

@@ -5,7 +5,6 @@ import (
 	"github.com/samuel/go-zookeeper/zk"
 )
 
-
 func (mgr *MetadataManager) SetupFramework(URI string) {
 	err := mgr.zkLock.Lock()
 	if err != nil {

@@ -10,11 +10,11 @@ import (
 	"strconv"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/basho-labs/riak-mesos/artifacts"
 	"github.com/elazarl/go-bindata-assetfs"
 	"github.com/gorilla/mux"
-	"github.com/basho-labs/riak-mesos/artifacts"
-	"net/url"
 	"net/http/httputil"
+	"net/url"
 )
 
 type SchedulerHTTPServer struct {
@@ -35,7 +35,6 @@ func parseIP(address string) net.IP {
 	}
 	return addr[0]
 }
-
 
 func (schttp *SchedulerHTTPServer) createCluster(w http.ResponseWriter, r *http.Request) {
 	schttp.sc.lock.Lock()
@@ -181,7 +180,6 @@ func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *Schedul
 
 	fs2 := http.FileServer(&assetfs.AssetFS{Asset: artifacts.Asset, AssetDir: artifacts.AssetDir, Prefix: ""})
 	router.PathPrefix("/static2/").Handler(http.StripPrefix("/static2/", fs2))
-
 
 	debugMux := http.NewServeMux()
 	router.PathPrefix("/debug").Handler(debugMux)

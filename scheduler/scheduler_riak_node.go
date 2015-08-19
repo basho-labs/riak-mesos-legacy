@@ -17,7 +17,7 @@ import (
 
 type FrameworkRiakNode struct {
 	// This is super hacky, we're relying on the following to be NOT serialized, and defaults. FIX THIS. Somehow..
-	reconciled       bool `json:"-"`
+	reconciled bool `json:"-"`
 
 	UUID             uuid.UUID
 	DestinationState process_state.ProcessState
@@ -27,10 +27,9 @@ type FrameworkRiakNode struct {
 	LastTaskInfo     *mesos.TaskInfo
 	LastOfferUsed    *mesos.Offer
 	TaskData         common.TaskData
-	FrameworkName	 string
+	FrameworkName    string
 	ClusterName      string
 }
-
 
 func NewFrameworkRiakNode(FrameworkName string, ClusterName string) *FrameworkRiakNode {
 	return &FrameworkRiakNode{
@@ -41,7 +40,7 @@ func NewFrameworkRiakNode(FrameworkName string, ClusterName string) *FrameworkRi
 		reconciled:       false,
 		FrameworkName:    FrameworkName,
 		UUID:             uuid.NewV4(),
-		ClusterName:	  ClusterName,
+		ClusterName:      ClusterName,
 	}
 }
 
@@ -76,7 +75,6 @@ func (frn *FrameworkRiakNode) CurrentID() string {
 func (frn *FrameworkRiakNode) ExecutorID() string {
 	return frn.CurrentID()
 }
-
 
 func (frn *FrameworkRiakNode) handleUpToDownTransition(sc *SchedulerCore, frc *FrameworkRiakCluster) {
 	rexc := sc.rex.NewRiakExplorerClient()
@@ -274,8 +272,8 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(sc *SchedulerCor
 		Zookeepers:                sc.zookeepers,
 		NodeID:                    frn.UUID.String(),
 		FrameworkName:             sc.frameworkName,
-		URI:					   sc.schedulerHTTPServer.GetURI(),
-		ClusterName:			frn.ClusterName,
+		URI:                       sc.schedulerHTTPServer.GetURI(),
+		ClusterName:               frn.ClusterName,
 	}
 	frn.TaskData = taskData
 

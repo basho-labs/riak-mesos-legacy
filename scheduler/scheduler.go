@@ -95,7 +95,6 @@ func NewSchedulerCore(
 	return scheduler
 }
 
-
 func (sc *SchedulerCore) setupMetadataManager() {
 	sc.mgr.SetupFramework(sc.schedulerHTTPServer.URI)
 }
