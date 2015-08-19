@@ -77,7 +77,7 @@
 
                 <section class="feature-text">
                   <h1>Riak Mesos Framework</h1>
-                  <p>The Riak Mesos Framework simplifies the deployment and management of large Apache Mesos based Riak clusters allowing for massive scalability with little operational effort. This demo highlights key features of the beta, unsupported release of the code.</p>
+                  <p>The Riak Mesos Framework simplifies the deployment and management of large Apache Mesos based Riak KV clusters allowing for massive scalability with little operational effort. This demo highlights key features of the beta, unsupported release of the code.</p>
                   <p><a href="#overview" class="link-scroll btn btn-outline-inverse btn-lg">seek wisdom</a></p>
                 </section>
 
@@ -98,12 +98,12 @@
                 </p>
 
                 <div class="content-to-populate-in-modal" id="modal-content-1">
-                  <p>The Riak Mesos Framework is managed by Marathon and coordinates with Mesos to keep large Riak clusters connected and running. The Riak Mesos Framework scheduler will attempt to spread Riak nodes across as many different mesos agents as possible to increase fault tolerance. If there are more nodes requested than there are agents available, the scheduler will then start adding more Riak nodes to existing agents.</p>
+                  <p>The Riak Mesos Framework is managed by Marathon and coordinates with Mesos to keep large Riak KV clusters connected and running. The Riak Mesos Framework scheduler will attempt to spread Riak KV nodes across as many different mesos agents as possible to increase fault tolerance. If there are more nodes requested than there are agents available, the scheduler will then start adding more Riak KV nodes to existing agents.</p>
                   <p><img width="600px" data-img-src="assets/images/basho_images/RiakMesosDiagramme.png" class="lazy"></p>
                 </div><!-- #modal-content-1 -->
                 <div class="content-to-populate-in-modal" id="modal-content-2">
-                  <p>Applications outside of Mesos can communicate with Riak on Mesos via a smart proxy called the "Riak Mesos Director". Due to the nature of Apache Mesos and the potential for Riak nodes to come and go on a regular basis, client applications using a Mesos based cluster must be kept up to date on the cluster's current state. Instead of requiring this intelligence to be built into Riak client libraries, a smart proxy application named Director has been created which can run alongside client applications.</p>
-                  <p>The Director communicates with Zookeeper to keep up to date with Riak cluster changes. The Director in turn will update it's list of balanced Riak connections.</p>
+                  <p>Applications outside of Mesos can communicate with Riak on Mesos via a smart proxy called the "Riak Mesos Director". Due to the nature of Apache Mesos and the potential for Riak KV nodes to come and go on a regular basis, client applications using a Mesos based cluster must be kept up to date on the cluster's current state. Instead of requiring this intelligence to be built into Riak client libraries, a smart proxy application named Director has been created which can run alongside client applications.</p>
+                  <p>The Director communicates with Zookeeper to keep up to date with Riak KV cluster changes. The Director in turn will update it's list of balanced Riak KV connections.</p>
                   <p><img width="600px" data-img-src="assets/images/basho_images/RiakMesosControlFrame.png" class="lazy"></p>
                 </div><!-- #modal-content-2 -->
             </div><!-- .col-sm-10 -->
@@ -116,7 +116,7 @@
 
                 <h1 class="section-title">Installing the Framework</h1>
 
-                <p class="feature-paragraph">Installing the Riak Mesos Framework is easy with the help of the Mesosphere data center operating system (DCOS). Simply install the Riak DCOS package and cli plugin to get started.</p>
+                <p class="feature-paragraph">Installing the Riak Mesos Framework is easy with the help of the Mesosphere data center operating system (DCOS). Simply install the Riak DCOS package and CLI plugin to get started.</p>
                 <p><a href="" onclick="populate_and_open_modal(event, 'modal-content-3');" class="btn btn-outline-inverse btn-sm">show me!</a></p>
 
                 <div class="content-to-populate-in-modal" id="modal-content-3">
@@ -135,19 +135,19 @@
 
                 <h1 class="section-title">Create a cluster</h1>
 
-                <p class="feature-paragraph">Creating large Riak clusters on Mesos is as simple as a few commands, no more complex and error prone deployment scripts.</p>
+                <p class="feature-paragraph">Creating large Riak KV clusters on Mesos is as simple as a few commands, no more complex and error prone deployment scripts.</p>
                 <p>
                   <a href="" onclick="populate_and_open_modal(event, 'modal-content-4');" class="btn btn-outline-inverse btn-sm">create a cluster</a>
                   <a href="" onclick="populate_and_open_modal(event, 'modal-content-5');" class="btn btn-outline-inverse btn-sm">add nodes</a>
                 </p>
                 <div class="content-to-populate-in-modal" id="modal-content-4">
                   <h6>Create a cluster</h6>
-                  <p>Running "dcos riak cluster create" will create a namespace for your Riak nodes.</p>
+                  <p>Running "dcos riak cluster create" will create a namespace for your Riak KV nodes.</p>
                   <p><img data-img-src="assets/images/basho_images/gifs/mesoscon_demo.2.gif" class="lazy full-width" alt="Cluster Create"></p>
                 </div><!-- #modal-content-4 -->
                 <div class="content-to-populate-in-modal" id="modal-content-5">
                   <h6>Add nodes</h6>
-                  <p>The second command needed to get a Riak cluster running is "dcos riak node add". To increase the initial scale of the cluster, supply the "--nodes 3" option.</p>
+                  <p>The second command needed to get a Riak KV cluster running is "dcos riak node add". To increase the initial scale of the cluster, supply the "--nodes 3" option.</p>
                   <p><img data-img-src="assets/images/basho_images/gifs/mesoscon_demo.3.gif" class="lazy full-width" alt="Node Add"></p>
                 </div><!-- #modal-content-5 -->
             </div><!-- .col-sm-10 -->
@@ -160,7 +160,7 @@
 
                 <h1 class="section-title">Explore the Cluster</h1>
 
-                <p class="feature-paragraph">Applications need a way to communicate with Riak, and most Mesos agents are closed to the world by default. Luckily the Riak Mesos Director smart proxy can bridge the gap.</p>
+                <p class="feature-paragraph">Applications need a way to communicate with Riak KV, and most Mesos agents are closed to the world by default. Luckily the Riak Mesos Director smart proxy can bridge the gap.</p>
                 <p>
                   <a href="" onclick="populate_and_open_modal(event, 'modal-content-6');" class="btn btn-outline-inverse btn-sm">install smart proxy</a>
                 </p>
@@ -181,7 +181,7 @@
              <div class="col-sm-10 col-md-9 pull-right">
 
                  <h1 class="section-title">Scale the Cluster</h1>
-                 <p class="feature-paragraph">Apache Mesos provides an environment that allows for massive scale. Riak on Mesos takes full advantage of those capabilities.</p>
+                 <p class="feature-paragraph">Apache Mesos provides an environment that allows for massive scale. Riak KV on Mesos takes full advantage of those capabilities.</p>
                 <p>
                   <a href="" onclick="populate_and_open_modal(event, 'modal-content-7');" class="btn btn-outline-inverse btn-sm">add more nodes</a>
                   <a href="" onclick="populate_and_open_modal(event, 'modal-content-8');" class="btn btn-outline-inverse btn-sm">add new cluster</a>
@@ -194,7 +194,7 @@
                  </div><!-- #modal-content-7 -->
                  <div class="content-to-populate-in-modal" id="modal-content-8">
                    <h6>Create another cluster</h6>
-                   <p>Best practices for operating Riak include creating a new cluster for each use case. This is easier than ever with the Riak Mesos Framework.</p>
+                   <p>Best practices for operating Riak KV include creating a new cluster for each use case. This is easier than ever with the Riak Mesos Framework.</p>
                    <p><img data-img-src="assets/images/basho_images/gifs/mesoscon_demo.6.gif" class="lazy full-width" alt="Cluster Create"></p>
                  </div><!-- #modal-content-8 -->
 
