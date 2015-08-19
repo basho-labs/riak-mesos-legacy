@@ -44,7 +44,7 @@ setup(
     author_email='support@basho.com',
 
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 3 - Beta',
         'Intended Audience :: Developers',
         'Intended Audience :: Information Technology',
         'License :: OSI Approved :: TODO: License',
