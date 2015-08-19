@@ -9,7 +9,7 @@ License: UNKNOWN
 Description: DCOS Riak Subcommand
 Keywords: dcos command riak mesosphere
 Platform: UNKNOWN
-Classifier: Development Status :: 3 - Alpha
+Classifier: Development Status :: 3 - Beta
 Classifier: Intended Audience :: Developers
 Classifier: Intended Audience :: Information Technology
 Classifier: License :: OSI Approved :: TODO: License
