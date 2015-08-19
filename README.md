@@ -1,6 +1,8 @@
-# Riak Mesos Framework
+# Riak Mesos Framework [in alpha]
 
 An [Apache Mesos](http://mesos.apache.org/) framework for [Riak KV](http://basho.com/products/riak-kv/), a distributed NoSQL key-value data store that offers high availability, fault tolerance, operational simplicity, and scalability.
+
+**Note:** This project is an early proof of concept. The code is in an alpha release and there may be bugs, incomplete features, incorrect documentation or other discrepancies. 
 
 ## Quick Links
 
@@ -62,6 +64,8 @@ may need to be used. Here is a minimal example:
 More examples can be found in [dcos-riak-cluster-1.json](dcos-riak-cluster-1.json), [dcos-riak-cluster-2.json](dcos-riak-cluster-2.json), and [dcos-riak-cluster-3.json](dcos-riak-cluster-3.json).
 
 ### Install the Riak Service
+
+The Riak framework should have at least 2GB of RAM and 0.5 CPUs to perform successfully.
 
 ```
 dcos package update
