@@ -249,7 +249,8 @@ func (riakNode *RiakNode) Run() {
 		data, err := ioutil.ReadFile("riak/riak/log/console.log")
 		if err != nil {
 			if bytes.Contains(data, []byte("Wait complete for service riak_kv")) {
-				log.Info("Riak started")
+				log.Info("Riak started, waiting 10 seconds to avoid race conditions (HACK)")
+				time.Sleep(10 * time.Second)
 				return nil
 			} else {
 				return errors.New("Riak KV not yet started")
