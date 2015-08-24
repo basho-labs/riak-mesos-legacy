@@ -82,6 +82,7 @@ Add the following to your `/etc/hosts` file:
 Start and connect to the Vagrant VM
 
 ```
+cd build/ubuntu/
 vagrant up
 vagrant ssh
 ```
