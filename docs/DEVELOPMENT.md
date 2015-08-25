@@ -17,7 +17,7 @@ cd $GOPATH/src/github.com/basho-labs/riak-mesos && make
 ### Run the framework
 
 ```
-./bin/framework_linux_amd64 \
+cd bin && ./framework_linux_amd64 \
     -master=zk://localhost:2181/mesos \
     -name=riak \
     -user=root \
@@ -27,12 +27,12 @@ cd $GOPATH/src/github.com/basho-labs/riak-mesos && make
 ### Add some nodes to the cluster
 
 ```
-./bin/tools_darwin_amd64 \
+cd bin && ./tools_darwin_amd64 \
     -name=riak \
     -zk=localhost:2181 \
     -command=create-cluster \
     -cluster-name=mycluster
-./bin/tools_darwin_amd64 \
+cd bin && ./tools_darwin_amd64 \
     -name=riak \
     -zk=localhost:2181 \
     -command=add-nodes \
