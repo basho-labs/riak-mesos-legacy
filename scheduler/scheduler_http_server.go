@@ -161,10 +161,6 @@ func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *Schedul
 		hostname = schedulerHostname
 	}
 
-	//TODO: MAKE THIS SMARTER
-	//We need to ideally embed the executor into the scheduler
-	//And we need to intelligently choose / decompress the executor based upon the host OS
-	//This is a HACK.
 	hostURI := fmt.Sprintf("http://%s:%d/static/executor_linux_amd64", hostname, port)
 	riakURI := fmt.Sprintf("http://%s:%d/static/riak_linux_amd64.tar.gz", hostname, port)
 	URI := fmt.Sprintf("http://%s:%d", hostname, port)
