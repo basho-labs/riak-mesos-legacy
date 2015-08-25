@@ -14,6 +14,16 @@ cd $GOPATH/src/github.com/basho-labs/riak-mesos && make
 
 ## Usage
 
+### Run the framework
+
+```
+./bin/framework_linux_amd64 \
+    -master=zk://localhost:2181/mesos \
+    -name=riak \
+    -user=root \
+    -zk=localhost:2181
+```
+
 ### Add some nodes to the cluster
 
 ```
@@ -28,14 +38,4 @@ cd $GOPATH/src/github.com/basho-labs/riak-mesos && make
     -command=add-nodes \
     -nodes=1 \
     -cluster-name=mycluster
-```
-
-### Run the framework
-
-```
-./bin/framework_linux_amd64 \
-    -master=zk://localhost:2181/mesos \
-    -name=riak \
-    -user=root \
-    -zk=localhost:2181
 ```
