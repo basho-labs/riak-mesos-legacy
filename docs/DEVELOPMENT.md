@@ -9,34 +9,33 @@ For vagrant or regular Ubuntu 14.04, go to [https://github.com/basho-labs/vagran
 Download dependencies and build the platform specific executables
 
 ```
-cd $GOPATH/src/github.com/basho-labs/riak-mesos
-make
+cd $GOPATH/src/github.com/basho-labs/riak-mesos && make
 ```
 
 ## Usage
 
 ### Add some nodes to the cluster
 
-TODO UPDATE ARGS
-
 ```
 ./bin/tools_darwin_amd64 \
-    -name=riak-mesos-go3 \
-    -zk=33.33.33.2:2181 \
+    -name=riak \
+    -zk=localhost:2181 \
     -command=create-cluster \
     -cluster-name=mycluster
 ./bin/tools_darwin_amd64 \
-    -name=riak-mesos-go3 \
-    -zk=33.33.33.2:2181 \
+    -name=riak \
+    -zk=localhost:2181 \
     -command=add-nodes \
-    -nodes=3 \
+    -nodes=1 \
     -cluster-name=mycluster
 ```
 
 ### Run the framework
 
-TODO UPDATE ARGS
-
 ```
-./bin/framework_linux_amd64 -id=riak-mesos-go3
+./bin/framework_linux_amd64 \
+    -master=zk://localhost:2181/mesos \
+    -name=riak \
+    -user=root \
+    -zk=localhost:2181
 ```
