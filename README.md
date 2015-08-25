@@ -2,7 +2,7 @@
 
 An [Apache Mesos](http://mesos.apache.org/) framework for [Riak KV](http://basho.com/products/riak-kv/), a distributed NoSQL key-value data store that offers high availability, fault tolerance, operational simplicity, and scalability.
 
-**Note:** This project is an early proof of concept. The code is a beta release and there may be bugs, incomplete features, incorrect documentation or other discrepancies. 
+**Note:** This project is an early proof of concept. The code is a beta release and there may be bugs, incomplete features, incorrect documentation or other discrepancies.
 
 ## Quick Links
 
@@ -201,6 +201,4 @@ instructions in [docs/MESOS_USAGE.md](docs/MESOS_USAGE.md) if you are not a DCOS
 
 ## Development / Contributing
 
-For initial setup of development environment, please follow the directions in
-[docs/DEVELOPMENT-SETUP.md](docs/DEVELOPMENT-SETUP.md). For further build and testing information,
-visit [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
+For build and testing information, visit [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).

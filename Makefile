@@ -1,18 +1,5 @@
 BASE_DIR         = $(shell pwd)
 PACKAGE_VERSION ?= 0.1.0
-### Framework / Executor Binary locations
-FTAR  ?= $(BASE_DIR)/bin
-ETAR  ?= $(BASE_DIR)/scheduler/data
-
-### Framework Run Arguments
-MAST  ?= "zk://33.33.33.2:2181/mesos"
-ZOOK  ?= "33.33.33.2:2181"
-FIP   ?= "33.33.33.1"
-FNAM  ?= "riak-mesos-go3"
-FHST  ?= ""
-FUSR  ?= ""
-# FHST ?= "33.33.33.1"
-# FUSR     ?= "vagrant"
 
 TAGS ?= dev
 export TAGS
@@ -66,7 +53,6 @@ clean: clean_cepmd
 
 clean_cepmd:
 	-rm -f cepmd/cepm/bindata_generated.go
-
 
 ### CEPMD end
 
@@ -152,15 +138,6 @@ clean_tools:
 	-rm $(BASE_DIR)/scheduler/bindata_generated.go
 	-rm $(BASE_DIR)/executor/bindata_generated.go
 	-rm $(BASE_DIR)/riak_explorer/bindata_generated.go
-
-run:
-	cd $(BASE_DIR)/bin && ./framework_linux_amd64 \
-		-master=$(MAST) \
-		-zk=$(ZOOK) \
-		-ip=$(FIP) \
-		-name=$(FNAM) \
-		-hostname=$(FHST) \
-		-user=$(FUSR)
 
 install-dcos-cli:
 	mkdir -p $(BASE_DIR)/bin/dcos
