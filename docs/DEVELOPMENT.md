@@ -27,12 +27,12 @@ cd bin && ./framework_linux_amd64 \
 ### Add some nodes to the cluster
 
 ```
-cd bin && ./tools_darwin_amd64 \
+cd bin && ./tools_linux_amd64 \
     -name=riak \
     -zk=localhost:2181 \
     -command=create-cluster \
     -cluster-name=mycluster
-cd bin && ./tools_darwin_amd64 \
+cd bin && ./tools_linux_amd64 \
     -name=riak \
     -zk=localhost:2181 \
     -command=add-nodes \
