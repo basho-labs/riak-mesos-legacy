@@ -124,6 +124,8 @@ func NewRiakExplorer(port int64, nodename string, c *cepm.CEPM) (*RiakExplorer, 
 	decompress()
 	exepath := "/riak_explorer/bin/riak_explorer"
 
+	var err error
+
 	args := []string{"console", "-noinput"}
 	healthCheckFun := func() error {
 		log.Info("Running healthcheck: ", port)
@@ -132,7 +134,7 @@ func NewRiakExplorer(port int64, nodename string, c *cepm.CEPM) (*RiakExplorer, 
 		return err
 	}
 	tearDownFun := func() {
-		log.Info("Deleting all data in: riak explorer")
+		log.Info("Tearing down riak explorer")
 		//err := os.RemoveAll("riak_explorer")
 		//if err != nil {
 		///		log.Error(err)
@@ -155,7 +157,7 @@ func NewRiakExplorer(port int64, nodename string, c *cepm.CEPM) (*RiakExplorer, 
 	}
 	re.configure(port, nodename)
 	log.Debugf("Starting up Riak Explorer %v", exepath)
-	var err error
+
 	chroot := filepath.Join(".", "riak_explorer")
 	re.pm, err = process_manager.NewProcessManager(tearDownFun, exepath, args, healthCheckFun, &chroot)
 	if err != nil {

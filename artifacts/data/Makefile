@@ -2,7 +2,7 @@ PREFIX := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 ERLC   := $(shell which erlc)
 
 .PHONY: all clean
-all: riak_explorer-bin.tar.gz riak-2.1.1-bin.tar.gz trusty.tar.gz
+all: riak_explorer-bin.tar.gz riak-2.1.1-bin.tar.gz trusty.tar.gz riak_mesos_director-bin.tar.gz
 
 ### Riak Explorer begin
 riak_explorer:
@@ -34,8 +34,23 @@ clean_riak:
 	-rm -rf riak-2.1.1 riak-2.1.1-bin.tar.gz riak-2.1.1-bin
 ### Riak end
 
+### Director begin
+riak_mesos_director:
+	git clone --depth=1 https://github.com/basho-labs/riak-mesos-director.git riak_mesos_director
+riak_mesos_director-bin: riak_mesos_director OTP_R16B02_basho8-bin
+	rm -rf riak_mesos_director/deps/node_package
+	git clone https://github.com/basho/node_package.git --branch no-epmd riak_mesos_director/deps/node_package
+	cd riak_mesos_director && PATH=$(PREFIX)OTP_R16B02_basho8-bin/bin:$(PATH) $(MAKE) rel
+	touch riak_mesos_director-bin
+riak_mesos_director-bin.tar.gz: riak_mesos_director-bin
+	tar -C riak_mesos_director/rel -czf riak_mesos_director-bin.tar.gz riak_mesos_director || rm -rf riak_mesos_director-bin.tar.gz
+clean: clean_riak_mesos_director
+clean_riak_mesos_director:
+	-rm -rf riak_mesos_director-bin.tar.gz riak_mesos_director riak_mesos_director-bin
+### Director end
+
 ### Erlang begin
-ifneq ($(ERLC),)
+ifneq ($(ERLC),"")
 	ifeq ("$(wildcard otp_src_R16B02-basho8.tar.gz","")
 		$(shell touch otp_src_R16B02-basho8.tar.gz)
 	endif
@@ -43,7 +58,6 @@ ifneq ($(ERLC),)
 		$(shell touch OTP_R16B02_basho8-bin)
 	endif
 endif
-
 otp_src_R16B02-basho8.tar.gz:
 	curl -C - -O http://s3.amazonaws.com/downloads.basho.com/erlang/otp_src_R16B02-basho8.tar.gz || rm otp_src_R16B02-basho8.tar.gz
 OTP_R16B02_basho8-bin: otp_src_R16B02-basho8.tar.gz

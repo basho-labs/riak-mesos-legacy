@@ -2,8 +2,9 @@ BASE_DIR         = $(shell pwd)
 PACKAGE_VERSION ?= 0.1.0
 export TAGS     ?= rel
 
-.PHONY: all clean
-all: framework
+.PHONY: all clean clean-bin
+all: clean-bin framework director
+clean: clean-bin
 
 ## Godeps begin
 .godep: Godeps/Godeps.json
@@ -14,34 +15,39 @@ all: framework
 ### Framework begin
 .PHONY: framework clean_framework
 # Depends on artifacts, because it depends on scheduler which depends on artifacts
-framework: .godep schroot cepm artifacts executor riak_explorer scheduler
+.bin.framework_linux_amd64:
 	go build -o bin/framework_linux_amd64 -tags=$(TAGS) ./framework/
-clean: clean_framework
+	$(shell touch .bin.framework_linux_amd64)
+framework: .godep schroot cepm artifacts executor riak_explorer scheduler .bin.framework_linux_amd64
+clean-bin: clean_framework
 clean_framework:
-	-rm -f bin/framework_linux_amd64
+	-rm -f .bin.framework_linux_amd64 bin/framework_linux_amd64
 ### Framework end
 
 ### Scheduler begin
 .PHONY: scheduler clean_scheduler
-scheduler/bindata_generated.go: scheduler/data/executor_linux_amd64 process_manager/bindata_generated.go
+.scheduler.bindata_generated: .scheduler.data.executor_linux_amd64 .process_manager.bindata_generated
 	go generate -tags=$(TAGS) ./scheduler
-scheduler: scheduler/bindata_generated.go
-clean: clean_scheduler
+	$(shell touch .scheduler.bindata_generated)
+scheduler: .scheduler.bindata_generated
+clean-bin: clean_scheduler
 clean_scheduler:
-	-rm -rf scheduler/bindata_generated.go
+	-rm -rf .scheduler.bindata_generated scheduler/bindata_generated.go
 ### Scheduler end
 
 ### Executor begin
-.PHONY: executor clean_executor scheduler/data/executor_linux_amd64
-clean: clean_executor
-executor: scheduler/data/executor_linux_amd64
-executor/bindata_generated.go: executor/data/advanced.config executor/data/riak.conf
+.PHONY: executor clean_executor .scheduler.data.executor_linux_amd64
+executor: .scheduler.data.executor_linux_amd64
+.executor.bindata_generated: executor/data/advanced.config executor/data/riak.conf
 	go generate -tags=$(TAGS) ./executor/...
-scheduler/data/executor_linux_amd64: cepm executor/bindata_generated.go process_manager/bindata_generated.go
+	$(shell touch .executor.bindata_generated)
+.scheduler.data.executor_linux_amd64: cepm .executor.bindata_generated .process_manager.bindata_generated
 	go build -o scheduler/data/executor_linux_amd64 -tags=$(TAGS) ./executor/
+	$(shell touch .scheduler.data.executor_linux_amd64)
+clean-bin: clean_executor
 clean_executor:
-	-rm -f executor/bindata_generated.go
-	-rm -f scheduler/data/executor_linux_amd64
+	-rm -f .executor.bindata_generated executor/bindata_generated.go
+	-rm -f .scheduler.data.executor_linux_amd64 scheduler/data/executor_linux_amd64
 ### Executor end
 
 ### Artifact begin
@@ -55,54 +61,70 @@ clean_artifacts:
 ### Artifact end
 
 ### Tools begin
-.PHONY: tools clean_tools bin/tools_linux_amd64
-bin/tools_linux_amd64:
+.PHONY: tools clean_tools .bin.tools_linux_amd64
+.bin.tools_linux_amd64:
 	go build -o bin/tools_linux_amd64 -tags=$(TAGS) ./tools/
-tools: bin/tools_linux_amd64
+	$(shell touch .bin.tools_linux_amd64)
+tools: .bin.tools_linux_amd64
 all: tools
+clean-bin: clean_tools
 clean_tools:
-	-rm -rf bin/tools_linux_amd64
+	-rm -rf .bin.tools_linux_amd64 bin/tools_linux_amd64
 ### Tools end
+
+### Director begin
+.PHONY: director clean_director
+.director.bindata_generated: .process_manager.bindata_generated
+	go generate -tags=$(TAGS) ./director
+	$(shell touch .director.bindata_generated)
+director: .director.bindata_generated
+	go build -o bin/director_linux_amd64 -tags=$(TAGS) ./director/
+clean-bin: clean_director
+clean_director:
+	-rm -rf .director.bindata_generated director/bindata_generated.go
+### Scheduler end
 
 ### Schroot begin
 .PHONY: schroot clean_schroot
 schroot:
 	cd process_manager/schroot/data && $(MAKE)
+clean-bin: clean_schroot
 clean_schroot:
 	cd process_manager/schroot/data && $(MAKE) clean
 ### Schroot end
 
 ### Process Manager begin
-.PHONY: process_manager/bindata_generated.go
-process_manager/bindata_generated.go:
+.PHONY: .process_manager.bindata_generated
+.process_manager.bindata_generated:
 	go generate -tags=$(TAGS) ./process_manager/...
+	$(shell touch .process_manager.bindata_generated)
+clean-bin: clean_process_manager
 clean_process_manager:
-	rm -rf process_manager/bindata_generated.go
-clean: clean_process_manager
+	rm -rf .process_manager.bindata_generated process_manager/bindata_generated.go
 ### Process Manager end
 
 ### CEPMd begin
 .PHONY: cepm clean_cepmd erl_dist
 erl_dist:
 	cd erlang_dist && $(MAKE)
-cepmd/cepm/data/erl_epmd.beam: erl_dist
-cepmd/cepm/data/inet_tcp_dist.beam: erl_dist
-cepmd/cepm/data/net_kernel.beam: erl_dist
-cepmd/cepm/bindata_generated.go: cepmd/cepm/data/erl_epmd.beam cepmd/cepm/data/inet_tcp_dist.beam cepmd/cepm/data/net_kernel.beam
+.cepmd.cepm.bindata_generated: erl_dist
 	go generate -tags=$(TAGS) ./cepmd/cepm
-cepm: cepmd/cepm/bindata_generated.go
-clean: clean_cepmd
+	$(shell touch .cepmd.cepm.bindata_generated)
+cepm: .cepmd.cepm.bindata_generated
+clean-bin: clean_cepmd
 clean_cepmd:
-	-rm -f cepmd/cepm/bindata_generated.go
+	-rm -f .cepmd.cepm.bindata_generated cepmd/cepm/bindata_generated.go
 ### CEPMd end
 
 ### Riak Explorer begin
 .PHONY: riak_explorer clean_riak_explorer
-riak_explorer/bindata_generated.go: riak_explorer/data/advanced.config riak_explorer/data/riak_explorer.conf
+.riak_explorer.bindata_generated: riak_explorer/data/advanced.config riak_explorer/data/riak_explorer.conf
 	go generate -tags=$(TAGS) ./riak_explorer/...
-riak_explorer: artifacts riak_explorer/bindata_generated.go
+	$(shell touch .riak_explorer.bindata_generated)
+riak_explorer: artifacts .riak_explorer.bindata_generated
+clean-bin: clean_riak_explorer
 clean_riak_explorer:
-	-rm -f riak_explorer/bindata_generated.go
+	-rm -f .riak_explorer.bindata_generated riak_explorer/bindata_generated.go
 ### Riak Explorer end
 
 ### Go Tools begin

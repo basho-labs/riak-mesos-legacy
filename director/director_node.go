@@ -1,19 +1,15 @@
 package main
 
 import (
-	"archive/tar"
-	"compress/gzip"
-	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"runtime"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/basho-labs/riak-mesos/process_manager"
+	"github.com/basho-labs/riak-mesos/cepmd/cepm"
+	"github.com/basho-labs/riak-mesos/common"
 
 	"bytes"
 	"errors"
@@ -49,90 +45,39 @@ func (directorNode *DirectorNode) runLoop() {
 	log.Info("Shutting down")
 }
 
-func decompress() string {
-	assetPath := fmt.Sprintf("riak_mesos_director_%s_%s.tar.gz", runtime.GOOS, runtime.GOARCH)
+func decompress() {
+	var err error
+	if err := os.Mkdir("riak_mesos_director", 0777); err != nil {
+		log.Fatal("Unable to make director directory: ", err)
+	}
 
-	log.Info("Decompressing Riak Mesos Director: ", assetPath)
-
-	asset, err := Asset(assetPath)
+	asset, err := Asset("trusty.tar.gz")
 	if err != nil {
 		log.Fatal(err)
 	}
-	bytesReader := bytes.NewReader(asset)
-
-	gzReader, err := gzip.NewReader(bytesReader)
+	if err = common.ExtractGZ("riak_mesos_director", bytes.NewReader(asset)); err != nil {
+		log.Fatal("Unable to extract trusty root: ", err)
+	}
+	asset, err = Asset("riak_mesos_director-bin.tar.gz")
 
 	if err != nil {
-		log.Fatal("Error encountered decompressing riak explorer: ", err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
-
-	tr := tar.NewReader(gzReader)
-	tempdir := "./"
-
-	for {
-		hdr, err := tr.Next()
-		if err == io.EOF {
-			// end of tar archive
-			break
-		} else if err != nil {
-			log.Fatalln(err)
-		}
-		filename := filepath.Join(".", tempdir, hdr.Name)
-		if hdr.Typeflag == tar.TypeReg || hdr.Typeflag == tar.TypeRegA {
-			file, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE, os.FileMode(hdr.Mode))
-			io.Copy(file, tr)
-			if err != nil {
-				log.Fatal(err)
-			}
-			if _, err := io.Copy(file, tr); err != nil {
-				log.Fatal(err)
-			}
-			file.Close()
-		} else if hdr.Typeflag == tar.TypeDir {
-			err := os.Mkdir(filename, 0777)
-			if err != nil {
-				log.Fatalln(err)
-			}
-		} else if hdr.Typeflag == tar.TypeSymlink {
-			if err := os.Symlink(hdr.Linkname, filename); err != nil {
-				log.Fatal(err)
-			}
-			// Hard link
-		} else if hdr.Typeflag == tar.TypeLink {
-			fmt.Printf("Encountered hardlink: %+v\n", hdr)
-			linkdest := filepath.Join(".", tempdir, hdr.Linkname)
-			if err := os.Link(linkdest, filename); err != nil {
-				log.Fatal(err)
-			}
-		} else {
-			log.Fatal("Experienced unknown tar file type: ", hdr.Typeflag)
-		}
+	if err = common.ExtractGZ("riak_mesos_director", bytes.NewReader(asset)); err != nil {
+		log.Fatal("Unable to extract rex: ", err)
 	}
-	return tempdir
 }
 
 func (directorNode *DirectorNode) Run() {
+	exepath := "/riak_mesos_director/bin/director"
 
 	var err error
 
 	args := []string{"console", "-noinput"}
-
-	wd, err := os.Getwd()
-	if err != nil {
-		log.Panic("Could not get wd: ", err)
-	}
-	chroot := filepath.Join(wd, "director_root")
-
-	cpCmd := exec.Command("cp", "/etc/resolv.conf", "director_root/etc/resolv.conf")
-	err = cpCmd.Run()
-	if err != nil {
-		log.Panic("Could not copy resolv.conf: ", err)
-	}
-
-	HealthCheckFun := func() error {
+	healthCheckFun := func() error {
 		log.Info("Checking is Director is started")
-		data, err := ioutil.ReadFile("director_root/riak_mesos_director/log/console.log")
+		logPath := filepath.Join(".", "riak_mesos_director", "riak_mesos_director", "log", "console.log")
+		data, err := ioutil.ReadFile(logPath)
 		if err != nil {
 			if bytes.Contains(data, []byte("lager started on node")) {
 				log.Info("Director started")
@@ -144,7 +89,25 @@ func (directorNode *DirectorNode) Run() {
 			return err
 		}
 	}
-	directorNode.pm, err = process_manager.NewProcessManager(func() { return }, "/riak_mesos_director/bin/director", args, HealthCheckFun, &chroot)
+	tearDownFun := func() {
+		log.Info("Tearing down director")
+	}
+
+	libpath := filepath.Join(".", "riak_mesos_director", "riak_mesos_director", "lib", "basho-patches")
+	os.Mkdir(libpath, 0777)
+	err = cepm.InstallInto(libpath)
+	if err != nil {
+		log.Panic(err)
+	}
+	args = append(args, "-no_epmd")
+
+	log.Debugf("Starting up Director %v", exepath)
+
+	chroot := filepath.Join(".", "riak_mesos_director")
+	directorNode.pm, err = process_manager.NewProcessManager(tearDownFun, exepath, args, healthCheckFun, &chroot)
+	if err != nil {
+		log.Error("Could not start Riak Explorer: ", err)
+	}
 
 	if err != nil {
 		log.Error("Could not start Director: ", err)
