@@ -22,7 +22,6 @@ An [Apache Mesos](http://mesos.apache.org/) framework for [Riak KV](http://basho
 
 ### Other Documentation
 
-* [Development Setup](docs/DEVELOPMENT-SETUP.md)
 * [Development Guide](docs/DEVELOPMENT.md)
 * [Director](docs/DIRECTOR.md)
 * [HTTP API](docs/HTTP-API.md)
