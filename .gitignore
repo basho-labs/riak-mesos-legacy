@@ -18,3 +18,11 @@ scheduler/cluster_state/clusterstate_string.go
 scheduler/process_state/processstate_jsonenums.go
 scheduler/process_state/processstate_string.go
 _build
+.godep
+artifacts/data/OTP_R16B02_basho8-bin
+artifacts/data/OTP_R16B02_basho8
+artifacts/data/otp_src_R16B02-basho8.tar.gz
+artifacts/data/riak-2.1.1-bin.tar.gz
+artifacts/data/riak-2.1.1.tar.gz
+artifacts/data/riak-2.1.1
+dev-sync.sh
