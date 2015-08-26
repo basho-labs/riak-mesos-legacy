@@ -13,43 +13,13 @@ The Director in turn will update it's list of balanced Riak connections.
 
 ## Marathon Setup
 
-Example `marathon.json`
-
-```
-{
-    "id": "/riak/director",
-    "cmd": "bin/director console -noinput",
-    "cpus": 0.1,
-    "mem": 100.0,
-    "ports": [8098, 8087, 0],
-    "instances": 1,
-    "env": {
-        "DIRECTOR_ZK": "master.mesos:2181"
-        "DIRECTOR_FRAMEWORK": "riak-mesos-go"
-        "DIRECTOR_CLUSTER": "mycluster"
-    },
-    "uris": [
-        "http://riak-tools.s3.amazonaws.com/riak_mesos_director_linux_amd64.tar.gz"
-    ],
-    "healthChecks": [
-        {
-            "protocol": "HTTP",
-            "path": "/health",
-            "gracePeriodSeconds": 3,
-            "intervalSeconds": 10,
-            "portIndex": 2,
-            "timeoutSeconds": 10,
-            "maxConsecutiveFailures": 3
-        }
-    ]
-}
-```
+Example `marathon.json` for the director can be found in [../director.marathon.json](../director.marathon.json)
 
 ## Manual Setup
 
 ### Download
 
-Download and Extract [riak_mesos_director_linux_amd64.tar.gz](http://riak-tools.s3.amazonaws.com/riak_mesos_director_linux_amd64.tar.gz) or [riak_mesos_director_darwin_amd64.tar.gz](http://riak-tools.s3.amazonaws.com/riak_mesos_director_darwin_amd64.tar.gz).
+Links for downloading the director can be found in [../README.md](../README.md)
 
 ### Configure
 

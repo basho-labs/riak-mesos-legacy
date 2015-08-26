@@ -54,6 +54,8 @@ func main() {
 	case "delete-cluster":
 		requireClusterName()
 		respond(client.DeleteCluster(clusterName))
+	case "delete-framework":
+		respond(deleteFramework(), nil)
 	case "get-nodes":
 		requireClusterName()
 		respond(client.GetNodes(clusterName))
@@ -90,6 +92,13 @@ func getURL() string {
 		log.Panic(err)
 	}
 	return string(zkNode.GetData())
+}
+
+func deleteFramework() string {
+	mgr := metadata_manager.NewMetadataManager(frameworkName, []string{zookeeperAddr})
+	mgr.GetRootNode().Delete()
+
+	return "ok"
 }
 
 func requireClusterName() {

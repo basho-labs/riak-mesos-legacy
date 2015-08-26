@@ -31,7 +31,7 @@ Configure a few environment variables matching your setup for convenience.
 #### Create a cluster
 
 ```
-./tools_darwin_amd64 \
+./tools_linux_amd64 \
     -name=riak \
     -zk=master.mesos:2181 \
     -cluster-name=mycluster \
@@ -41,7 +41,7 @@ Configure a few environment variables matching your setup for convenience.
 Add Riak nodes
 
 ```
-./tools_darwin_amd64 \
+./tools_linux_amd64 \
     -name=riak \
     -zk=master.mesos:2181 \
     -cluster-name=mycluster \
@@ -52,7 +52,7 @@ Add Riak nodes
 Get the base URL for the Riak Mesos Framework [HTTP API](docs/HTTP-API.md) endpoints for more ways to interact with the framework.
 
 ```
-./tools_darwin_amd64 -name=$NAME -zk=$ZK -command="get-url"
+./tools_linux_amd64 -name=$NAME -zk=$ZK -command="get-url"
 ```
 
 #### Start the director
