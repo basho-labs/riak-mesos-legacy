@@ -60,7 +60,7 @@ Get the base URL for the Riak Mesos Framework [HTTP API](docs/HTTP-API.md) endpo
 Download and extract the Riak Mesos Director (link in [../README.md](../README.md)), and start the framework with an incantation similar to this:
 
 ```
-FRAMEWORK_HOST=master.mesos FRAMEWORK_PORT=9090 DIRECTOR_CLUSTER=mycluster DIRECTOR_FRAMEWORK=riak DIRECTOR_ZK=localhost:2181 ./director_linux_amd64
+FRAMEWORK_HOST=master.mesos FRAMEWORK_PORT=9090 DIRECTOR_CLUSTER=mycluster DIRECTOR_FRAMEWORK=riak DIRECTOR_ZK=master.mesos:2181 ./director_linux_amd64
 ```
 
 Starting the director should give you access to a number of endpoints:
