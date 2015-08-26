@@ -27,6 +27,11 @@ An [Apache Mesos](http://mesos.apache.org/) framework for [Riak KV](http://basho
 * [HTTP API](docs/HTTP-API.md)
 * [Mesos Usage](docs/MESOS-USAGE.md)
 
+### Package Downloads
+
+* Riak Mesos Framework [riak_mesos_linux_amd64_0.1.1.tar.gz](http://riak-tools.s3.amazonaws.com/riak-mesos/coreos/riak_mesos_linux_amd64_0.1.1.tar.gz)
+* Riak Mesos Director [riak_mesos_director_linux_amd64_0.1.1.tar.gz](http://riak-tools.s3.amazonaws.com/riak-mesos/coreos/riak_mesos_director_linux_amd64_0.1.1.tar.gz)
+
 [DCOS](http://docs.mesosphere.com/) support is still in development and is not
 supported on all platforms.
 
@@ -39,7 +44,7 @@ First, the Riak DCOS package needs to be added to sources.
 This step will no longer be necessary once the framework passes DCOS certification.
 
 ```
-dcos config set package.sources '["http://riak-tools.s3.amazonaws.com/riak-mesos/dcos-repo-0.1.0.zip"]'
+dcos config set package.sources '["http://riak-tools.s3.amazonaws.com/riak-mesos/dcos-repo-0.1.1.zip"]'
 ```
 
 ### Create a Configuration File

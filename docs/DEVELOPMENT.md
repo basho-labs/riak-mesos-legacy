@@ -14,35 +14,4 @@ cd $GOPATH/src/github.com/basho-labs/riak-mesos && make
 
 ## Usage
 
-### Run the framework
-
-```
-cd bin && ./framework_linux_amd64 \
-    -master=zk://localhost:2181/mesos \
-    -name=riak \
-    -user=root \
-    -zk=localhost:2181
-```
-
-### Add some nodes to the cluster
-
-```
-cd bin && ./tools_linux_amd64 \
-    -name=riak \
-    -zk=localhost:2181 \
-    -command=create-cluster \
-    -cluster-name=mycluster
-cd bin && ./tools_linux_amd64 \
-    -name=riak \
-    -zk=localhost:2181 \
-    -command=add-nodes \
-    -nodes=1 \
-    -cluster-name=mycluster
-```
-
-### Start the director
-
-```
-cd bin
-DIRECTOR_CLUSTER=mycluster DIRECTOR_FRAMEWORK=riak DIRECTOR_ZK=localhost:2181 ./director_linux_amd64
-```
+See [MESOS_USAGE.md](MESOS_USAGE.md) for information on how to use the binaries created in the `bin/` directory

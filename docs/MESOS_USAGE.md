@@ -2,100 +2,72 @@
 
 ## Installation
 
-The Riak Mesos Framework can be configured in a few different ways depending on the restraints of
-the Mesos cluster.
+The Riak Mesos Framework can be configured in a few different ways depending on the restraints of the Mesos cluster.
 
-### Marathon Setup
+### Marathon Usage
 
-Sample `marathon.json`
+Sample Riak Mesos Framework `marathon.json`: [../mararthon.json](../marathon.json).
+Sample Riak Mesos Director `marathon.json`: [../director.mararthon.json](../marathon.json).
 
-```
-{
-  "id": "/riak",
-  "instances": 1,
-  "cpus": 0.5,
-  "mem": 512,
-  "ports": [0,0],
-  "uris": [
-      "http://riak-tools.s3.amazonaws.com/riak_mesos_framework_0.1.0_linux_amd64.tar.gz"
-  ],
-  "env": {},
-  "args": [
-      "framework_linux_amd64",
-      "-master=zk://master.mesos:2181/mesos",
-      "-zk=master.mesos:2181",
-      "-id=riak-mesos-go",
-      "-name=\"Riak Mesos Framework\"",
-      "-role=*"],
-  "healthChecks": [
-    {
-      "path": "/healthcheck",
-      "portIndex": 0,
-      "protocol": "HTTP",
-      "gracePeriodSeconds": 300,
-      "intervalSeconds": 60,
-      "timeoutSeconds": 20,
-      "maxConsecutiveFailures": 5,
-      "ignoreHttp1xx": false
-    }
-  ]
-}
-```
+### Manual Usage
 
-### Manual Setup
+#### Start the framework
 
-Download and extract [riak_mesos_framework_linux_amd64_0.1.0.tar.gz](http://riak-tools.s3.amazonaws.com/riak_mesos_framework_linux_amd64_0.1.0.tar.gz), and start the framework with an incantation similar to this:
+Download and extract the Riak Mesos Framework (link in [../README.md](../README.md)), and start the framework with an incantation similar to this:
 
 ```
 ./framework_linux_amd64 \
     -master=zk://master.mesos:2181/mesos \
-    -zk=master.mesos:2181 \
-    -id=riak-mesos-go \
-    -user=centos \
-    -role=* \
-    -ip=master.mesos \
-    -hostname=master.mesos
+    -zk=master.mesos:2181
+    -name=riak \
+    -user=root \
+    -role=*
 ```
 
-### Riak Cluster Configuration
-
-#### CLI Tool
-
-Included with the framework tarball is a CLI tool named `tools_linux_amd64` which can be used to
-perform a variety of tasks on a running Riak Mesos Framework instance. Following are some usage
-instructions.
+Included with the framework tarball is a CLI tool named `tools_linux_amd64` which can be used to perform a variety of tasks on a running Riak Mesos Framework instance. Following are some usage instructions.
 
 Configure a few environment variables matching your setup for convenience.
 
-```
-NAME="riak-mesos-go"
-ZK="master.mesos:2181"
-CLUSTERNAME="mycluster"
-```
-
-Create a cluster
+#### Create a cluster
 
 ```
 ./tools_darwin_amd64 \
-    -name=$NAME \
-    -zk=$ZK \
-    -cluster-name=$CLUSTERNAME \
+    -name=riak \
+    -zk=master.mesos:2181 \
+    -cluster-name=mycluster \
     -command="create-cluster"
 ```
 
-Set the initial node count
+Add Riak nodes
 
 ```
 ./tools_darwin_amd64 \
-    -name=$NAME \
-    -zk=$ZK \
-    -cluster-name=$CLUSTERNAME \
+    -name=riak \
+    -zk=master.mesos:2181 \
+    -cluster-name=mycluster \
     -command="add-nodes" \
     -nodes=5
 ```
 
-Get the base URL for the Riak Mesos Framework [HTTP API](docs/HTTP-API.md) endpoints.
+Get the base URL for the Riak Mesos Framework [HTTP API](docs/HTTP-API.md) endpoints for more ways to interact with the framework.
 
 ```
 ./tools_darwin_amd64 -name=$NAME -zk=$ZK -command="get-url"
 ```
+
+#### Start the director
+
+Download and extract the Riak Mesos Director (link in [../README.md](../README.md)), and start the framework with an incantation similar to this:
+
+```
+FRAMEWORK_HOST=master.mesos FRAMEWORK_PORT=9090 DIRECTOR_CLUSTER=mycluster DIRECTOR_FRAMEWORK=riak DIRECTOR_ZK=localhost:2181 ./director_linux_amd64
+```
+
+Starting the director should give you access to a number of endpoints:
+
+* Balanced Riak HTTP [http://master.mesos:8098](http://master.mesos:8098)
+* Balanced Riak Protobuf [http://master.mesos:8087](http://master.mesos:8087)
+* Director HTTP API [http://master.mesos:9000](http://master.mesos:9000)
+* Riak Explorer Web UI and API [http://master.mesos:9999](http://master.mesos:9999)
+
+These ports are the defaults, and will be dynamically assigned when using Marathon or DCOS.

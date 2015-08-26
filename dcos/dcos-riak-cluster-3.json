@@ -1,8 +1,0 @@
-{
-    "riak": {
-        "master": "zk://master.mesos:2181/mesos",
-        "zk": "master.mesos:2181",
-        "user": "root",
-        "framework-name": "riak-cluster-3"
-    }
-}
