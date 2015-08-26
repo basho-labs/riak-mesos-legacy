@@ -39,3 +39,10 @@ cd bin && ./tools_linux_amd64 \
     -nodes=1 \
     -cluster-name=mycluster
 ```
+
+### Start the director
+
+```
+cd bin
+DIRECTOR_CLUSTER=mycluster DIRECTOR_FRAMEWORK=riak DIRECTOR_ZK=localhost:2181 ./director_linux_amd64
+```

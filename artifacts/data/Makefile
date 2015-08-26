@@ -51,12 +51,12 @@ clean_riak_mesos_director:
 
 ### Erlang begin
 ifneq ($(ERLC),"")
-	ifeq ("$(wildcard otp_src_R16B02-basho8.tar.gz","")
-		$(shell touch otp_src_R16B02-basho8.tar.gz)
-	endif
-	ifeq ("$(wildcard OTP_R16B02_basho8-bin","")
-		$(shell touch OTP_R16B02_basho8-bin)
-	endif
+ifeq ("$(wildcard otp_src_R16B02-basho8.tar.gz)","")
+$(shell touch otp_src_R16B02-basho8.tar.gz)
+endif
+ifeq ("$(wildcard OTP_R16B02_basho8-bin)","")
+$(shell touch OTP_R16B02_basho8-bin)
+endif
 endif
 otp_src_R16B02-basho8.tar.gz:
 	curl -C - -O http://s3.amazonaws.com/downloads.basho.com/erlang/otp_src_R16B02-basho8.tar.gz || rm otp_src_R16B02-basho8.tar.gz

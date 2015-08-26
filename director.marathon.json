@@ -1,27 +1,38 @@
 {
-    "id": "/riak-director",
-    "cmd": "riak_mesos_director/bin/director console -noinput",
-    "cpus": 0.1,
-    "mem": 100.0,
-    "ports": [8098, 8087, 0],
-    "instances": 1,
-    "env": {
-        "DIRECTOR_ZK": "33.33.33.2:2181",
-        "DIRECTOR_FRAMEWORK": "riak-mesos-go24",
-        "DIRECTOR_CLUSTER": "mycluster"
-    },
-    "uris": [
-        "http://33.33.33.1:8000/vagrant/ubuntu/trusty64/dependencies/_build/riak_mesos_director_linux_amd64.tar.gz"
-    ],
-    "healthChecks": [
-        {
-            "protocol": "HTTP",
-            "path": "/health",
-            "gracePeriodSeconds": 3,
-            "intervalSeconds": 10,
-            "portIndex": 2,
-            "timeoutSeconds": 10,
-            "maxConsecutiveFailures": 3
-        }
-    ]
+   "id":"/riak-director",
+   "cmd":"./riak_mesos_director/director_linux_amd64",
+   "cpus":0.5,
+   "mem":1024.0,
+   "ports":[0,0,0,0],
+   "instances":1,
+   "constraints":[
+      [
+         "hostname",
+         "UNIQUE"
+      ]
+   ],
+   "acceptedResourceRoles":[
+      "slave_public"
+   ],
+   "env":{
+      "FRAMEWORK_HOST":"localhost",
+      "FRAMEWORK_PORT":"9090",
+      "DIRECTOR_ZK":"localhost:2181",
+      "DIRECTOR_FRAMEWORK":"riak",
+      "DIRECTOR_CLUSTER":"mycluster"
+   },
+   "uris":[
+      "http://riak-tools.s3.amazonaws.com/riak-mesos/coreos/riak_mesos_director_linux_amd64_0.1.1.tar.gz"
+   ],
+   "healthChecks":[
+      {
+         "protocol":"HTTP",
+         "path":"/health",
+         "gracePeriodSeconds":3,
+         "intervalSeconds":10,
+         "portIndex":2,
+         "timeoutSeconds":10,
+         "maxConsecutiveFailures":3
+      }
+   ]
 }

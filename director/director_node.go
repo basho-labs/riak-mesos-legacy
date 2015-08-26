@@ -8,7 +8,6 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/basho-labs/riak-mesos/process_manager"
-	"github.com/basho-labs/riak-mesos/cepmd/cepm"
 	"github.com/basho-labs/riak-mesos/common"
 
 	"bytes"
@@ -93,21 +92,10 @@ func (directorNode *DirectorNode) Run() {
 		log.Info("Tearing down director")
 	}
 
-	libpath := filepath.Join(".", "riak_mesos_director", "riak_mesos_director", "lib", "basho-patches")
-	os.Mkdir(libpath, 0777)
-	err = cepm.InstallInto(libpath)
-	if err != nil {
-		log.Panic(err)
-	}
-	args = append(args, "-no_epmd")
-
 	log.Debugf("Starting up Director %v", exepath)
 
 	chroot := filepath.Join(".", "riak_mesos_director")
 	directorNode.pm, err = process_manager.NewProcessManager(tearDownFun, exepath, args, healthCheckFun, &chroot)
-	if err != nil {
-		log.Error("Could not start Riak Explorer: ", err)
-	}
 
 	if err != nil {
 		log.Error("Could not start Director: ", err)

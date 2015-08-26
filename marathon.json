@@ -1,23 +1,12 @@
 {
-  "id": "/riak1",
+  "id": "riak",
   "instances": 1,
   "cpus": 0.5,
-  "mem": 512,
-  "ports": [0,0],
-  "uris": [
-      "http://33.33.33.1:8000/_build/riak_mesos_linux_amd64_0.1.0.tar.gz"
-  ],
+  "mem": 2048,
+  "ports": [0, 0],
+  "uris": ["http://riak-tools.s3.amazonaws.com/riak-mesos/coreos/riak_mesos_linux_amd64_0.1.1.tar.gz"],
   "env": {},
-  "args": [
-      "riak_mesos_framework/framework_linux_amd64",
-      "-master=zk://33.33.33.2:2181/mesos",
-      "-zk=33.33.33.2",
-      "-ip=ubuntu.local",
-      "-hostname=ubuntu.local",
-      "-log=/riak-mesos/test.log",
-      "-user=vagrant",
-      "-name=riakMesosFramework",
-      "-role=*"],
+  "cmd": "riak_mesos_framework/framework_linux_amd64 -master=zk://localhost:2181/mesos -zk=localhost:2181 -name=riak -user=root",
   "healthChecks": [
     {
       "path": "/healthcheck",
@@ -28,6 +17,5 @@
       "timeoutSeconds": 20,
       "maxConsecutiveFailures": 5,
       "ignoreHttp1xx": false
-    }
-  ]
+    }]
 }
