@@ -18,7 +18,7 @@ Download and extract the Riak Mesos Framework (link in [../README.md](../README.
 ```
 ./framework_linux_amd64 \
     -master=zk://master.mesos:2181/mesos \
-    -zk=master.mesos:2181
+    -zk=master.mesos:2181 \
     -name=riak \
     -user=root \
     -role=*
