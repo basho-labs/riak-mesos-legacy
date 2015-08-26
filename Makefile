@@ -9,6 +9,7 @@ DEPLOY_OS       ?= coreos
 .PHONY: all clean clean_bin package clean_package sync
 all: clean_bin framework director
 clean: clean_package clean_bin
+package: clean_package
 
 ## Godeps begin
 .godep: Godeps/Godeps.json
