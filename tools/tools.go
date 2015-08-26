@@ -7,6 +7,8 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/basho-labs/riak-mesos/metadata_manager"
+	"github.com/samuel/go-zookeeper/zk"
+	"time"
 )
 
 var (
@@ -34,35 +36,42 @@ func init() {
 }
 
 func main() {
-
-	if cmd == "get-url" {
-		fmt.Println(getURL())
-		os.Exit(1)
-	}
-
-	client = NewSchedulerHTTPClient(getURL())
-
 	switch cmd {
+	case "get-url":
+		fmt.Println(getURL())
+	case "delete-framework":
+		respond(deleteFramework(), nil)
+	case "zk-list-children":
+		respondList(zkListChildren(), nil)
+	case "zk-get-data":
+		respond(zkGetData(), nil)
+	case "zk-delete":
+		respond("ok", zkDelete())
 	case "get-clusters":
+		client = NewSchedulerHTTPClient(getURL())
 		respond(client.GetClusters())
 	case "get-cluster":
+		client = NewSchedulerHTTPClient(getURL())
 		requireClusterName()
 		respond(client.GetCluster(clusterName))
 	case "create-cluster":
+		client = NewSchedulerHTTPClient(getURL())
 		requireClusterName()
 		respond(client.CreateCluster(clusterName))
 	case "delete-cluster":
+		client = NewSchedulerHTTPClient(getURL())
 		requireClusterName()
 		respond(client.DeleteCluster(clusterName))
-	case "delete-framework":
-		respond(deleteFramework(), nil)
 	case "get-nodes":
+		client = NewSchedulerHTTPClient(getURL())
 		requireClusterName()
 		respond(client.GetNodes(clusterName))
 	case "add-node":
+		client = NewSchedulerHTTPClient(getURL())
 		requireClusterName()
 		respond(client.AddNode(clusterName))
 	case "add-nodes":
+		client = NewSchedulerHTTPClient(getURL())
 		requireClusterName()
 		for i := 1; i <= nodes; i++ {
 			respond(client.AddNode(clusterName))
@@ -70,6 +79,13 @@ func main() {
 	default:
 		log.Fatal("Unknown command")
 	}
+}
+
+func respondList(val []string, err error) {
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(val)
 }
 
 func respond(val string, err error) {
@@ -95,10 +111,46 @@ func getURL() string {
 }
 
 func deleteFramework() string {
-	mgr := metadata_manager.NewMetadataManager(frameworkName, []string{zookeeperAddr})
-	mgr.GetRootNode().Delete()
-
+	frameworkName = "/riak/frameworks/" + frameworkName
+	zkDelete()
 	return "ok"
+}
+
+func zkListChildren() []string {
+	conn, _, err := zk.Connect([]string{zookeeperAddr}, time.Second)
+	if err != nil {
+		log.Panic(err)
+	}
+	children, _, err := conn.Children(frameworkName)
+
+	if err != nil {
+		log.Panic(err)
+	}
+	return children
+}
+
+func zkGetData() string {
+	conn, _, err := zk.Connect([]string{zookeeperAddr}, time.Second)
+	if err != nil {
+		log.Panic(err)
+	}
+	data, _, err := conn.Get(frameworkName)
+
+	if err != nil {
+		log.Panic(err)
+	}
+	return string(data)
+}
+
+func zkDelete() error {
+	conn, _, err := zk.Connect([]string{zookeeperAddr}, time.Second)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	zkDeleteChildren(conn, frameworkName)
+
+	return nil
 }
 
 func requireClusterName() {
@@ -106,4 +158,26 @@ func requireClusterName() {
 		fmt.Println("Please specify value for cluster name")
 		os.Exit(1)
 	}
+}
+
+
+func zkDeleteChildren(conn *zk.Conn, path string) {
+	children, _, _ := conn.Children(path)
+
+	// Leaf
+	if len(children) == 0 {
+		fmt.Println("Deleting ", path)
+		err := conn.Delete(path, -1)
+		if err != nil {
+			log.Panic(err)
+		}
+		return
+	}
+
+	// Branches
+	for _, name := range children {
+		zkDeleteChildren(conn, path + "/" + name)
+	}
+
+	return
 }

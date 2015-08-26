@@ -43,7 +43,8 @@ riak_mesos_director-bin: riak_mesos_director OTP_R16B02_basho8-bin
 	cd riak_mesos_director && PATH=$(PREFIX)OTP_R16B02_basho8-bin/bin:$(PATH) $(MAKE) rel
 	touch riak_mesos_director-bin
 riak_mesos_director-bin.tar.gz: riak_mesos_director-bin
-	tar -C riak_mesos_director/rel -czf riak_mesos_director-bin.tar.gz riak_mesos_director || rm -rf riak_mesos_director-bin.tar.gz
+	mv riak_mesos_director/rel/riak_mesos_director riak_mesos_director/rel/director
+	tar -C riak_mesos_director/rel -czf riak_mesos_director-bin.tar.gz director || rm -rf riak_mesos_director-bin.tar.gz
 clean: clean_riak_mesos_director
 clean_riak_mesos_director:
 	-rm -rf riak_mesos_director-bin.tar.gz riak_mesos_director riak_mesos_director-bin
@@ -75,9 +76,7 @@ trusty.tar.gz:
 	sudo chroot trusty_root apt-get clean
 	sudo chown -R $(shell id -un): trusty_root/
 	rm -rf trusty_root/dev trusty_root/proc trusty_root/sys
-	mkdir -p trusty_root/dev trusty_root/proc trusty_root/sys trusty_root/parent_root
-	ln -sf /parent_root/etc/resolv.conf trusty_root/etc/resolv.conf
-	ln -sf /parent_root/etc/hosts trusty_root/etc/hosts
+	mkdir -p trusty_root/dev trusty_root/proc trusty_root/sys
 	tar -C trusty_root -czf trusty.tar.gz . || rm -rf trusty.tar.gz
 	rm -rf trusty_root
 clean: clean_schroot

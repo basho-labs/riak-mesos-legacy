@@ -5,18 +5,9 @@
    "mem":1024.0,
    "ports":[0,0,0,0],
    "instances":1,
-   "constraints":[
-      [
-         "hostname",
-         "UNIQUE"
-      ]
-   ],
-   "acceptedResourceRoles":[
-      "slave_public"
-   ],
    "env":{
       "FRAMEWORK_HOST":"localhost",
-      "FRAMEWORK_PORT":"9090",
+      "FRAMEWORK_PORT":"31559",
       "DIRECTOR_ZK":"localhost:2181",
       "DIRECTOR_FRAMEWORK":"riak",
       "DIRECTOR_CLUSTER":"mycluster"

@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"os/exec"
 )
 
 func (pm *ProcessManager) start(executablePath string, args []string, chroot *string) {
@@ -22,6 +23,20 @@ func (pm *ProcessManager) start(executablePath string, args []string, chroot *st
 			log.Panic("Unable to decompress: ", err)
 		}
 		args = append([]string{*chroot, executablePath}, args...)
+
+		cpResolvCmd := exec.Command("/bin/cp", "/etc/resolv.conf", "./" + *chroot + "/etc/resolv.conf")
+		log.Info(cpResolvCmd.Args)
+		err = cpResolvCmd.Run()
+		if err != nil {
+			log.Info("Non-zero exit from command")
+		}
+		cpHostsCmd := exec.Command("/bin/cp", "/etc/hosts", "./" + *chroot + "/etc/hosts")
+		log.Info(cpHostsCmd.Args)
+		err = cpHostsCmd.Run()
+		if err != nil {
+			log.Info("Non-zero exit from command")
+		}
+
 		executablePath = filepath.Join(*chroot, "super_chroot")
 	}
 	env := os.Environ()
@@ -37,11 +52,7 @@ func (pm *ProcessManager) start(executablePath string, args []string, chroot *st
 		if err != nil {
 			log.Fatal("Could not get current working directory")
 		}
-		if chroot != nil {
-			procattr.Dir = "/"
-		} else {
-			procattr.Dir = wd
-		}
+		procattr.Dir = wd
 		homevar := fmt.Sprintf("HOME=%s", wd)
 		procattr.Env = append(os.Environ(), homevar)
 	}

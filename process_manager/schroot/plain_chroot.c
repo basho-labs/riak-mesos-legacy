@@ -33,13 +33,6 @@ int main(int argc, char **argv) {
 	chk(checked_mount("/dev", "./dev"));
 	chk(checked_mount("/proc", "./proc"));
  	chk(checked_mount("/sys", "./sys"));
- // This makes the assumption that /etc is on the same partition as /
-  struct stat mount_data;
- 	if (stat("./parent_root", &mount_data) != -1) {
- 	  if (S_ISDIR(mount_data.st_mode)) {
-      mount("/", "./parent_root", 0, MS_BIND|MS_REC, 0);
-    }
- 	}
 
 	chk(chroot("."));
 	chk(execvp(argv[2], argv+2));

@@ -46,7 +46,7 @@ func (directorNode *DirectorNode) runLoop() {
 
 func decompress() {
 	var err error
-	if err := os.Mkdir("riak_mesos_director", 0777); err != nil {
+	if err := os.Mkdir("director", 0777); err != nil {
 		log.Fatal("Unable to make director directory: ", err)
 	}
 
@@ -54,7 +54,7 @@ func decompress() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err = common.ExtractGZ("riak_mesos_director", bytes.NewReader(asset)); err != nil {
+	if err = common.ExtractGZ("director", bytes.NewReader(asset)); err != nil {
 		log.Fatal("Unable to extract trusty root: ", err)
 	}
 	asset, err = Asset("riak_mesos_director-bin.tar.gz")
@@ -62,20 +62,20 @@ func decompress() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err = common.ExtractGZ("riak_mesos_director", bytes.NewReader(asset)); err != nil {
+	if err = common.ExtractGZ("director", bytes.NewReader(asset)); err != nil {
 		log.Fatal("Unable to extract rex: ", err)
 	}
 }
 
 func (directorNode *DirectorNode) Run() {
-	exepath := "/riak_mesos_director/bin/director"
+	exepath := "/director/bin/director"
 
 	var err error
 
 	args := []string{"console", "-noinput"}
 	healthCheckFun := func() error {
 		log.Info("Checking is Director is started")
-		logPath := filepath.Join(".", "riak_mesos_director", "riak_mesos_director", "log", "console.log")
+		logPath := filepath.Join(".", "director", "director", "log", "console.log")
 		data, err := ioutil.ReadFile(logPath)
 		if err != nil {
 			if bytes.Contains(data, []byte("lager started on node")) {
@@ -94,7 +94,7 @@ func (directorNode *DirectorNode) Run() {
 
 	log.Debugf("Starting up Director %v", exepath)
 
-	chroot := filepath.Join(".", "riak_mesos_director")
+	chroot := filepath.Join(".", "director")
 	directorNode.pm, err = process_manager.NewProcessManager(tearDownFun, exepath, args, healthCheckFun, &chroot)
 
 	if err != nil {
