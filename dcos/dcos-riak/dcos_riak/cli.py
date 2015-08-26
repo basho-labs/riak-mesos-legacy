@@ -226,7 +226,7 @@ def run(args):
     debug(debug_flag, "Nodes: " + str(num_nodes))
     debug(debug_flag, "Command: " + cmd)
 
-    service_url = api_url(framework)
+    service_url = api_url(framework) + "api/v1/"
     debug(debug_flag, "Service URL: " + service_url)
 
     if cmd == "cluster list" or cmd == "cluster":
