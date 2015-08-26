@@ -3,7 +3,8 @@ export TAGS     ?= rel
 PACKAGE_VERSION ?= 0.1.1
 BUILD_DIR       ?= $(BASE_DIR)/_build
 DEPLOY_BASE     ?= riak-tools/riak-mesos
-DEPLOY_OS       ?= coreos # The project is actually cross platform, but this is the current repository location for all packages.
+DEPLOY_OS       ?= coreos
+# The project is actually cross platform, but this is the current repository location for all packages.
 
 .PHONY: all clean clean_bin package clean_package sync
 all: clean_bin framework director
