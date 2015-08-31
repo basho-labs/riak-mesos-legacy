@@ -4,6 +4,7 @@ language: go
 go:
   - 1.4
 install:
+  - travis_wait
   - go get -u github.com/jteeuwen/go-bindata/...
   - go get github.com/tools/godep
 
