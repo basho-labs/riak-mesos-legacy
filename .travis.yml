@@ -4,12 +4,11 @@ language: go
 go:
   - 1.4
 install:
-  - travis_wait
   - go get -u github.com/jteeuwen/go-bindata/...
   - go get github.com/tools/godep
   - curl -O https://raw.githubusercontent.com/spawngrid/kerl/master/kerl
   - chmod a+x kerl
-  - ./kerl build git git://github.com/basho/otp.git OTP_R16B02_basho8 R16B02-basho8
+  - travis_wait ./kerl build git git://github.com/basho/otp.git OTP_R16B02_basho8 R16B02-basho8
   - ./kerl install R16B02-basho8 ~/erlang/R16B02-basho8
   - . ~/erlang/R16B02-basho8/activate
 
