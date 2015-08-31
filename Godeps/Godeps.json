@@ -40,6 +40,11 @@
 			"Rev": "9cb89f07ca03c6a28d1e237ba033bc6a29422fd6"
 		},
 		{
+			"ImportPath": "github.com/jteeuwen/go-bindata",
+			"Comment": "v3.0.7-54-g91db54b",
+			"Rev": "91db54b0401d0679b3cf743142e4f3c86b4aaa4e"
+		},
+		{
 			"ImportPath": "github.com/mesos/mesos-go/auth",
 			"Rev": "6440c09c9d8a1b365f3c3e9b2297dd856abd017c"
 		},
@@ -70,6 +75,10 @@
 		{
 			"ImportPath": "github.com/mesos/mesos-go/upid",
 			"Rev": "6440c09c9d8a1b365f3c3e9b2297dd856abd017c"
+		},
+		{
+			"ImportPath": "github.com/mitchellh/go-ps",
+			"Rev": "e6c6068076470196af082b1ff896e24a51a87b2a"
 		},
 		{
 			"ImportPath": "github.com/samuel/go-zookeeper/zk",
