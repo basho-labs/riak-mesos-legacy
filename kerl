@@ -315,7 +315,7 @@ do_git_build()
             fi
         done
     fi
-    ./otp_build boot -a $KERL_CONFIGURE_OPTIONS > "$LOGFILE" 2>&1
+    ./otp_build boot -a $KERL_CONFIGURE_OPTIONS |& tee "$LOGFILE"
     if [ $? -ne 0 ]; then
         echo "Build error, see $LOGFILE"
         exit 1
@@ -323,7 +323,7 @@ do_git_build()
     rm -f "$LOGFILE"
     ./otp_build release -a "$KERL_BUILD_DIR/$3/release_git" |& tee "$LOGFILE"
     cd "$KERL_BUILD_DIR/$3/release_git"
-    ./Install $INSTALL_OPT "$KERL_BUILD_DIR/$3/release_git" > /dev/null 2>&1
+    ./Install $INSTALL_OPT "$KERL_BUILD_DIR/$3/release_git" |& tee "$LOGFILE"
     echo "Erlang/OTP $3 from git has been successfully built"
     list_add builds "git,$3"
 }
