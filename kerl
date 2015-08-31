@@ -1,4 +1,4 @@
-#! /bin/sh
+#!/bin/bash
 
 # Copyright (c) 2011, 2012 Spawngrid, Inc
 # Copyright (c) 2011 Evax Software <contact(at)evax(dot)org>
@@ -290,8 +290,8 @@ do_git_build()
     fi
     LOGFILE="$KERL_BUILD_DIR/$3/otp_build.log"
     echo "Building Erlang/OTP $3 from git, please wait..."
-    ./otp_build autoconf $KERL_CONFIGURE_OPTIONS > "$LOGFILE" 2>&1 && \
-        ./otp_build configure $KERL_CONFIGURE_OPTIONS > "$LOGFILE" 2>&1
+    ./otp_build autoconf $KERL_CONFIGURE_OPTIONS |& tee "$LOGFILE" && \
+        ./otp_build configure $KERL_CONFIGURE_OPTIONS |& tee "$LOGFILE"
     if [ $? -ne 0 ]; then
         echo "Build error, see $LOGFILE"
         exit 1
@@ -321,7 +321,7 @@ do_git_build()
         exit 1
     fi
     rm -f "$LOGFILE"
-    ./otp_build release -a "$KERL_BUILD_DIR/$3/release_git" > /dev/null 2>&1
+    ./otp_build release -a "$KERL_BUILD_DIR/$3/release_git" |& tee "$LOGFILE"
     cd "$KERL_BUILD_DIR/$3/release_git"
     ./Install $INSTALL_OPT "$KERL_BUILD_DIR/$3/release_git" > /dev/null 2>&1
     echo "Erlang/OTP $3 from git has been successfully built"
@@ -367,10 +367,10 @@ do_build()
     cd "$ERL_TOP"
     LOGFILE="$KERL_BUILD_DIR/$2/otp_build_$1.log"
     if [ -n "$KERL_USE_AUTOCONF" ]; then
-        ./otp_build autoconf $KERL_CONFIGURE_OPTIONS > "$LOGFILE" 2>&1 && \
-            ./otp_build configure $KERL_CONFIGURE_OPTIONS > "$LOGFILE" 2>&1
+        ./otp_build autoconf $KERL_CONFIGURE_OPTIONS |& tee "$LOGFILE" && \
+            ./otp_build configure $KERL_CONFIGURE_OPTIONS |& tee "$LOGFILE"
     else
-        ./otp_build configure $KERL_CONFIGURE_OPTIONS > "$LOGFILE" 2>&1
+        ./otp_build configure $KERL_CONFIGURE_OPTIONS |& tee "$LOGFILE"
 
     fi
     if [ $? -ne 0 ]; then
@@ -398,7 +398,7 @@ do_build()
             fi
         done
     fi
-    ./otp_build boot -a $KERL_CONFIGURE_OPTIONS > "$LOGFILE" 2>&1
+    ./otp_build boot -a $KERL_CONFIGURE_OPTIONS |& tee "$LOGFILE"
     if [ $? -ne 0 ]; then
         echo "Build failed, see $LOGFILE"
         list_remove builds "$1 $2"
