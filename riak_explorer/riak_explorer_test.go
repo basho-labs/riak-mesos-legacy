@@ -10,8 +10,11 @@ import (
 )
 
 func TestNothing(t *testing.T) {
+  if os.Getenv("TRAVIS") == "true" {
+    t.Skip("Unable to run test on Travis")
+  }
 	assert := assert.New(t)
-
+  
 	mgr := metamgr.NewMetadataManager("rmf5", []string{"127.0.0.1"})
 	c := cepm.NewCPMd(7902, mgr)
 
