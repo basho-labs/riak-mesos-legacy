@@ -1,5 +1,6 @@
 PREFIX := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 ERLC   := $(shell which erlc)
+TMP	   := /tmp
 
 .PHONY: all clean
 all: riak_explorer-bin.tar.gz riak-2.1.1-bin.tar.gz trusty.tar.gz riak_mesos_director-bin.tar.gz
@@ -8,6 +9,7 @@ all: riak_explorer-bin.tar.gz riak-2.1.1-bin.tar.gz trusty.tar.gz riak_mesos_dir
 riak_explorer:
 	git clone --depth=1 https://github.com/basho-labs/riak_explorer.git
 riak_explorer-bin: riak_explorer OTP_R16B02_basho8-bin
+	cd riak_explorer && PATH=$(PREFIX)OTP_R16B02_basho8-bin/bin:$(PATH) $(MAKE) deps
 	cd riak_explorer && PATH=$(PREFIX)OTP_R16B02_basho8-bin/bin:$(PATH) $(MAKE) rel-backend
 	touch riak_explorer-bin
 riak_explorer-bin.tar.gz: riak_explorer-bin
@@ -52,11 +54,11 @@ clean_riak_mesos_director:
 
 ### Erlang begin
 ifneq ($(ERLC),"")
-ifeq ("$(wildcard otp_src_R16B02-basho8.tar.gz)","")
-$(shell touch otp_src_R16B02-basho8.tar.gz)
-endif
 ifeq ("$(wildcard OTP_R16B02_basho8-bin)","")
 $(shell touch OTP_R16B02_basho8-bin)
+endif
+ifeq ("$(wildcard otp_src_R16B02-basho8.tar.gz)","")
+$(shell touch otp_src_R16B02-basho8.tar.gz)
 endif
 endif
 otp_src_R16B02-basho8.tar.gz:
@@ -71,15 +73,17 @@ clean_erlang:
 
 ### schroot, debootstrap begin
 trusty.tar.gz:
-	sudo debootstrap trusty trusty_root/
-	sudo chroot trusty_root apt-get install -y busybox-static strace curl wget openssl
-	sudo chroot trusty_root apt-get clean
-	sudo chown -R $(shell id -un): trusty_root/
-	rm -rf trusty_root/dev trusty_root/proc trusty_root/sys
-	mkdir -p trusty_root/dev trusty_root/proc trusty_root/sys
-	tar -C trusty_root -czf trusty.tar.gz . || rm -rf trusty.tar.gz
-	rm -rf trusty_root
+	cd $(TMP) && sudo debootstrap trusty trusty_root/
+	cd $(TMP) && sudo chroot trusty_root apt-get install -y busybox-static strace curl wget openssl
+	cd $(TMP) && sudo chroot trusty_root apt-get clean
+	cd $(TMP) && sudo chown -R $(shell id -un): trusty_root/
+	cd $(TMP) && rm -rf trusty_root/dev trusty_root/proc trusty_root/sys
+	cd $(TMP) && mkdir -p trusty_root/dev trusty_root/proc trusty_root/sys
+	cd $(TMP) && tar -C trusty_root -czf trusty.tar.gz . || rm -rf trusty.tar.gz
+	cd $(TMP) && rm -rf trusty_root
+	mv $(TMP)/trusty.tar.gz ./
 clean: clean_schroot
 clean_schroot:
 	-rm -rf trusty.tar.gz trusty_root
+	-cd $(TMP) && rm -rf trusty.tar.gz trusty_root
 ### schroot, debootstrap end
