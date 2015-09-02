@@ -6,15 +6,14 @@ go:
 install:
   - go get -u github.com/jteeuwen/go-bindata/...
   - go get github.com/tools/godep
-  - export KERL_CONFIGURE_DISABLE_APPLICATIONS="observer orber debugger ic diameter cosNotification cosEvent cosEventDomain cosFileTransfer cosProperty cosTime cosTransactions megaco wx" 
+  - export KERL_CONFIGURE_DISABLE_APPLICATIONS="observer orber debugger ic diameter cosNotification cosEvent cosEventDomain cosFileTransfer cosProperty cosTime cosTransactions megaco wx"
   - ./kerl build git git://github.com/basho/otp.git OTP_R16B02_basho8 R16B02-basho8
   - ./kerl install R16B02-basho8 ~/erlang/R16B02-basho8
   - . ~/erlang/R16B02-basho8/activate
 script:
-  - make TAGS=dev
-  - go test -v ./...
+  - TAGS=dev make
+  - go test ./...
 
 before_install:
   - sudo apt-get update -qq
   - sudo apt-get install -y build-essential autoconf libncurses5-dev openssl libssl-dev fop xsltproc unixodbc-dev libpam0g-dev debootstrap
-
