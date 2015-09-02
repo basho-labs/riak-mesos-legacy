@@ -9,7 +9,6 @@ all: riak_explorer-bin.tar.gz riak-2.1.1-bin.tar.gz trusty.tar.gz riak_mesos_dir
 riak_explorer:
 	git clone --depth=1 https://github.com/basho-labs/riak_explorer.git
 riak_explorer-bin: riak_explorer OTP_R16B02_basho8-bin
-	cd riak_explorer && PATH=$(PREFIX)OTP_R16B02_basho8-bin/bin:$(PATH) $(MAKE) deps
 	cd riak_explorer && PATH=$(PREFIX)OTP_R16B02_basho8-bin/bin:$(PATH) $(MAKE) rel-backend
 	touch riak_explorer-bin
 riak_explorer-bin.tar.gz: riak_explorer-bin
@@ -56,9 +55,6 @@ clean_riak_mesos_director:
 ifneq ($(ERLC),"")
 ifeq ("$(wildcard OTP_R16B02_basho8-bin)","")
 $(shell touch OTP_R16B02_basho8-bin)
-endif
-ifeq ("$(wildcard otp_src_R16B02-basho8.tar.gz)","")
-$(shell touch otp_src_R16B02-basho8.tar.gz)
 endif
 endif
 otp_src_R16B02-basho8.tar.gz:
