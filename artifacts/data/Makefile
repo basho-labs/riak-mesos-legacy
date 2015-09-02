@@ -57,9 +57,8 @@ ifeq ("$(wildcard OTP_R16B02_basho8-bin)","")
 $(shell touch OTP_R16B02_basho8-bin)
 endif
 endif
-otp_src_R16B02-basho8.tar.gz:
+OTP_R16B02_basho8-bin:
 	curl -C - -O http://s3.amazonaws.com/downloads.basho.com/erlang/otp_src_R16B02-basho8.tar.gz || rm otp_src_R16B02-basho8.tar.gz
-OTP_R16B02_basho8-bin: otp_src_R16B02-basho8.tar.gz
 	tar -xvf otp_src_R16B02-basho8.tar.gz
 	cd OTP_R16B02_basho8 && ./otp_build autoconf && ./configure --prefix=$(PREFIX)/OTP_R16B02_basho8-bin && $(MAKE) && $(MAKE) install
 clean: clean_erlang
