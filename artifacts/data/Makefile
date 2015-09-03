@@ -32,7 +32,7 @@ riak-2.1.1-bin.tar.gz: riak-2.1.1-bin
 	tar -C riak-2.1.1/rel/ -czf riak-2.1.1-bin.tar.gz riak || rm -rf riak-2.1.1-bin.tar.gz
 clean: clean_riak
 clean_riak:
-	-rm -rf riak-2.1.1 riak-2.1.1-bin.tar.gz riak-2.1.1-bin
+	-rm -rf riak-2.1.1.tar.gz riak-2.1.1 riak-2.1.1-bin.tar.gz riak-2.1.1-bin
 ### Riak end
 
 ### Director begin

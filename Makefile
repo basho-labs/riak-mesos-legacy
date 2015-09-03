@@ -2,12 +2,14 @@ BASE_DIR         = $(shell pwd)
 export TAGS     ?= rel
 PACKAGE_VERSION ?= 0.1.1
 BUILD_DIR       ?= $(BASE_DIR)/_build
-DEPLOY_BASE     ?= riak-tools/riak-mesos
+PROJECT_BASE    ?= riak-mesos
+DEPLOY_BASE     ?= riak-tools/$PROJECT_BASE
 DEPLOY_OS       ?= coreos
 # The project is actually cross platform, but this is the current repository location for all packages.
 
 .PHONY: all clean clean_bin package clean_package sync
 all: clean_bin framework director
+rebuild_all: clean build_artifacts framework director
 clean: clean_package clean_bin
 package: clean_package
 
@@ -57,12 +59,23 @@ clean_executor:
 
 ### Artifact begin
 .PHONY: artifacts clean_artifacts
-artifacts:
+build_artifacts:
 	cd artifacts/data && $(MAKE)
 	go generate -tags=$(TAGS) ./artifacts
+artifacts:
+	cd artifacts/data && $(MAKE) -f download.make
+	go generate -tags=$(TAGS) ./artifacts
+sync: sync_artifacts
+sync_artifacts:
+	cd artifacts/data/ && \
+		s3cmd put --acl-public riak_explorer-bin.tar.gz s3://$(DEPLOY_BASE)/$(DEPLOY_OS)/artifacts/$(PACKAGE_VERSION)/ && \
+		s3cmd put --acl-public riak-2.1.1-bin.tar.gz s3://$(DEPLOY_BASE)/$(DEPLOY_OS)/artifacts/$(PACKAGE_VERSION)/ && \
+		s3cmd put --acl-public riak_mesos_director-bin.tar.gz s3://$(DEPLOY_BASE)/$(DEPLOY_OS)/artifacts/$(PACKAGE_VERSION)/ && \
+		s3cmd put --acl-public trusty.tar.gz s3://$(DEPLOY_BASE)/$(DEPLOY_OS)/artifacts/$(PACKAGE_VERSION)/
 clean: clean_artifacts
 clean_artifacts:
 	cd artifacts/data && $(MAKE) clean
+	-rm -rf artifacts/bindata_generated.go
 ### Artifact end
 
 ### Tools begin
@@ -86,7 +99,7 @@ director: .director.bindata_generated
 	go build -o bin/director_linux_amd64 -tags=$(TAGS) ./director/
 clean_bin: clean_director
 clean_director:
-	-rm -rf .director.bindata_generated director/bindata_generated.go
+	-rm -rf .director.bindata_generated director/bindata_generated.go bin/director_linux_amd64
 ### Scheduler end
 
 ### Schroot begin
