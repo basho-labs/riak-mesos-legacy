@@ -3,13 +3,13 @@ export TAGS     ?= rel
 PACKAGE_VERSION ?= 0.1.1
 BUILD_DIR       ?= $(BASE_DIR)/_build
 PROJECT_BASE    ?= riak-mesos
-DEPLOY_BASE     ?= riak-tools/$PROJECT_BASE
+DEPLOY_BASE     ?= riak-tools/$(PROJECT_BASE)
 DEPLOY_OS       ?= coreos
 # The project is actually cross platform, but this is the current repository location for all packages.
 
 .PHONY: all clean clean_bin package clean_package sync
 all: clean_bin framework director
-rebuild_all: clean build_artifacts framework director
+rebuild_all: clean build_artifacts build_schroot framework director
 clean: clean_package clean_bin
 package: clean_package
 
@@ -48,7 +48,7 @@ executor: .scheduler.data.executor_linux_amd64
 .executor.bindata_generated: executor/data/advanced.config executor/data/riak.conf
 	go generate -tags=$(TAGS) ./executor/...
 	$(shell touch .executor.bindata_generated)
-.scheduler.data.executor_linux_amd64: cepm .executor.bindata_generated .process_manager.bindata_generated
+.scheduler.data.executor_linux_amd64: cepm .process_manager.bindata_generated .executor.bindata_generated
 	go build -o scheduler/data/executor_linux_amd64 -tags=$(TAGS) ./executor/
 	$(shell touch .scheduler.data.executor_linux_amd64)
 clean_bin: clean_executor
@@ -103,10 +103,17 @@ clean_director:
 ### Scheduler end
 
 ### Schroot begin
-.PHONY: schroot clean_schroot
-schroot:
+.PHONY: build_schroot schroot clean_schroot
+build_schroot:
 	cd process_manager/schroot/data && $(MAKE)
-clean_bin: clean_schroot
+schroot:
+	cd process_manager/schroot/data && $(MAKE) -f download.make
+sync: sync_schroot
+sync_schroot:
+	cd process_manager/schroot/data/ && \
+		s3cmd put --acl-public plain_chroot s3://$(DEPLOY_BASE)/$(DEPLOY_OS)/artifacts/$(PACKAGE_VERSION)/ && \
+		s3cmd put --acl-public super_chroot s3://$(DEPLOY_BASE)/$(DEPLOY_OS)/artifacts/$(PACKAGE_VERSION)/
+clean: clean_schroot
 clean_schroot:
 	cd process_manager/schroot/data && $(MAKE) clean
 ### Schroot end
@@ -160,8 +167,6 @@ lint:
 fmt:
 	go fmt ./...
 ### Go Tools end
-
-
 
 ### Framework Package begin
 .PHONY: package_framework sync_framework clean_framework_package

@@ -1,5 +1,30 @@
 # Development Guide
 
+## Quickstart
+
+To build the framework and get it running in a Mesos vagrant environment on Mac OSX, follow these steps:
+
+### Build
+
+```
+make
+```
+
+### Bring up Mesos
+
+```
+vagrant plugin install vagrant-hostmanager
+vagrant up
+vagrant reload
+```
+
+### Start the framework
+
+```
+
+```
+
+
 ## Environment
 
 For vagrant or regular Ubuntu 14.04, go to [https://github.com/basho-labs/vagrant-riak-mesos](https://github.com/basho-labs/vagrant-riak-mesos) and follow the directions to set up a development environment.

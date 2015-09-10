@@ -37,16 +37,6 @@ supported on all platforms.
 
 ## Installation
 
-### Setup DCOS CLI
-
-First, the Riak DCOS package needs to be added to sources.
-
-This step will no longer be necessary once the framework passes DCOS certification.
-
-```
-dcos config set package.sources '["http://riak-tools.s3.amazonaws.com/riak-mesos/dcos-repo-0.1.1.zip"]'
-```
-
 ### Create a Configuration File
 
 For the framework to work properly in your environment, a custom config file
