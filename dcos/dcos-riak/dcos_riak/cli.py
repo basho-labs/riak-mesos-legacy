@@ -37,8 +37,8 @@ def usage():
     print("    cluster create")
     print("    node list")
     print("    node add [--nodes <number>]")
-    print("    proxy config [--zk <host:port>]")
-    print("    proxy install [--zk <host:port>]")
+    print("    proxy config [--zk <host:port> --disable-super-chroot]")
+    print("    proxy install [--zk <host:port> --disable-super-chroot]")
     print("    proxy uninstall")
     print("    proxy endpoints [--public-dns <host>]")
     print("")
@@ -120,16 +120,16 @@ def uninstall_director(framework):
     try:
         client = marathon.create_client()
         client.remove_app('/' + framework + '-director')
-        print("Finished removing " + director_json['id'] + " from marathon")
+        print("Finished removing " + '/' + framework + '-director' + " from marathon")
     except errors.DCOSException as e:
         print(e.message)
         raise CliError("Unable to uninstall marathon app")
     except:
         raise CliError("Unable to communicate with marathon.")
 
-def install_director(framework, cluster, zookeeper):
+def install_director(framework, cluster, zookeeper, disable_super_chroot_flag):
     try:
-        director_conf = generate_director_config(framework, cluster, zookeeper)
+        director_conf = generate_director_config(framework, cluster, zookeeper, disable_super_chroot_flag)
         director_json = json.loads(director_conf)
         client = marathon.create_client()
         client.add_app(director_json)
@@ -140,14 +140,15 @@ def install_director(framework, cluster, zookeeper):
     except:
         raise CliError("Unable to communicate with marathon.")
 
-def generate_director_config(framework, cluster, zookeeper):
+def generate_director_config(framework, cluster, zookeeper, disable_super_chroot_flag):
     try:
+
         framework_host = framework + ".marathon.mesos"
         client = marathon.create_client()
         app = client.get_app(framework)
         ports = app['ports']
         explorer_port = str(ports[1])
-        return '{"id": "/' + framework + '-director","cmd": "./riak_mesos_director/director_linux_amd64","cpus": 0.5,"mem": 1024.0,"ports": [0, 0, 0, 0],"instances": 1,"constraints": [["hostname", "UNIQUE"]],"acceptedResourceRoles": ["slave_public"],"env": {"FRAMEWORK_HOST": "' + framework_host + '","FRAMEWORK_PORT": "' + explorer_port + '","DIRECTOR_ZK": "' + zookeeper + '","DIRECTOR_FRAMEWORK": "' + framework + '","DIRECTOR_CLUSTER": "' + cluster + '"},"uris": ["http://riak-tools.s3.amazonaws.com/riak-mesos/coreos/riak_mesos_director_linux_amd64_0.1.1.tar.gz"],"healthChecks": [{"protocol": "HTTP","path": "/health","gracePeriodSeconds": 3,"intervalSeconds": 10,"portIndex": 2,"timeoutSeconds": 10,"maxConsecutiveFailures": 3}]}'
+        return '{"id": "/' + framework + '-director","cmd": "./riak_mesos_director/director_linux_amd64","cpus": 0.5,"mem": 1024.0,"ports": [0, 0, 0, 0],"instances": 1,"constraints": [["hostname", "UNIQUE"]],"acceptedResourceRoles": ["slave_public"],"env": {"USE_SUPER_CHROOT": "'+ str(not disable_super_chroot_flag).lower() + '","FRAMEWORK_HOST": "' + framework_host + '","FRAMEWORK_PORT": "' + explorer_port + '","DIRECTOR_ZK": "' + zookeeper + '","DIRECTOR_FRAMEWORK": "' + framework + '","DIRECTOR_CLUSTER": "' + cluster + '"},"uris": ["http://riak-tools.s3.amazonaws.com/riak-mesos/coreos/test/riak_mesos_director_linux_amd64_0.1.1.tar.gz"],"healthChecks": [{"protocol": "HTTP","path": "/health","gracePeriodSeconds": 3,"intervalSeconds": 10,"portIndex": 2,"timeoutSeconds": 10,"maxConsecutiveFailures": 3}]}'
     except errors.DCOSException as e:
         print(e.message)
         raise CliError("Unable to create marathon app")
@@ -210,6 +211,7 @@ def debug(debug_flag, debug_string):
 def run(args):
     args, help_flag = extract_flag(args, "--help")
     args, debug_flag = extract_flag(args, "--debug")
+    args, disable_super_chroot_flag = extract_flag(args, "--disable-super-chroot")
     args, framework = extract_option(args, "--framework", "riak")
     args, cluster = extract_option(args, "--cluster", "riak-cluster")
     args, zk = extract_option(args, "--zk", "master.mesos:2181")
@@ -255,12 +257,12 @@ def run(args):
         if help_flag:
             print("Generates a marathon json config using --zookeeper (default is master.mesos:2181) and --cluster (default is riak-cluster).")
         else:
-            print(generate_director_config(framework, cluster, zk))
+            print(generate_director_config(framework, cluster, zk, disable_super_chroot_flag))
     elif cmd == "proxy install":
         if help_flag:
             print("Installs a riak-mesos-director marathon app on the public Mesos node using --zookeeper (default is master.mesos:2181) and --cluster (default is riak-cluster).")
         else:
-            install_director(framework, cluster, zk)
+            install_director(framework, cluster, zk, disable_super_chroot_flag)
     elif cmd == "proxy uninstall":
         if help_flag:
             print("Uninstalls the riak-mesos-director marathon app.")

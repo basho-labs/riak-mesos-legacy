@@ -6,6 +6,7 @@
    "ports":[0,0,0,0],
    "instances":1,
    "env":{
+      "USE_SUPER_CHROOT": "true",
       "FRAMEWORK_HOST":"localhost",
       "FRAMEWORK_PORT":"31559",
       "DIRECTOR_ZK":"localhost:2181",
