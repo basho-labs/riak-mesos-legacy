@@ -183,6 +183,9 @@ sync: sync_framework
 sync_framework:
 	cd $(BUILD_DIR)/ && \
 		s3cmd put --acl-public riak_mesos_linux_amd64_$(PACKAGE_VERSION).tar.gz s3://$(DEPLOY_BASE)/$(DEPLOY_OS)/
+sync_framework_test:
+	cd $(BUILD_DIR)/ && \
+		s3cmd put --acl-public riak_mesos_linux_amd64_$(PACKAGE_VERSION).tar.gz s3://$(DEPLOY_BASE)/$(DEPLOY_OS)/test/
 clean_package: clean_framework_package
 clean_framework_package:
 	-rm $(BUILD_DIR)/riak_mesos_linux_amd64_$(PACKAGE_VERSION).tar.gz
@@ -202,6 +205,9 @@ sync: sync_director
 sync_director:
 	cd $(BUILD_DIR)/ && \
 		s3cmd put --acl-public riak_mesos_director_linux_amd64_$(PACKAGE_VERSION).tar.gz s3://$(DEPLOY_BASE)/$(DEPLOY_OS)/
+sync_director_test:
+	cd $(BUILD_DIR)/ && \
+		s3cmd put --acl-public riak_mesos_director_linux_amd64_$(PACKAGE_VERSION).tar.gz s3://$(DEPLOY_BASE)/$(DEPLOY_OS)/test/
 clean_package: clean_director_package
 clean_director_package:
 	-rm $(BUILD_DIR)/riak_mesos_director_linux_amd64_$(PACKAGE_VERSION).tar.gz
@@ -220,6 +226,9 @@ sync: sync_dcos
 sync_dcos:
 	cd $(BUILD_DIR)/ && \
 		s3cmd put --acl-public dcos-riak-$(PACKAGE_VERSION).tar.gz s3://$(DEPLOY_BASE)/
+sync_dcos_test:
+	cd $(BUILD_DIR)/ && \
+		s3cmd put --acl-public dcos-riak-$(PACKAGE_VERSION).tar.gz s3://$(DEPLOY_BASE)/test/
 clean_package: clean_dcos_package
 clean_dcos_package:
 	-rm $(BUILD_DIR)/dcos-riak-$(PACKAGE_VERSION).tar.gz

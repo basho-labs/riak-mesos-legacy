@@ -3,43 +3,65 @@ package process_manager
 
 import (
 	"fmt"
-	log "github.com/Sirupsen/logrus"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"syscall"
-	"os/exec"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 func (pm *ProcessManager) start(executablePath string, args []string, chroot *string) {
+	var err error
+	realArgs := []string{}
+
+	wd, err := os.Getwd()
+	if err != nil {
+		log.Fatal("Could not get current working directory")
+	}
+	procattrDir := wd
+
+	env := os.Environ()
 
 	sysprocattr := &syscall.SysProcAttr{
 		Setpgid: true,
 	}
-	if chroot != nil {
-		log.Info("Assets: ", AssetNames())
-		err := RestoreAsset(*chroot, "super_chroot")
-		if err != nil {
-			log.Panic("Unable to decompress: ", err)
-		}
-		args = append([]string{*chroot, executablePath}, args...)
 
-		cpResolvCmd := exec.Command("/bin/cp", "/etc/resolv.conf", "./" + *chroot + "/etc/resolv.conf")
+	if chroot != nil {
+		cpResolvCmd := exec.Command("/bin/cp", "/etc/resolv.conf", "./"+*chroot+"/etc/resolv.conf")
 		log.Info(cpResolvCmd.Args)
 		err = cpResolvCmd.Run()
 		if err != nil {
 			log.Info("Non-zero exit from command")
 		}
-		cpHostsCmd := exec.Command("/bin/cp", "/etc/hosts", "./" + *chroot + "/etc/hosts")
+		cpHostsCmd := exec.Command("/bin/cp", "/etc/hosts", "./"+*chroot+"/etc/hosts")
 		log.Info(cpHostsCmd.Args)
 		err = cpHostsCmd.Run()
 		if err != nil {
 			log.Info("Non-zero exit from command")
 		}
 
-		executablePath = filepath.Join(*chroot, "super_chroot")
+		if os.Getenv("USE_SUPER_CHROOT") != "false" {
+			log.Info("Assets: ", AssetNames())
+			err = RestoreAsset(*chroot, "super_chroot")
+			if err != nil {
+				log.Panic("Unable to decompress: ", err)
+			}
+			args = append([]string{*chroot, executablePath}, args...)
+			executablePath = filepath.Join(*chroot, "super_chroot")
+		} else {
+			sysprocattr.Chroot = *chroot
+			procattrDir = "/"
+			if os.Getuid() != 0 {
+				//Namespace tricks
+				sysprocattr.Cloneflags = syscall.CLONE_NEWUSER | syscall.CLONE_NEWNS
+				sysprocattr.UidMappings = []syscall.SysProcIDMap{
+					{ContainerID: 0, HostID: os.Getuid(), Size: 1},
+				}
+			}
+		}
 	}
-	env := os.Environ()
 
 	procattr := &syscall.ProcAttr{
 		Sys:   sysprocattr,
@@ -48,11 +70,7 @@ func (pm *ProcessManager) start(executablePath string, args []string, chroot *st
 	}
 
 	if os.Getenv("HOME") == "" {
-		wd, err := os.Getwd()
-		if err != nil {
-			log.Fatal("Could not get current working directory")
-		}
-		procattr.Dir = wd
+		procattr.Dir = procattrDir
 		homevar := fmt.Sprintf("HOME=%s", wd)
 		procattr.Env = append(os.Environ(), homevar)
 	}
@@ -70,8 +88,8 @@ func (pm *ProcessManager) start(executablePath string, args []string, chroot *st
 	if !pathDetected {
 		procattr.Env = append(procattr.Env, "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games")
 	}
-	var err error
-	realArgs := append([]string{executablePath}, args...)
+
+	realArgs = append([]string{executablePath}, args...)
 
 	log.Infof("Getting Ready to start process: %v with args: %v and ProcAttr: %+v and %+v", executablePath, realArgs, procattr, sysprocattr)
 
