@@ -48,8 +48,8 @@ func (pm *ProcessManager) start(executablePath string, args []string, chroot *st
 			if err != nil {
 				log.Panic("Unable to decompress: ", err)
 			}
-			executablePath = filepath.Join(*chroot, "super_chroot")
 			args = append([]string{*chroot, executablePath}, args...)
+			executablePath = filepath.Join(*chroot, "super_chroot")
 		} else {
 			sysprocattr.Chroot = *chroot
 			procattrDir = "/"
