@@ -183,6 +183,9 @@ sync: sync_framework
 sync_framework:
 	cd $(BUILD_DIR)/ && \
 		s3cmd put --acl-public riak_mesos_linux_amd64_$(PACKAGE_VERSION).tar.gz s3://$(DEPLOY_BASE)/$(DEPLOY_OS)/
+sync_framework_test:
+	cd $(BUILD_DIR)/ && \
+		s3cmd put --acl-public riak_mesos_linux_amd64_$(PACKAGE_VERSION).tar.gz s3://$(DEPLOY_BASE)/$(DEPLOY_OS)/test/
 clean_package: clean_framework_package
 clean_framework_package:
 	-rm $(BUILD_DIR)/riak_mesos_linux_amd64_$(PACKAGE_VERSION).tar.gz

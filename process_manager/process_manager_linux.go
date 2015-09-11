@@ -3,48 +3,55 @@ package process_manager
 
 import (
 	"fmt"
-	log "github.com/Sirupsen/logrus"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"syscall"
-	"os/exec"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 func (pm *ProcessManager) start(executablePath string, args []string, chroot *string) {
+	var err error
+
+	env := os.Environ()
 
 	sysprocattr := &syscall.SysProcAttr{
 		Setpgid: true,
 	}
-	if chroot != nil {
-		log.Info("Assets: ", AssetNames())
-		err := RestoreAsset(*chroot, "super_chroot")
-		if err != nil {
-			log.Panic("Unable to decompress: ", err)
-		}
-		args = append([]string{*chroot, executablePath}, args...)
 
-		cpResolvCmd := exec.Command("/bin/cp", "/etc/resolv.conf", "./" + *chroot + "/etc/resolv.conf")
+	procattr := &syscall.ProcAttr{
+		Sys:   sysprocattr,
+		Env:   env,
+		Files: []uintptr{os.Stdin.Fd(), os.Stdout.Fd(), os.Stderr.Fd()},
+	}
+
+	if chroot != nil {
+		cpResolvCmd := exec.Command("/bin/cp", "/etc/resolv.conf", "./"+*chroot+"/etc/resolv.conf")
 		log.Info(cpResolvCmd.Args)
 		err = cpResolvCmd.Run()
 		if err != nil {
 			log.Info("Non-zero exit from command")
 		}
-		cpHostsCmd := exec.Command("/bin/cp", "/etc/hosts", "./" + *chroot + "/etc/hosts")
+		cpHostsCmd := exec.Command("/bin/cp", "/etc/hosts", "./"+*chroot+"/etc/hosts")
 		log.Info(cpHostsCmd.Args)
 		err = cpHostsCmd.Run()
 		if err != nil {
 			log.Info("Non-zero exit from command")
 		}
 
-		executablePath = filepath.Join(*chroot, "super_chroot")
-	}
-	env := os.Environ()
-
-	procattr := &syscall.ProcAttr{
-		Sys:   sysprocattr,
-		Env:   env,
-		Files: []uintptr{os.Stdin.Fd(), os.Stdout.Fd(), os.Stderr.Fd()},
+		if os.Getenv("USE_SUPER_CHROOT") != "false" {
+			log.Info("Assets: ", AssetNames())
+			err = RestoreAsset(*chroot, "super_chroot")
+			if err != nil {
+				log.Panic("Unable to decompress: ", err)
+			}
+			executablePath = filepath.Join(*chroot, "super_chroot")
+			args = append([]string{*chroot, executablePath}, args...)
+		} else {
+			sysprocattr.Chroot = *chroot
+		}
 	}
 
 	if os.Getenv("HOME") == "" {
@@ -70,7 +77,7 @@ func (pm *ProcessManager) start(executablePath string, args []string, chroot *st
 	if !pathDetected {
 		procattr.Env = append(procattr.Env, "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games")
 	}
-	var err error
+
 	realArgs := append([]string{executablePath}, args...)
 
 	log.Infof("Getting Ready to start process: %v with args: %v and ProcAttr: %+v and %+v", executablePath, realArgs, procattr, sysprocattr)
