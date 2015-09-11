@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
@@ -160,13 +161,13 @@ func (frn *FrameworkRiakNode) handleStatusUpdate(sc *SchedulerCore, frc *Framewo
 func (frn *FrameworkRiakNode) GetTaskStatus() *mesos.TaskStatus {
 	if frn.TaskStatus != nil {
 		return frn.TaskStatus
-	} else {
-		ts := mesos.TaskState_TASK_ERROR
-		return &mesos.TaskStatus{
-			TaskId:  &mesos.TaskID{Value: proto.String(frn.CurrentID())},
-			State:   &ts,
-			SlaveId: &mesos.SlaveID{Value: proto.String("")}, // Slave ID isn't required
-		}
+	}
+
+	ts := mesos.TaskState_TASK_ERROR
+	return &mesos.TaskStatus{
+		TaskId:  &mesos.TaskID{Value: proto.String(frn.CurrentID())},
+		State:   &ts,
+		SlaveId: &mesos.SlaveID{Value: proto.String("")}, // Slave ID isn't required
 	}
 }
 
@@ -242,6 +243,16 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(sc *SchedulerCor
 	}
 	//executorUris = append(executorUris,
 	//	&mesos.CommandInfo_URI{Value: &(frn.frc.sc.schedulerHTTPServer.hostURI), Executable: proto.Bool(true)})
+	superChrootValue := "true"
+	if os.Getenv("USE_SUPER_CHROOT") == "false" {
+		superChrootValue = "false"
+	}
+
+	environmentVariables := []*mesos.Environment_Variable{}
+	environmentVariables = append(environmentVariables, &mesos.Environment_Variable{
+		Name:  proto.String("USE_SUPER_CHROOT"),
+		Value: proto.String(superChrootValue),
+	})
 
 	exec := &mesos.ExecutorInfo{
 		//No idea is this is the "right" way to do it, but I think so?
@@ -249,9 +260,12 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(sc *SchedulerCor
 		Name:       proto.String("Executor (Go)"),
 		Source:     proto.String("Riak Mesos Framework (Go)"),
 		Command: &mesos.CommandInfo{
-			Value:     proto.String(sc.schedulerHTTPServer.executorName),
-			Uris:      executorUris,
-			Shell:     proto.Bool(false),
+			Value: proto.String(sc.schedulerHTTPServer.executorName),
+			Uris:  executorUris,
+			Shell: proto.Bool(false),
+			Environment: &mesos.Environment{
+				Variables: environmentVariables,
+			},
 			Arguments: []string{sc.schedulerHTTPServer.executorName, "-logtostderr=true", "-taskinfo", frn.CurrentID()},
 		},
 		Resources: executorAsk,

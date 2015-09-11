@@ -14,17 +14,18 @@ import (
 
 func (pm *ProcessManager) start(executablePath string, args []string, chroot *string) {
 	var err error
+	realArgs := []string{}
+
+	wd, err := os.Getwd()
+	if err != nil {
+		log.Fatal("Could not get current working directory")
+	}
+	procattrDir := wd
 
 	env := os.Environ()
 
 	sysprocattr := &syscall.SysProcAttr{
 		Setpgid: true,
-	}
-
-	procattr := &syscall.ProcAttr{
-		Sys:   sysprocattr,
-		Env:   env,
-		Files: []uintptr{os.Stdin.Fd(), os.Stdout.Fd(), os.Stderr.Fd()},
 	}
 
 	if chroot != nil {
@@ -51,15 +52,25 @@ func (pm *ProcessManager) start(executablePath string, args []string, chroot *st
 			args = append([]string{*chroot, executablePath}, args...)
 		} else {
 			sysprocattr.Chroot = *chroot
+			procattrDir = "/"
+			if os.Getuid() != 0 {
+				//Namespace tricks
+				sysprocattr.Cloneflags = syscall.CLONE_NEWUSER | syscall.CLONE_NEWNS
+				sysprocattr.UidMappings = []syscall.SysProcIDMap{
+					{ContainerID: 0, HostID: os.Getuid(), Size: 1},
+				}
+			}
 		}
 	}
 
+	procattr := &syscall.ProcAttr{
+		Sys:   sysprocattr,
+		Env:   env,
+		Files: []uintptr{os.Stdin.Fd(), os.Stdout.Fd(), os.Stderr.Fd()},
+	}
+
 	if os.Getenv("HOME") == "" {
-		wd, err := os.Getwd()
-		if err != nil {
-			log.Fatal("Could not get current working directory")
-		}
-		procattr.Dir = wd
+		procattr.Dir = procattrDir
 		homevar := fmt.Sprintf("HOME=%s", wd)
 		procattr.Env = append(os.Environ(), homevar)
 	}
@@ -78,7 +89,7 @@ func (pm *ProcessManager) start(executablePath string, args []string, chroot *st
 		procattr.Env = append(procattr.Env, "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games")
 	}
 
-	realArgs := append([]string{executablePath}, args...)
+	realArgs = append([]string{executablePath}, args...)
 
 	log.Infof("Getting Ready to start process: %v with args: %v and ProcAttr: %+v and %+v", executablePath, realArgs, procattr, sysprocattr)
 
