@@ -7,7 +7,7 @@ The Riak Mesos Framework can be configured in a few different ways depending on 
 ### Marathon Usage
 
 Sample Riak Mesos Framework `marathon.json`: [../mararthon.json](../marathon.json).
-Sample Riak Mesos Director `marathon.json`: [../director.mararthon.json](../marathon.json).
+Sample Riak Mesos Director `marathon.json`: [../director.mararthon.json](../director.marathon.json).
 
 ### Manual Usage
 
