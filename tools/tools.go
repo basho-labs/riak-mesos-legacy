@@ -6,10 +6,10 @@ import (
 	"os"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/basho-labs/riak-mesos/scheduler"
 	"github.com/basho-labs/riak-mesos/metadata_manager"
-	"github.com/samuel/go-zookeeper/zk"
+	"github.com/basho-labs/riak-mesos/scheduler"
 	"github.com/kr/pretty"
+	"github.com/samuel/go-zookeeper/zk"
 	"time"
 )
 

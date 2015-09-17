@@ -18,7 +18,6 @@ import (
 	"github.com/basho-labs/riak-mesos/process_manager"
 	rex "github.com/basho-labs/riak-mesos/riak_explorer"
 	mesos "github.com/mesos/mesos-go/mesosproto"
-	util "github.com/mesos/mesos-go/mesosutil"
 	"net/http"
 )
 
@@ -64,18 +63,6 @@ func NewRiakNode(taskInfo *mesos.TaskInfo, executor *ExecutorCore) *RiakNode {
 	}
 }
 
-func portIter(resources []*mesos.Resource) chan int64 {
-	ports := make(chan int64)
-	go func() {
-		defer close(ports)
-		for _, resource := range util.FilterResources(resources, func(res *mesos.Resource) bool { return res.GetName() == "ports" }) {
-			for _, port := range common.RangesToArray(resource.GetRanges().GetRange()) {
-				ports <- port
-			}
-		}
-	}()
-	return ports
-}
 func (riakNode *RiakNode) runLoop(child *metamgr.ZkNode) {
 
 	runStatus := &mesos.TaskStatus{
@@ -123,7 +110,7 @@ func (riakNode *RiakNode) runLoop(child *metamgr.ZkNode) {
 	riakNode.executor.Driver.Stop()
 
 }
-func (riakNode *RiakNode) configureRiak(ports chan int64) templateData {
+func (riakNode *RiakNode) configureRiak(taskData common.TaskData) templateData {
 
 	data, err := Asset("data/riak.conf")
 	if err != nil {
@@ -139,10 +126,10 @@ func (riakNode *RiakNode) configureRiak(ports chan int64) templateData {
 	vars := templateData{}
 	vars.FullyQualifiedNodeName = riakNode.taskData.FullyQualifiedNodeName
 
-	vars.HTTPPort = <-ports
-	vars.PBPort = <-ports
-	vars.HandoffPort = <-ports
-	vars.DisterlPort = <-ports
+	vars.HTTPPort = taskData.HTTPPort
+	vars.PBPort = taskData.PBPort
+	vars.HandoffPort = taskData.HandoffPort
+	vars.DisterlPort = taskData.DisterlPort
 
 	file, err := os.OpenFile("root/riak/etc/riak.conf", os.O_TRUNC|os.O_CREATE|os.O_RDWR, 0664)
 
@@ -222,8 +209,7 @@ func (riakNode *RiakNode) Run() {
 		log.Panic("Unable to extract riak root: ", err)
 	}
 
-	ports := portIter(riakNode.taskInfo.Resources)
-	config := riakNode.configureRiak(ports)
+	config := riakNode.configureRiak(riakNode.taskData)
 
 	c := cepm.NewCPMd(0, riakNode.metadataManager)
 	c.Background()
@@ -285,7 +271,7 @@ func (riakNode *RiakNode) Run() {
 		log.Info("Shutting down due to GC, after failing to bring up Riak node")
 		riakNode.executor.Driver.Stop()
 	} else {
-		rexPort := <-ports
+		rexPort := riakNode.taskData.RexPort
 		riakNode.startRex(rexPort, c)
 		rootNode := riakNode.metadataManager.GetRootNode()
 

@@ -31,7 +31,6 @@ type FrameworkRiakNode struct {
 	TaskData         common.TaskData
 	FrameworkName    string
 	ClusterName      string
-	TaskStatusData   *common.TaskStatusData
 }
 
 func NewFrameworkRiakNode(FrameworkName string, ClusterName string) *FrameworkRiakNode {
@@ -82,13 +81,9 @@ func (frn *FrameworkRiakNode) ExecutorID() string {
 func (frn *FrameworkRiakNode) handleUpToDownTransition(sc *SchedulerCore, frc *FrameworkRiakCluster) {
 	for _, riakNode := range sc.schedulerState.Clusters[frc.Name].Nodes {
 		if riakNode.CurrentState == process_state.Started && riakNode != frn {
-			var rexc *rex.RiakExplorerClient
-			if riakNode.TaskStatusData != nil {
-				rexHostname := fmt.Sprintf("%s:%d", riakNode.LastOfferUsed.GetHostname(), riakNode.TaskStatusData.RexPort)
-				rexc = rex.NewRiakExplorerClient(rexHostname)
-			} else {
-				log.Info("Riak node %v doesn't have TSD set", riakNode)
-			}
+
+			rexc := rex.NewRiakExplorerClient(fmt.Sprintf("%s:%d", riakNode.LastOfferUsed.GetHostname(), riakNode.TaskData.RexPort))
+
 			// We should try to join against this node
 			log.Infof("Making leave: %+v to %+v", frn.TaskData.FullyQualifiedNodeName, riakNode.TaskData.FullyQualifiedNodeName)
 			leaveReply, leaveErr := rexc.ForceRemove(riakNode.TaskData.FullyQualifiedNodeName, frn.TaskData.FullyQualifiedNodeName)
@@ -101,10 +96,8 @@ func (frn *FrameworkRiakNode) handleUpToDownTransition(sc *SchedulerCore, frc *F
 	}
 }
 func (frn *FrameworkRiakNode) handleStartingToRunningTransition(sc *SchedulerCore, frc *FrameworkRiakCluster) {
-	if frn.TaskStatusData == nil {
-		panic("TaskStatus Data not set")
-	}
-	rexHostname := fmt.Sprintf("%s:%d", frn.LastOfferUsed.GetHostname(), frn.TaskStatusData.RexPort)
+
+	rexHostname := fmt.Sprintf("%s:%d", frn.LastOfferUsed.GetHostname(), frn.TaskData.RexPort)
 	rexc := rex.NewRiakExplorerClient(rexHostname)
 	for _, riakNode := range sc.schedulerState.Clusters[frc.Name].Nodes {
 		if riakNode.CurrentState == process_state.Started {
@@ -120,12 +113,6 @@ func (frn *FrameworkRiakNode) handleStartingToRunningTransition(sc *SchedulerCor
 }
 func (frn *FrameworkRiakNode) handleStatusUpdate(sc *SchedulerCore, frc *FrameworkRiakCluster, statusUpdate *mesos.TaskStatus) {
 	frn.reconciled = true
-
-	tsd, err := common.DeserializeTaskStatusData(statusUpdate.GetData())
-	if err != nil {
-		log.Debug("Unable to deserialize task data: ", err)
-	}
-	frn.TaskStatusData = &tsd
 
 	// Poor man's FSM event handler
 	frn.TaskStatus = statusUpdate
@@ -214,6 +201,19 @@ func (frn *FrameworkRiakNode) GetAsks() []common.ResourceAsker {
 	return []common.ResourceAsker{common.AskForCPU(0.3), common.AskForPorts(10), common.AskForMemory(320)}
 }
 
+func portIter(resources []*mesos.Resource) chan int64 {
+	ports := make(chan int64)
+	go func() {
+		defer close(ports)
+		for _, resource := range util.FilterResources(resources, func(res *mesos.Resource) bool { return res.GetName() == "ports" }) {
+			for _, port := range common.RangesToArray(resource.GetRanges().GetRange()) {
+				ports <- port
+			}
+		}
+	}()
+	return ports
+}
+
 func (frn *FrameworkRiakNode) GetCombinedAsk() common.CombinedResourceAsker {
 	ret := func(offer []*mesos.Resource) ([]*mesos.Resource, []*mesos.Resource, []*mesos.Resource, bool) {
 		executorAsks := []*mesos.Resource{}
@@ -287,6 +287,7 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(sc *SchedulerCor
 	if !strings.Contains(offer.GetHostname(), ".") {
 		nodename = nodename + "."
 	}
+	ports := portIter(taskAsk)
 
 	taskData := common.TaskData{
 		FullyQualifiedNodeName:    nodename,
@@ -297,6 +298,11 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(sc *SchedulerCor
 		URI:                       sc.schedulerHTTPServer.GetURI(),
 		ClusterName:               frn.ClusterName,
 		UseSuperChroot:            superChrootValue,
+		RexPort:                   <-ports,
+		HTTPPort:                  <-ports,
+		PBPort:                    <-ports,
+		DisterlPort:               <-ports,
+		RexDisterlPort:            <-ports,
 	}
 	frn.TaskData = taskData
 
