@@ -12,6 +12,7 @@ type TaskData struct {
 	FrameworkName             string
 	ClusterName               string
 	URI                       string
+	UseSuperChroot			  bool
 }
 
 func (s *TaskData) Serialize() ([]byte, error) {
@@ -58,6 +59,22 @@ func (s *DisterlData) Serialize() ([]byte, error) {
 
 func DeserializeDisterlData(data []byte) (DisterlData, error) {
 	t := DisterlData{}
+	err := json.Unmarshal(data, &t)
+	return t, err
+}
+
+
+type TaskStatusData struct {
+	RexPort int64
+}
+
+func (s *TaskStatusData) Serialize() ([]byte, error) {
+	b, err := json.Marshal(s)
+	return b, err
+}
+
+func DeserializeTaskStatusData(data []byte) (TaskStatusData, error) {
+	t := TaskStatusData{}
 	err := json.Unmarshal(data, &t)
 	return t, err
 }
