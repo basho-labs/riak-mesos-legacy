@@ -4,39 +4,93 @@
 
 To build the framework and get it running in a Mesos vagrant environment on Mac OSX, follow these steps:
 
-### Build
+### Vagrant Dev Environment
 
-```
-make
-```
-
-### Bring up Mesos
+Bring up the build environment with a running Mesos and ssh in
 
 ```
 vagrant plugin install vagrant-hostmanager
 vagrant up
 vagrant reload
+vagrant ssh
 ```
 
-### Start the framework
+### Set up Dependencies
 
 ```
-
+cd /vagrant && ./setup-env.sh
 ```
 
-
-## Environment
-
-For vagrant or regular Ubuntu 14.04, go to [https://github.com/basho-labs/vagrant-riak-mesos](https://github.com/basho-labs/vagrant-riak-mesos) and follow the directions to set up a development environment.
-
-## Build
-
-Download dependencies and build the platform specific executables
+### Build the Framework
 
 ```
 cd $GOPATH/src/github.com/basho-labs/riak-mesos && make
 ```
 
-## Usage
+or for a faster build with lower RAM requirements:
 
-See [MESOS_USAGE.md](MESOS_USAGE.md) for information on how to use the binaries created in the `bin/` directory
+```
+cd $GOPATH/src/github.com/basho-labs/riak-mesos && TAGS=dev make
+```
+
+### Start the Framework
+
+```
+cp /vagrant/bin/framework_linux_amd64 /tmp/; cd /tmp; \
+./framework_linux_amd64 \
+    -master=zk://localhost:2181/mesos \
+    -zk=localhost:2181 \
+    -name=riak \
+    -user=root \
+    -role=*
+```
+
+### Create a Cluster
+
+```
+cd /vagrant/bin; \
+./tools_linux_amd64 \
+    -name=riak \
+    -zk=localhost:2181 \
+    -cluster-name=mycluster \
+    -command="create-cluster"
+```
+
+Add Riak nodes
+
+```
+cd /vagrant/bin; \
+./tools_linux_amd64 \
+    -name=riak \
+    -zk=localhost:2181 \
+    -cluster-name=mycluster \
+    -command="add-nodes" \
+    -nodes=1
+```
+
+### Start the Director
+
+```
+cp /vagrant/bin/director_linux_amd64 /tmp/; cd /tmp; \
+FRAMEWORK_HOST=localhost FRAMEWORK_PORT=9090 DIRECTOR_CLUSTER=mycluster DIRECTOR_FRAMEWORK=riak DIRECTOR_ZK=localhost:2181 ./director_linux_amd64
+```
+
+### Endpoints for Testing
+
+* Director API: [http://192.168.0.30:9000/](http://192.168.0.30:9000/)
+* Riak Explorer (Direct): [http://192.168.0.30:9090/](http://192.168.0.30:9090/)
+* Riak Explorer (Director Proxy): [http://192.168.0.30:9999/](http://192.168.0.30:9999/)
+* Riak HTTP (Director): [http://192.168.0.30:8098/](http://192.168.0.30:8098/)
+* Riak PB (Director Proxy) [http://192.168.0.30:8087/](http://192.168.0.30:8087/)
+* Framework API: Dynamically assigned, check output of framework_linux_amd64
+
+### Writing and Reading Data
+
+```
+curl -v -XPUT http://192.168.0.30:8098/buckets/test/keys/one -d "hello"
+curl -v http://192.168.0.30:8098/buckets/test/keys/one
+```
+
+## Further Usage
+
+See [MESOS_USAGE.md](MESOS_USAGE.md) for more information on how to use the binaries created in the `bin/` directory

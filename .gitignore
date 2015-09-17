@@ -42,3 +42,4 @@ artifacts/data/riak_mesos_director/
 artifacts/data/trusty.tar.gz
 process_manager/schroot/data/plain_chroot
 process_manager/schroot/data/super_chroot
+goroot
