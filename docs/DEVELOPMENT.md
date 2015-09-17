@@ -80,7 +80,7 @@ FRAMEWORK_HOST=localhost FRAMEWORK_PORT=9090 DIRECTOR_CLUSTER=mycluster DIRECTOR
 * Director API: [http://192.168.0.30:9000/](http://192.168.0.30:9000/)
 * Riak Explorer (Direct): [http://192.168.0.30:9090/](http://192.168.0.30:9090/)
 * Riak Explorer (Director Proxy): [http://192.168.0.30:9999/](http://192.168.0.30:9999/)
-* Riak HTTP (Director): [http://192.168.0.30:8098/](http://192.168.0.30:8098/)
+* Riak HTTP (Director Proxy): [http://192.168.0.30:8098/](http://192.168.0.30:8098/)
 * Riak PB (Director Proxy) [http://192.168.0.30:8087/](http://192.168.0.30:8087/)
 * Framework API: Dynamically assigned, check output of framework_linux_amd64
 
