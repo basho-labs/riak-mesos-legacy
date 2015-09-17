@@ -20,9 +20,9 @@ type ProcessManager struct {
 	subscribe chan chan int
 }
 
-func NewProcessManager(tdcb TeardownCallback, executablePath string, args []string, healthcheck Healthchecker, chroot *string) (*ProcessManager, error) {
+func NewProcessManager(tdcb TeardownCallback, executablePath string, args []string, healthcheck Healthchecker, chroot *string, useSuperChroot bool) (*ProcessManager, error) {
 	retFuture := make(chan *ProcessManager)
-	go startProcessManager(tdcb, executablePath, args, healthcheck, retFuture, chroot)
+	go startProcessManager(tdcb, executablePath, args, healthcheck, retFuture, chroot, useSuperChroot)
 	retVal := <-retFuture
 	log.Info("Retval: ", retVal)
 	if retVal == nil {
@@ -44,7 +44,7 @@ func (pm *ProcessManager) TearDown() {
 	<-replyChan
 	return
 }
-func startProcessManager(tdcb TeardownCallback, executablePath string, args []string, healthcheck Healthchecker, retChan chan *ProcessManager, chroot *string) {
+func startProcessManager(tdcb TeardownCallback, executablePath string, args []string, healthcheck Healthchecker, retChan chan *ProcessManager, chroot *string, useSuperChroot  bool) {
 	defer close(retChan)
 	pm := &ProcessManager{
 		teardown:  make(chan chan interface{}, 10),
@@ -62,7 +62,7 @@ func startProcessManager(tdcb TeardownCallback, executablePath string, args []st
 	sigchlds := make(chan os.Signal, 1000)
 	signal.Notify(sigchlds, syscall.SIGCHLD)
 
-	pm.start(executablePath, args, chroot)
+	pm.start(executablePath, args, chroot, useSuperChroot)
 	waitChan := subscribe(pm.pid)
 	defer unsubscribe(pm.pid)
 	defer close(waitChan)

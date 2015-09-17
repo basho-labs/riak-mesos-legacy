@@ -2,10 +2,7 @@ package scheduler
 
 import (
 	"errors"
-	"fmt"
 	"io/ioutil"
-	"os"
-	"strings"
 	"sync"
 
 	"golang.org/x/net/context"
@@ -13,13 +10,12 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/basho-labs/riak-mesos/cepmd/cepm"
 	metamgr "github.com/basho-labs/riak-mesos/metadata_manager"
-	rex "github.com/basho-labs/riak-mesos/riak_explorer"
+	//rex "github.com/basho-labs/riak-mesos/riak_explorer"
 	"github.com/golang/protobuf/proto"
 	auth "github.com/mesos/mesos-go/auth"
 	sasl "github.com/mesos/mesos-go/auth/sasl"
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	sched "github.com/mesos/mesos-go/scheduler"
-	"github.com/satori/go.uuid"
 )
 
 const (
@@ -35,8 +31,6 @@ type SchedulerCore struct {
 	rServer             *ReconcilationServer
 	user                string
 	zookeepers          []string
-	rex                 *rex.RiakExplorer
-	rexPort             int
 	cepm                *cepm.CEPM
 	frameworkName       string
 	frameworkRole       string
@@ -53,30 +47,17 @@ func NewSchedulerCore(
 	zookeepers []string,
 	schedulerIPAddr string,
 	user string,
-	rexPort int,
 	authProvider string,
 	mesosAuthPrincipal string,
 	mesosAuthSecretFile string) *SchedulerCore {
 
 	mgr := metamgr.NewMetadataManager(frameworkName, zookeepers)
 	ss := GetSchedulerState(mgr)
-	hostname, err := os.Hostname()
-	if err != nil {
-		log.Panic("Could not get hostname")
-	}
-	nodename := fmt.Sprintf("rex-%s@%s", uuid.NewV4().String(), hostname)
-
-	if !strings.Contains(nodename, ".") {
-		nodename = nodename + "."
-	}
 
 	c := cepm.NewCPMd(0, mgr)
 	c.Background()
 
-	myRex, err := rex.NewRiakExplorer(int64(rexPort), nodename, c)
-	if err != nil {
-		log.Fatal("Could not start up Riak Explorer in scheduler")
-	}
+
 	scheduler := &SchedulerCore{
 		lock:            &sync.Mutex{},
 		schedulerIPAddr: schedulerIPAddr,
@@ -84,8 +65,6 @@ func NewSchedulerCore(
 		frnDict:         make(map[string]*FrameworkRiakNode),
 		user:            user,
 		zookeepers:      zookeepers,
-		rex:             myRex,
-		rexPort:         rexPort,
 		cepm:            c,
 		frameworkName:   frameworkName,
 		frameworkRole:   frameworkRole,

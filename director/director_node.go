@@ -95,7 +95,12 @@ func (directorNode *DirectorNode) Run() {
 	log.Debugf("Starting up Director %v", exepath)
 
 	chroot := filepath.Join(".", "director")
-	directorNode.pm, err = process_manager.NewProcessManager(tearDownFun, exepath, args, healthCheckFun, &chroot)
+	superChrootValue := true
+	if os.Getenv("USE_SUPER_CHROOT") == "false" {
+		superChrootValue = false
+	}
+
+	directorNode.pm, err = process_manager.NewProcessManager(tearDownFun, exepath, args, healthCheckFun, &chroot, superChrootValue)
 
 	if err != nil {
 		log.Error("Could not start Director: ", err)

@@ -9,7 +9,10 @@ import (
 	"testing"
 )
 
-func TestNothing(t *testing.T) {
+
+// TODO: Fix test and decompress trusty into "root"
+// It needs to manage the root itself
+func TestREX(t *testing.T) {
   if os.Getenv("TRAVIS") == "true" {
     t.Skip("Unable to run test on Travis")
   }
@@ -20,7 +23,7 @@ func TestNothing(t *testing.T) {
 
 	go c.Background()
 	// Port number for testing
-	re, err := NewRiakExplorer(7901, "rex@ubuntu.", c) // 998th  prime number.
+	re, err := NewRiakExplorer(7901, "rex@ubuntu.", c, "root", true) // 998th  prime number.
 	assert.Equal(nil, err)
 	re.TearDown()
 	_, err = re.NewRiakExplorerClient().Ping()

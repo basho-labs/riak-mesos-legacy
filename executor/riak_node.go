@@ -16,7 +16,7 @@ import (
 	"github.com/basho-labs/riak-mesos/process_manager"
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	util "github.com/mesos/mesos-go/mesosutil"
-
+	rex "github.com/basho-labs/riak-mesos/riak_explorer"
 	"bytes"
 	"errors"
 	"net/http"
@@ -144,7 +144,7 @@ func (riakNode *RiakNode) configureRiak(ports chan int64) templateData {
 	vars.HandoffPort = <-ports
 	vars.DisterlPort = <-ports
 
-	file, err := os.OpenFile("riak/riak/etc/riak.conf", os.O_TRUNC|os.O_CREATE|os.O_RDWR, 0664)
+	file, err := os.OpenFile("root/riak/etc/riak.conf", os.O_TRUNC|os.O_CREATE|os.O_RDWR, 0664)
 
 	defer file.Close()
 	if err != nil {
@@ -173,7 +173,7 @@ func (riakNode *RiakNode) configureAdvanced(cepmdPort int) {
 	// Populate template data from the MesosTask
 	vars := advancedTemplateData{}
 	vars.CEPMDPort = cepmdPort
-	file, err := os.OpenFile("riak/riak/etc/advanced.config", os.O_TRUNC|os.O_CREATE|os.O_RDWR, 0664)
+	file, err := os.OpenFile("root/riak/etc/advanced.config", os.O_TRUNC|os.O_CREATE|os.O_RDWR, 0664)
 
 	defer file.Close()
 	if err != nil {
@@ -186,19 +186,28 @@ func (riakNode *RiakNode) configureAdvanced(cepmdPort int) {
 		log.Panic("Got error", err)
 	}
 }
+func (riakNode *RiakNode) startRex(rexPort int64, c *cepm.CEPM) (*rex.RiakExplorer, error) {
+	fetchURI := fmt.Sprintf("%s/static2/riak_explorer-bin.tar.gz", riakNode.taskData.URI)
+	resp, err := http.Get(fetchURI)
+	if err != nil {
+		log.Panic("Unable to fetch Riak Exploer: ", err)
+	}
+	err = common.ExtractGZ("root", resp.Body)
+	return rex.NewRiakExplorer(rexPort, riakNode.taskData.RexFullyQualifiedNodeName, c, "root", riakNode.taskData.UseSuperChroot)
+}
 func (riakNode *RiakNode) Run() {
 
 	var err error
 	log.Info("Other hilarious facts: ", riakNode.taskInfo)
 
-	os.Mkdir("riak", 0777)
+	os.Mkdir("root", 0777)
 	fetchURI := fmt.Sprintf("%s/static2/trusty.tar.gz", riakNode.taskData.URI)
 	log.Info("Preparing to fetch trusty_root from: ", fetchURI)
 	resp, err := http.Get(fetchURI)
 	if err != nil {
 		log.Panic("Unable to fetch trusty root: ", err)
 	}
-	err = common.ExtractGZ("riak", resp.Body)
+	err = common.ExtractGZ("root", resp.Body)
 	if err != nil {
 		log.Panic("Unable to extract trusty root: ", err)
 	}
@@ -208,7 +217,7 @@ func (riakNode *RiakNode) Run() {
 	if err != nil {
 		log.Panic("Unable to fetch riak root: ", err)
 	}
-	err = common.ExtractGZ("riak", resp.Body)
+	err = common.ExtractGZ("root", resp.Body)
 	if err != nil {
 		log.Panic("Unable to extract riak root: ", err)
 	}
@@ -222,7 +231,7 @@ func (riakNode *RiakNode) Run() {
 
 	args := []string{"console", "-noinput"}
 
-	kernelDirs, err := filepath.Glob("riak/riak/lib/kernel*")
+	kernelDirs, err := filepath.Glob("root/riak/lib/kernel*")
 	if err != nil {
 		log.Fatal("Could not find kernel directory")
 	}
@@ -241,11 +250,11 @@ func (riakNode *RiakNode) Run() {
 	if err != nil {
 		log.Panic("Could not get wd: ", err)
 	}
-	chroot := filepath.Join(wd, "riak")
+	chroot := filepath.Join(wd, "root")
 
 	HealthCheckFun := func() error {
 		log.Info("Checking is Riak is started")
-		data, err := ioutil.ReadFile("riak/riak/log/console.log")
+		data, err := ioutil.ReadFile("root/riak/log/console.log")
 		if err != nil {
 			if bytes.Contains(data, []byte("Wait complete for service riak_kv")) {
 				log.Info("Riak started, waiting 10 seconds to avoid race conditions (HACK)")
@@ -258,7 +267,7 @@ func (riakNode *RiakNode) Run() {
 			return err
 		}
 	}
-	riakNode.pm, err = process_manager.NewProcessManager(func() { return }, "/riak/bin/riak", args, HealthCheckFun, &chroot)
+	riakNode.pm, err = process_manager.NewProcessManager(func() { return }, "/riak/bin/riak", args, HealthCheckFun, &chroot, riakNode.taskData.UseSuperChroot)
 
 	if err != nil {
 		log.Error("Could not start Riak: ", err)
@@ -276,6 +285,8 @@ func (riakNode *RiakNode) Run() {
 		log.Info("Shutting down due to GC, after failing to bring up Riak node")
 		riakNode.executor.Driver.Stop()
 	} else {
+		rexPort := <- ports
+		riakNode.startRex(rexPort, c)
 		rootNode := riakNode.metadataManager.GetRootNode()
 
 		rootNode.CreateChildIfNotExists("coordinator")
@@ -316,10 +327,18 @@ func (riakNode *RiakNode) Run() {
 		}
 		child.SetData(cdBytes)
 		// lock.Unlock()
+		tsd := common.TaskStatusData{
+			RexPort: rexPort,
+		}
+		tsdBytes, err := tsd.Serialize()
 
+		if err != nil {
+			log.Panic("Could not serialize Riak Explorer data", err)
+		}
 		runStatus := &mesos.TaskStatus{
 			TaskId: riakNode.taskInfo.GetTaskId(),
 			State:  mesos.TaskState_TASK_RUNNING.Enum(),
+			Data:   tsdBytes,
 		}
 		_, err = riakNode.executor.Driver.SendStatusUpdate(runStatus)
 		if err != nil {

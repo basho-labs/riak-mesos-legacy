@@ -12,7 +12,8 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
-func (pm *ProcessManager) start(executablePath string, args []string, chroot *string) {
+
+func (pm *ProcessManager) start(executablePath string, args []string, chroot *string, useSuperChroot bool) {
 	var err error
 	realArgs := []string{}
 
@@ -42,7 +43,7 @@ func (pm *ProcessManager) start(executablePath string, args []string, chroot *st
 			log.Info("Non-zero exit from command")
 		}
 
-		if os.Getenv("USE_SUPER_CHROOT") != "false" {
+		if useSuperChroot {
 			log.Info("Assets: ", AssetNames())
 			err = RestoreAsset(*chroot, "super_chroot")
 			if err != nil {

@@ -12,6 +12,8 @@ import (
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	util "github.com/mesos/mesos-go/mesosutil"
 	"github.com/satori/go.uuid"
+	rex "github.com/basho-labs/riak-mesos/riak_explorer"
+
 )
 
 // Next Status
@@ -30,6 +32,7 @@ type FrameworkRiakNode struct {
 	TaskData         common.TaskData
 	FrameworkName    string
 	ClusterName      string
+	TaskStatusData	 *common.TaskStatusData
 }
 
 func NewFrameworkRiakNode(FrameworkName string, ClusterName string) *FrameworkRiakNode {
@@ -78,9 +81,15 @@ func (frn *FrameworkRiakNode) ExecutorID() string {
 }
 
 func (frn *FrameworkRiakNode) handleUpToDownTransition(sc *SchedulerCore, frc *FrameworkRiakCluster) {
-	rexc := sc.rex.NewRiakExplorerClient()
 	for _, riakNode := range sc.schedulerState.Clusters[frc.Name].Nodes {
 		if riakNode.CurrentState == process_state.Started && riakNode != frn {
+			var rexc *rex.RiakExplorerClient
+			if riakNode.TaskStatusData != nil {
+				rexHostname := fmt.Sprintf("%s:%d", riakNode.LastOfferUsed.GetHostname(), riakNode.TaskStatusData.RexPort)
+				rexc = rex.NewRiakExplorerClient(rexHostname)
+			} else {
+				log.Info("Riak node %v doesn't have TSD set", riakNode)
+			}
 			// We should try to join against this node
 			log.Infof("Making leave: %+v to %+v", frn.TaskData.FullyQualifiedNodeName, riakNode.TaskData.FullyQualifiedNodeName)
 			leaveReply, leaveErr := rexc.ForceRemove(riakNode.TaskData.FullyQualifiedNodeName, frn.TaskData.FullyQualifiedNodeName)
@@ -93,7 +102,11 @@ func (frn *FrameworkRiakNode) handleUpToDownTransition(sc *SchedulerCore, frc *F
 	}
 }
 func (frn *FrameworkRiakNode) handleStartingToRunningTransition(sc *SchedulerCore, frc *FrameworkRiakCluster) {
-	rexc := sc.rex.NewRiakExplorerClient()
+	if frn.TaskStatusData == nil {
+		panic("TaskStatus Data not set")
+	}
+	rexHostname := fmt.Sprintf("%s:%d", frn.LastOfferUsed.GetHostname(), frn.TaskStatusData.RexPort)
+	rexc := rex.NewRiakExplorerClient(rexHostname)
 	for _, riakNode := range sc.schedulerState.Clusters[frc.Name].Nodes {
 		if riakNode.CurrentState == process_state.Started {
 			// We should try to join against this node
@@ -108,7 +121,12 @@ func (frn *FrameworkRiakNode) handleStartingToRunningTransition(sc *SchedulerCor
 }
 func (frn *FrameworkRiakNode) handleStatusUpdate(sc *SchedulerCore, frc *FrameworkRiakCluster, statusUpdate *mesos.TaskStatus) {
 	frn.reconciled = true
-	// TODO: Check the task ID in the TaskStatus to make sure it matches our current task
+
+	tsd, err := common.DeserializeTaskStatusData(statusUpdate.GetData())
+	if err != nil {
+		log.Debug("Unable to deserialize task data: ", err)
+	}
+	frn.TaskStatusData = &tsd
 
 	// Poor man's FSM event handler
 	frn.TaskStatus = statusUpdate
@@ -243,16 +261,10 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(sc *SchedulerCor
 	}
 	//executorUris = append(executorUris,
 	//	&mesos.CommandInfo_URI{Value: &(frn.frc.sc.schedulerHTTPServer.hostURI), Executable: proto.Bool(true)})
-	superChrootValue := "true"
+	superChrootValue := true
 	if os.Getenv("USE_SUPER_CHROOT") == "false" {
-		superChrootValue = "false"
+		superChrootValue = false
 	}
-
-	environmentVariables := []*mesos.Environment_Variable{}
-	environmentVariables = append(environmentVariables, &mesos.Environment_Variable{
-		Name:  proto.String("USE_SUPER_CHROOT"),
-		Value: proto.String(superChrootValue),
-	})
 
 	exec := &mesos.ExecutorInfo{
 		//No idea is this is the "right" way to do it, but I think so?
@@ -263,9 +275,6 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(sc *SchedulerCor
 			Value: proto.String(sc.schedulerHTTPServer.executorName),
 			Uris:  executorUris,
 			Shell: proto.Bool(false),
-			Environment: &mesos.Environment{
-				Variables: environmentVariables,
-			},
 			Arguments: []string{sc.schedulerHTTPServer.executorName, "-logtostderr=true", "-taskinfo", frn.CurrentID()},
 		},
 		Resources: executorAsk,
@@ -288,6 +297,7 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(sc *SchedulerCor
 		FrameworkName:             sc.frameworkName,
 		URI:                       sc.schedulerHTTPServer.GetURI(),
 		ClusterName:               frn.ClusterName,
+		UseSuperChroot:			   superChrootValue,
 	}
 	frn.TaskData = taskData
 

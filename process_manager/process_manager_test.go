@@ -24,7 +24,7 @@ func TestTeardown(t *testing.T) {
 	}()
 	assert := assert.New(t)
 
-	re, err := NewProcessManager(func() { return }, "/bin/sleep", []string{"100"}, func() error { return nil }, nil)
+	re, err := NewProcessManager(func() { return }, "/bin/sleep", []string{"100"}, func() error { return nil }, nil, true)
 
 	assert.Nil(err)
 	re.TearDown()
@@ -42,7 +42,7 @@ func TestTeardown(t *testing.T) {
 
 func TestNotify(t *testing.T) {
 	assert := assert.New(t)
-	re, err := NewProcessManager(func() { return }, "/bin/sleep", []string{"1"}, func() error { return nil }, nil)
+	re, err := NewProcessManager(func() { return }, "/bin/sleep", []string{"1"}, func() error { return nil }, nil, true)
 	status := <-re.Listen()
 	assert.Nil(err)
 	assert.Equal(status, 0)

@@ -25,7 +25,7 @@ package: clean_package
 .bin.framework_linux_amd64:
 	go build -o bin/framework_linux_amd64 -tags=$(TAGS) ./framework/
 	$(shell touch .bin.framework_linux_amd64)
-framework: .godep schroot cepm artifacts executor riak_explorer scheduler .bin.framework_linux_amd64
+framework: .godep schroot cepm artifacts executor scheduler .bin.framework_linux_amd64
 clean_bin: clean_framework
 clean_framework:
 	-rm -f .bin.framework_linux_amd64 bin/framework_linux_amd64
@@ -48,8 +48,8 @@ executor: .scheduler.data.executor_linux_amd64
 .executor.bindata_generated: executor/data/advanced.config executor/data/riak.conf
 	go generate -tags=$(TAGS) ./executor/...
 	$(shell touch .executor.bindata_generated)
-.scheduler.data.executor_linux_amd64: cepm .process_manager.bindata_generated .executor.bindata_generated
-	go build -o scheduler/data/executor_linux_amd64 -tags=$(TAGS) ./executor/
+.scheduler.data.executor_linux_amd64: cepm .process_manager.bindata_generated .executor.bindata_generated riak_explorer
+	GOOS=linux GOARCH=amd64 go build -v -o scheduler/data/executor_linux_amd64 -tags=$(TAGS) ./executor/
 	$(shell touch .scheduler.data.executor_linux_amd64)
 clean_bin: clean_executor
 clean_executor:

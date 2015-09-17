@@ -71,7 +71,7 @@ func main() {
 		rexPortStr = "9090"
 	}
 
-	rexPort, portErr := strconv.Atoi(rexPortStr)
+	_, portErr := strconv.Atoi(rexPortStr)
 	if portErr != nil {
 		log.Fatal(portErr)
 	}
@@ -83,7 +83,6 @@ func main() {
 		[]string{zookeeperAddr},
 		schedulerIPAddr,
 		user,
-		rexPort,
 		authProvider,
 		mesosAuthPrincipal,
 		mesosAuthSecretFile)

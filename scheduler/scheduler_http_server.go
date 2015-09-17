@@ -13,8 +13,6 @@ import (
 	"github.com/basho-labs/riak-mesos/artifacts"
 	"github.com/elazarl/go-bindata-assetfs"
 	"github.com/gorilla/mux"
-	"net/http/httputil"
-	"net/url"
 )
 
 type SchedulerHTTPServer struct {
@@ -112,20 +110,10 @@ func (schttp *SchedulerHTTPServer) GetURI() string {
 }
 
 func (schttp *SchedulerHTTPServer) healthcheck(w http.ResponseWriter, r *http.Request) {
-	var pass bool = true
-	// TODO: Add better healthchecking
-	rexc := schttp.sc.rex.NewRiakExplorerClient()
-	_, err := rexc.Ping()
-	if err == nil {
-		fmt.Fprintln(w, "REX Client: OK")
-	} else {
-		pass = false
-		w.WriteHeader(503)
-		fmt.Fprintln(w, "REX Client: NOT OK")
-	}
-	if pass {
-		w.WriteHeader(200)
-	}
+
+	fmt.Fprintln(w, "Scheduler: OK")
+	w.WriteHeader(200)
+
 }
 
 func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *SchedulerHTTPServer {
@@ -200,15 +188,8 @@ func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *Schedul
 	router.Methods("GET").Path("/healthcheck").HandlerFunc(schttp.healthcheck)
 
 	// TODO: Add a function handler for /
-	// For now, just list clusters at root path
-	// router.HandleFunc("/", )
-	rexURL := &url.URL{
-		Host:   fmt.Sprintf("localhost:%d", sc.rexPort),
-		Scheme: "http",
-		Path:   "/",
-	}
-	router.PathPrefix("/").Handler(httputil.NewSingleHostReverseProxy(rexURL))
 	//http.Serve(ln, newHandler())
+
 	middleWare := http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
 		log.Infof("%v %s %s %s ? %s %s %s", request.Host, request.RemoteAddr, request.Method, request.URL.Path, request.URL.RawQuery, request.Proto, request.Header.Get("User-Agent"))
 		router.ServeHTTP(w, request)
