@@ -6,8 +6,10 @@ import (
 	"os"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/basho-labs/riak-mesos/scheduler"
 	"github.com/basho-labs/riak-mesos/metadata_manager"
 	"github.com/samuel/go-zookeeper/zk"
+	"github.com/kr/pretty"
 	"time"
 )
 
@@ -25,7 +27,7 @@ func init() {
 	flag.IntVar(&nodes, "nodes", 1, "Nodes in new cluster")
 	flag.StringVar(&clusterName, "cluster-name", "", "Name of new cluster")
 	flag.StringVar(&frameworkName, "name", "riakMesosFramework", "Framework Instance ID")
-	flag.StringVar(&cmd, "command", "get-url", "get-url, get-clusters, get-cluster, create-cluster, delete-cluster, get-nodes, add-node, add-nodes")
+	flag.StringVar(&cmd, "command", "get-url", "get-url, get-clusters, get-cluster, create-cluster, delete-cluster, get-nodes, add-node, add-nodes, get-state")
 	flag.Parse()
 
 	if cmd == "" {
@@ -39,6 +41,8 @@ func main() {
 	switch cmd {
 	case "get-url":
 		fmt.Println(getURL())
+	case "get-state":
+		getState()
 	case "delete-framework":
 		respond(deleteFramework(), nil)
 	case "zk-list-children":
@@ -179,4 +183,17 @@ func zkDeleteChildren(conn *zk.Conn, path string) {
 	}
 
 	return
+}
+
+func getState() {
+	mm := metadata_manager.NewMetadataManager(frameworkName, []string{zookeeperAddr})
+	zkNode, err := mm.GetRootNode().GetChild("SchedulerState")
+	if err != zk.ErrNoNode {
+		ss, err := scheduler.DeserializeSchedulerState(zkNode.GetData())
+		if err != nil {
+			log.Panic(err)
+		}
+		fmt.Printf("%# v", pretty.Formatter(ss))
+
+	}
 }

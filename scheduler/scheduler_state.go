@@ -26,7 +26,6 @@ func emptySchedulerState() *SchedulerState {
 func GetSchedulerState(mm *metadata_manager.MetadataManager) *SchedulerState {
 	var zkNode *metadata_manager.ZkNode
 	var err error
-	mm.GetRootNode().GetChild("SchedulerState")
 	zkNode, err = mm.GetRootNode().GetChild("SchedulerState")
 	if err == zk.ErrNoNode {
 		ess := emptySchedulerState()
@@ -37,7 +36,7 @@ func GetSchedulerState(mm *metadata_manager.MetadataManager) *SchedulerState {
 		ess.zkNode = zkNode
 		return ess
 	} else {
-		ss, err := deserializeSchedulerState(zkNode.GetData())
+		ss, err := DeserializeSchedulerState(zkNode.GetData())
 		if err != nil {
 			log.Panic(err)
 		}
@@ -62,7 +61,7 @@ func (ss *SchedulerState) Persist() error {
 	return err
 }
 
-func deserializeSchedulerState(data []byte) (*SchedulerState, error) {
+func DeserializeSchedulerState(data []byte) (*SchedulerState, error) {
 	r, err := zlib.NewReader(bytes.NewBuffer(data))
 	if err != nil {
 		log.Panic(err)
