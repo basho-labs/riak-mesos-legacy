@@ -160,7 +160,6 @@ func requireClusterName() {
 	}
 }
 
-
 func zkDeleteChildren(conn *zk.Conn, path string) {
 	children, _, _ := conn.Children(path)
 
@@ -176,7 +175,7 @@ func zkDeleteChildren(conn *zk.Conn, path string) {
 
 	// Branches
 	for _, name := range children {
-		zkDeleteChildren(conn, path + "/" + name)
+		zkDeleteChildren(conn, path+"/"+name)
 	}
 
 	return

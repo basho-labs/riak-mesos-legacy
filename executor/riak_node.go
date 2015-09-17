@@ -9,16 +9,16 @@ import (
 	"text/template"
 	"time"
 
+	"bytes"
+	"errors"
 	log "github.com/Sirupsen/logrus"
 	"github.com/basho-labs/riak-mesos/cepmd/cepm"
 	"github.com/basho-labs/riak-mesos/common"
 	metamgr "github.com/basho-labs/riak-mesos/metadata_manager"
 	"github.com/basho-labs/riak-mesos/process_manager"
+	rex "github.com/basho-labs/riak-mesos/riak_explorer"
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	util "github.com/mesos/mesos-go/mesosutil"
-	rex "github.com/basho-labs/riak-mesos/riak_explorer"
-	"bytes"
-	"errors"
 	"net/http"
 )
 
@@ -285,7 +285,7 @@ func (riakNode *RiakNode) Run() {
 		log.Info("Shutting down due to GC, after failing to bring up Riak node")
 		riakNode.executor.Driver.Stop()
 	} else {
-		rexPort := <- ports
+		rexPort := <-ports
 		riakNode.startRex(rexPort, c)
 		rootNode := riakNode.metadataManager.GetRootNode()
 

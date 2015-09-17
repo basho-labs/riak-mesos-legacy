@@ -7,8 +7,8 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/basho-labs/riak-mesos/process_manager"
 	"github.com/basho-labs/riak-mesos/common"
+	"github.com/basho-labs/riak-mesos/process_manager"
 
 	"bytes"
 	"errors"

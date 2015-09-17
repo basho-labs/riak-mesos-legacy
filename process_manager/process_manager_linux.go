@@ -12,7 +12,6 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
-
 func (pm *ProcessManager) start(executablePath string, args []string, chroot *string, useSuperChroot bool) {
 	var err error
 	realArgs := []string{}

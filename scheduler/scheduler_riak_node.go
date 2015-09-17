@@ -7,13 +7,12 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/basho-labs/riak-mesos/common"
+	rex "github.com/basho-labs/riak-mesos/riak_explorer"
 	"github.com/basho-labs/riak-mesos/scheduler/process_state"
 	"github.com/golang/protobuf/proto"
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	util "github.com/mesos/mesos-go/mesosutil"
 	"github.com/satori/go.uuid"
-	rex "github.com/basho-labs/riak-mesos/riak_explorer"
-
 )
 
 // Next Status
@@ -32,7 +31,7 @@ type FrameworkRiakNode struct {
 	TaskData         common.TaskData
 	FrameworkName    string
 	ClusterName      string
-	TaskStatusData	 *common.TaskStatusData
+	TaskStatusData   *common.TaskStatusData
 }
 
 func NewFrameworkRiakNode(FrameworkName string, ClusterName string) *FrameworkRiakNode {
@@ -272,9 +271,9 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(sc *SchedulerCor
 		Name:       proto.String("Executor (Go)"),
 		Source:     proto.String("Riak Mesos Framework (Go)"),
 		Command: &mesos.CommandInfo{
-			Value: proto.String(sc.schedulerHTTPServer.executorName),
-			Uris:  executorUris,
-			Shell: proto.Bool(false),
+			Value:     proto.String(sc.schedulerHTTPServer.executorName),
+			Uris:      executorUris,
+			Shell:     proto.Bool(false),
 			Arguments: []string{sc.schedulerHTTPServer.executorName, "-logtostderr=true", "-taskinfo", frn.CurrentID()},
 		},
 		Resources: executorAsk,
@@ -297,7 +296,7 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(sc *SchedulerCor
 		FrameworkName:             sc.frameworkName,
 		URI:                       sc.schedulerHTTPServer.GetURI(),
 		ClusterName:               frn.ClusterName,
-		UseSuperChroot:			   superChrootValue,
+		UseSuperChroot:            superChrootValue,
 	}
 	frn.TaskData = taskData
 

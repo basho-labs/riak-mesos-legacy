@@ -8,15 +8,14 @@ import (
 	"time"
 )
 
-
 func newReconciliationServer(driver sched.SchedulerDriver, sc *SchedulerCore) *ReconcilationServer {
 	rs := &ReconcilationServer{
 		nodesToReconcile: make(chan *FrameworkRiakNode, 10),
 		lock:             &sync.Mutex{},
 		enabled:          false,
 		driver:           driver,
-		wakeup:			  make(chan bool, 1),
-		sc: sc,
+		wakeup:           make(chan bool, 1),
+		sc:               sc,
 	}
 	go rs.loop()
 	return rs
@@ -27,8 +26,8 @@ type ReconcilationServer struct {
 	driver           sched.SchedulerDriver
 	lock             *sync.Mutex
 	enabled          bool
-	wakeup			 chan bool
-	sc				 *SchedulerCore
+	wakeup           chan bool
+	sc               *SchedulerCore
 }
 
 func (rServer *ReconcilationServer) enable() {
@@ -37,8 +36,8 @@ func (rServer *ReconcilationServer) enable() {
 	defer rServer.lock.Unlock()
 	rServer.enabled = true
 	select {
-		case rServer.wakeup<-true:
-		default:
+	case rServer.wakeup <- true:
+	default:
 	}
 }
 

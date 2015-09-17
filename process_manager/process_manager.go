@@ -44,7 +44,7 @@ func (pm *ProcessManager) TearDown() {
 	<-replyChan
 	return
 }
-func startProcessManager(tdcb TeardownCallback, executablePath string, args []string, healthcheck Healthchecker, retChan chan *ProcessManager, chroot *string, useSuperChroot  bool) {
+func startProcessManager(tdcb TeardownCallback, executablePath string, args []string, healthcheck Healthchecker, retChan chan *ProcessManager, chroot *string, useSuperChroot bool) {
 	defer close(retChan)
 	pm := &ProcessManager{
 		teardown:  make(chan chan interface{}, 10),

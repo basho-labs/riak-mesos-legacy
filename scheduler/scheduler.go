@@ -57,7 +57,6 @@ func NewSchedulerCore(
 	c := cepm.NewCPMd(0, mgr)
 	c.Background()
 
-
 	scheduler := &SchedulerCore{
 		lock:            &sync.Mutex{},
 		schedulerIPAddr: schedulerIPAddr,
