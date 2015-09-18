@@ -128,9 +128,6 @@ func main() {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGUSR1, syscall.SIGUSR2)
 
-	data, _ := Asset("data/stuff")
-	s := string(data)
-	fmt.Printf("data=%v\n", s)
 
 	executor := newExecutor()
 	dconfig := exec.DriverConfig{
