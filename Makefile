@@ -16,7 +16,7 @@ package: clean_package
 .PHONY: dependencies
 ## Godeps begin
 dependencies:
-	go get -u ./...
+	go get ./...
 ## Godeps end
 
 ### Framework begin
