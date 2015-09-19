@@ -13,10 +13,10 @@ rebuild_all: clean build_artifacts build_schroot framework director
 clean: clean_package clean_bin
 package: clean_package
 
+.PHONY dependencies
 ## Godeps begin
-.godep: Godeps/Godeps.json
-	godep restore
-	touch .godep
+dependencies:
+	go install -u ./...
 ## Godeps end
 
 ### Framework begin
@@ -25,7 +25,7 @@ package: clean_package
 .bin.framework_linux_amd64:
 	go build -o bin/framework_linux_amd64 -tags=$(TAGS) ./framework/
 	$(shell touch .bin.framework_linux_amd64)
-framework: .godep schroot cepm artifacts executor scheduler .bin.framework_linux_amd64
+framework: dependencies schroot cepm artifacts executor scheduler .bin.framework_linux_amd64
 clean_bin: clean_framework
 clean_framework:
 	-rm -f .bin.framework_linux_amd64 bin/framework_linux_amd64
