@@ -13,10 +13,10 @@ rebuild_all: clean build_artifacts build_schroot framework director
 clean: clean_package clean_bin
 package: clean_package
 
-.PHONY: dependencies
+.PHONY dependencies
 ## Godeps begin
 dependencies:
-	go get ./...
+	go install -u ./...
 ## Godeps end
 
 ### Framework begin
