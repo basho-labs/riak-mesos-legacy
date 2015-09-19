@@ -73,9 +73,6 @@ func NewSchedulerCore(
 	return scheduler
 }
 
-func (sc *SchedulerCore) setupMetadataManager() {
-	sc.mgr.SetupFramework(sc.schedulerHTTPServer.URI)
-}
 func (sc *SchedulerCore) Run(mesosMaster string) {
 	var frameworkId *mesos.FrameworkID
 	if sc.schedulerState.FrameworkID == nil {
@@ -144,7 +141,7 @@ func (sc *SchedulerCore) Run(mesosMaster string) {
 	}
 	sc.rServer = newReconciliationServer(driver, sc)
 
-	sc.setupMetadataManager()
+	sc.mgr.SetupFramework(sc.schedulerHTTPServer.URI)
 
 	if stat, err := driver.Run(); err != nil {
 		log.Infof("Framework stopped with status %s and error: %s\n", stat.String(), err.Error())

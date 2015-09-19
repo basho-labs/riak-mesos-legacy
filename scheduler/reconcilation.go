@@ -50,6 +50,8 @@ func (rServer *ReconcilationServer) disable() {
 func (rServer *ReconcilationServer) reconcile() {
 	rServer.lock.Lock()
 	defer rServer.lock.Unlock()
+	rServer.sc.lock.Lock()
+	defer rServer.sc.lock.Unlock()
 	if rServer.enabled {
 		tasksToReconcile := []*mesos.TaskStatus{}
 		for _, cluster := range rServer.sc.schedulerState.Clusters {

@@ -112,11 +112,18 @@ func (riakNode *RiakNode) runLoop(child *metamgr.ZkNode) {
 }
 func (riakNode *RiakNode) configureRiak(taskData common.TaskData) templateData {
 
-	data, err := Asset("data/riak.conf")
+	fetchURI := fmt.Sprintf("%s/api/v1/clusters/%s/config", riakNode.taskData.URI, riakNode.taskData.ClusterName)
+	resp, err := http.Get(fetchURI)
 	if err != nil {
-		log.Panic("Got error", err)
+		log.Error("Unable to fetch config: ", err)
 	}
-	tmpl, err := template.New("test").Parse(string(data))
+	config, err := ioutil.ReadAll(resp.Body)
+	resp.Body.Close()
+	if err != nil {
+		log.Error("Unable to fetch config: ", err)
+	}
+
+	tmpl, err := template.New("config").Parse(string(config))
 
 	if err != nil {
 		log.Panic(err)
@@ -147,11 +154,18 @@ func (riakNode *RiakNode) configureRiak(taskData common.TaskData) templateData {
 }
 func (riakNode *RiakNode) configureAdvanced(cepmdPort int) {
 
-	data, err := Asset("data/advanced.config")
+	fetchURI := fmt.Sprintf("%s/api/v1/clusters/%s/advancedConfig", riakNode.taskData.URI, riakNode.taskData.ClusterName)
+	resp, err := http.Get(fetchURI)
 	if err != nil {
-		log.Panic("Got error", err)
+		log.Error("Unable to fetch advanced config: ", err)
 	}
-	tmpl, err := template.New("advanced").Parse(string(data))
+	advancedConfig, err := ioutil.ReadAll(resp.Body)
+	resp.Body.Close()
+	if err != nil {
+		log.Error("Unable to fetch advanced config: ", err)
+	}
+
+	tmpl, err := template.New("advanced").Parse(string(advancedConfig))
 
 	if err != nil {
 		log.Panic(err)
