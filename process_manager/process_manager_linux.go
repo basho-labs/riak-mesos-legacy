@@ -29,13 +29,13 @@ func (pm *ProcessManager) start(executablePath string, args []string, chroot *st
 	}
 
 	if chroot != nil {
-		cpResolvCmd := exec.Command("/bin/cp", "/etc/resolv.conf", "./"+*chroot+"/etc/resolv.conf")
+		cpResolvCmd := exec.Command("/bin/cp", "/etc/resolv.conf", *chroot+"/etc/resolv.conf")
 		log.Info(cpResolvCmd.Args)
 		err = cpResolvCmd.Run()
 		if err != nil {
 			log.Info("Non-zero exit from command")
 		}
-		cpHostsCmd := exec.Command("/bin/cp", "/etc/hosts", "./"+*chroot+"/etc/hosts")
+		cpHostsCmd := exec.Command("/bin/cp", "/etc/hosts", *chroot+"/etc/hosts")
 		log.Info(cpHostsCmd.Args)
 		err = cpHostsCmd.Run()
 		if err != nil {

@@ -49,7 +49,7 @@ func (re *RiakExplorer) configure(port int64, nodename string, rootDir string) {
 
 	vars.NodeName = nodename
 	vars.HTTPPort = port
-	configpath := filepath.Join(".", rootDir, "riak_explorer", "etc", "riak_explorer.conf")
+	configpath := filepath.Join(rootDir, "riak_explorer", "etc", "riak_explorer.conf")
 	file, err := os.OpenFile(configpath, os.O_TRUNC|os.O_CREATE|os.O_RDWR, 0)
 
 	defer file.Close()
@@ -77,7 +77,7 @@ func (re *RiakExplorer) configureAdvanced(cepmdPort int, rootDir string) {
 	// Populate template data from the MesosTask
 	vars := advancedTemplateData{}
 	vars.CEPMDPort = cepmdPort
-	configpath := filepath.Join(".", rootDir, "riak_explorer", "etc", "advanced.config")
+	configpath := filepath.Join(rootDir, "riak_explorer", "etc", "advanced.config")
 	file, err := os.OpenFile(configpath, os.O_TRUNC|os.O_CREATE|os.O_RDWR, 0)
 
 	defer file.Close()
@@ -117,7 +117,7 @@ func NewRiakExplorer(port int64, nodename string, c *cepm.CEPM, root string, use
 	if c != nil {
 		// This is gross -- we're passing "hidden" state by passing it through the unix environment variables.
 		// Fix it -- we should convert the NewRiakExplorer into using a fluent pattern?
-		libpath := filepath.Join(".", root, "riak_explorer", "lib", "basho-patches")
+		libpath := filepath.Join(root, "riak_explorer", "lib", "basho-patches")
 		os.Mkdir(libpath, 0777)
 		err := cepm.InstallInto(libpath)
 		if err != nil {

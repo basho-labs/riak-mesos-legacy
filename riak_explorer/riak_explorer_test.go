@@ -7,6 +7,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
+	"io/ioutil"
+	"github.com/basho-labs/riak-mesos/common"
 )
 
 // TODO: Fix test and decompress trusty into "root"
@@ -22,7 +24,20 @@ func TestREX(t *testing.T) {
 
 	go c.Background()
 	// Port number for testing
-	re, err := NewRiakExplorer(7901, "rex@ubuntu.", c, "root", true) // 998th  prime number.
+	dirname, err := ioutil.TempDir("", "root")
+	t.Log("Decompressing into: ", dirname)
+	assert.Nil(err)
+	//defer os.RemoveAll(dirname)
+
+	f, err := os.Open("../artifacts/data/trusty.tar.gz")
+	assert.Nil(err)
+	assert.Nil(common.ExtractGZ(dirname, f))
+	f, err = os.Open("../artifacts/data/riak_explorer-bin.tar.gz")
+	assert.Nil(err)
+	assert.Nil(common.ExtractGZ(dirname, f))
+
+
+	re, err := NewRiakExplorer(7901, "rex@ubuntu.", c, dirname, true) // 998th  prime number.
 	assert.Equal(nil, err)
 	re.TearDown()
 	_, err = re.NewRiakExplorerClient().Ping()
