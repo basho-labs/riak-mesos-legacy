@@ -3,8 +3,7 @@ language: go
 
 before_install:
   - sudo apt-get update -qq
-  - sudo apt-get install zookeeper zookeeperd
-
+  - sudo apt-get install -y zookeeper zookeeperd
 
 go:
   - 1.4
@@ -12,6 +11,9 @@ go:
 install:
   - go get -u github.com/jteeuwen/go-bindata/...
   - go get github.com/tools/godep
+before_script:
+  - sudo /etc/init.d/zookeeper start
+
 script:
   - TAGS=dev make
   - go test -v=true -race ./...
