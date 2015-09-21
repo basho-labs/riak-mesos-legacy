@@ -25,6 +25,7 @@ func TestREX(t *testing.T) {
 	go c.Background()
 	// Port number for testing
 	dirname, err := ioutil.TempDir("", "root")
+	defer os.RemoveAll(dirname)
 	t.Log("Decompressing into: ", dirname)
 	assert.Nil(err)
 	//defer os.RemoveAll(dirname)
