@@ -14,9 +14,7 @@ import (
 // TODO: Fix test and decompress trusty into "root"
 // It needs to manage the root itself
 func TestREX(t *testing.T) {
-	if os.Getenv("TRAVIS") == "true" {
-		t.Skip("Unable to run test on Travis")
-	}
+
 	assert := assert.New(t)
 
 	mgr := metamgr.NewMetadataManager("rmf5", []string{"127.0.0.1"})
