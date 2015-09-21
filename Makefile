@@ -46,7 +46,7 @@ clean_scheduler:
 .PHONY: executor clean_executor .scheduler.data.executor_linux_amd64
 executor: .scheduler.data.executor_linux_amd64
 .scheduler.data.executor_linux_amd64: cepm .process_manager.bindata_generated riak_explorer
-	GOOS=linux GOARCH=amd64 go build -v -o scheduler/data/executor_linux_amd64 -tags=$(TAGS) ./executor/
+	GOOS=linux GOARCH=amd64 go build -o scheduler/data/executor_linux_amd64 -tags=$(TAGS) ./executor/
 	$(shell touch .scheduler.data.executor_linux_amd64)
 clean_bin: clean_executor
 clean_executor:
