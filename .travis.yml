@@ -13,7 +13,6 @@ install:
   - go get github.com/tools/godep
 before_script:
   - sudo /etc/init.d/zookeeper start
-  - sudo sysctl kernel.unprivileged_userns_clone=1
 script:
   - TAGS=dev make
   - go test -v=true ./...
