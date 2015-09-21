@@ -14,7 +14,10 @@ import (
 // TODO: Fix test and decompress trusty into "root"
 // It needs to manage the root itself
 func TestREX(t *testing.T) {
-
+	use_super_chroot := true
+	if os.Getenv("TRAVIS") == "true" {
+		use_super_chroot = false
+	}
 	assert := assert.New(t)
 
 	mgr := metamgr.NewMetadataManager("rmf5", []string{"127.0.0.1"})
@@ -36,7 +39,7 @@ func TestREX(t *testing.T) {
 	assert.Nil(common.ExtractGZ(dirname, f))
 
 
-	re, err := NewRiakExplorer(7901, "rex@ubuntu.", c, dirname, true) // 998th  prime number.
+	re, err := NewRiakExplorer(7901, "rex@ubuntu.", c, dirname, use_super_chroot) // 998th  prime number.
 	assert.Equal(nil, err)
 	re.TearDown()
 	_, err = re.NewRiakExplorerClient().Ping()
