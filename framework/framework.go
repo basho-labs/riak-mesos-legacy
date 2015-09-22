@@ -11,6 +11,7 @@ import (
 	"github.com/basho-labs/riak-mesos/scheduler"
 	"github.com/mesos/mesos-go/auth/sasl"
 	"github.com/mesos/mesos-go/auth/sasl/mech"
+	"runtime"
 )
 
 // Must start with a-z, or A-Z
@@ -32,6 +33,7 @@ var (
 )
 
 func init() {
+	runtime.GOMAXPROCS(1)
 	flag.StringVar(&mesosMaster, "master", "zk://33.33.33.2:2181/mesos", "Mesos master")
 	flag.StringVar(&zookeeperAddr, "zk", "33.33.33.2:2181", "Zookeeper")
 	flag.StringVar(&schedulerHostname, "hostname", "", "Framework hostname")

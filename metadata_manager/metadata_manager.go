@@ -30,10 +30,6 @@ func (node *ZkNode) String() string {
 func (node *ZkNode) GetData() []byte {
 	return node.data
 }
-func (node *ZkNode) GetLock() *zk.Lock {
-	zkLock := zk.NewLock(node.mgr.zkConn, node.ns.GetZKPath(), zk.WorldACL(zk.PermAll))
-	return zkLock
-}
 func (node *ZkNode) SetData(data []byte) error {
 	var err error
 	log.Info("Persisting data")

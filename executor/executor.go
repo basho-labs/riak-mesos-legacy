@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+	"runtime"
 )
 
 const (
@@ -123,14 +124,11 @@ func (exec *ExecutorCore) Error(driver exec.ExecutorDriver, err string) {
 }
 
 func main() {
+	runtime.GOMAXPROCS(1)
 	log.SetLevel(log.DebugLevel)
 	fmt.Println("Starting Riak Executor")
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGUSR1, syscall.SIGUSR2)
-
-	data, _ := Asset("data/stuff")
-	s := string(data)
-	fmt.Printf("data=%v\n", s)
 
 	executor := newExecutor()
 	dconfig := exec.DriverConfig{

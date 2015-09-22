@@ -1,14 +1,14 @@
 {
 	"ImportPath": "github.com/basho-labs/riak-mesos",
-	"GoVersion": "go1.4.2",
+	"GoVersion": "go1.5.1",
 	"Packages": [
 		"./..."
 	],
 	"Deps": [
 		{
 			"ImportPath": "github.com/Sirupsen/logrus",
-			"Comment": "v0.8.2-20-gab7e46e",
-			"Rev": "ab7e46ea22bd379e660230844f96d20f1dabc21a"
+			"Comment": "v0.8.7",
+			"Rev": "418b41d23a1bf978c06faea5313ba194650ac088"
 		},
 		{
 			"ImportPath": "github.com/elazarl/go-bindata-assetfs",
@@ -38,6 +38,14 @@
 			"ImportPath": "github.com/jteeuwen/go-bindata",
 			"Comment": "v3.0.7-54-g91db54b",
 			"Rev": "91db54b0401d0679b3cf743142e4f3c86b4aaa4e"
+		},
+		{
+			"ImportPath": "github.com/kr/pretty",
+			"Rev": "e6ac2fc51e89a3249e82157fa0bb7a18ef9dd5bb"
+		},
+		{
+			"ImportPath": "github.com/kr/text",
+			"Rev": "bb797dc4fb8320488f47bf11de07a733d7233e1f"
 		},
 		{
 			"ImportPath": "github.com/mesos/mesos-go/auth",
@@ -76,6 +84,10 @@
 			"Rev": "e6c6068076470196af082b1ff896e24a51a87b2a"
 		},
 		{
+			"ImportPath": "github.com/pborman/uuid",
+			"Rev": "cccd189d45f7ac3368a0d127efb7f4d08ae0b655"
+		},
+		{
 			"ImportPath": "github.com/samuel/go-zookeeper/zk",
 			"Rev": "d0e0d8e11f318e000a8cc434616d69e329edc374"
 		},
@@ -100,10 +112,6 @@
 		{
 			"ImportPath": "golang.org/x/net/context",
 			"Rev": "cbcac7bb8415db9b6cb4d1ebab1dc9afbd688b97"
-		},
-    {
-      "ImportPath": "github.com/kr/pretty",
-      "Rev": "e6ac2fc51e89a3249e82157fa0bb7a18ef9dd5bb"
-    }
+		}
 	]
 }

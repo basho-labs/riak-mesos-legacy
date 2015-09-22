@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 )
@@ -18,6 +19,25 @@ func NewSchedulerHTTPClient(baseURL string) *SchedulerHTTPClient {
 	}
 
 	return c
+}
+
+func (client *SchedulerHTTPClient) GetClusterConfig(clusterName string) (string, error) {
+	commandURI := fmt.Sprintf("clusters/%s/config", clusterName)
+	return client.doGet(commandURI)
+}
+
+func (client *SchedulerHTTPClient) SetClusterConfig(clusterName string, file io.Reader) (string, error) {
+	commandURI := fmt.Sprintf("clusters/%s/config", clusterName)
+	return client.doPostWithData(commandURI, file)
+}
+func (client *SchedulerHTTPClient) GetClusterAdvancedConfig(clusterName string) (string, error) {
+	commandURI := fmt.Sprintf("clusters/%s/advancedConfig", clusterName)
+	return client.doGet(commandURI)
+}
+
+func (client *SchedulerHTTPClient) SetClusterAdvancedConfig(clusterName string, file io.Reader) (string, error) {
+	commandURI := fmt.Sprintf("clusters/%s/advancedConfig", clusterName)
+	return client.doPostWithData(commandURI, file)
 }
 
 // GetClusters issues a Get to the Scheduler HTTP Server clusters endpoint
@@ -57,6 +77,20 @@ func (client *SchedulerHTTPClient) AddNode(clusterName string) (string, error) {
 func (client *SchedulerHTTPClient) doGet(path string) (string, error) {
 	commandURL := fmt.Sprintf("%s/api/v1/%s", client.BaseURL, path)
 	resp, err := http.Get(commandURL)
+	if err != nil {
+		return "", err
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	defer resp.Body.Close()
+	if err != nil {
+		return "", err
+	}
+	return string(body[:]), nil
+}
+
+func (client *SchedulerHTTPClient) doPostWithData(path string, data io.Reader) (string, error) {
+	commandURL := fmt.Sprintf("%s/api/v1/%s", client.BaseURL, path)
+	resp, err := http.Post(commandURL, "", data)
 	if err != nil {
 		return "", err
 	}

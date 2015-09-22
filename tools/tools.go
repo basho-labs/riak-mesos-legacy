@@ -10,6 +10,7 @@ import (
 	"github.com/basho-labs/riak-mesos/scheduler"
 	"github.com/kr/pretty"
 	"github.com/samuel/go-zookeeper/zk"
+	"io"
 	"time"
 )
 
@@ -20,14 +21,20 @@ var (
 	frameworkName string
 	cmd           string
 	client        *SchedulerHTTPClient
+	config        string
 )
 
 func init() {
 	flag.StringVar(&zookeeperAddr, "zk", "33.33.33.2:2181", "Zookeeper")
 	flag.IntVar(&nodes, "nodes", 1, "Nodes in new cluster")
 	flag.StringVar(&clusterName, "cluster-name", "", "Name of new cluster")
+	flag.StringVar(&config, "config", "", "filename of new config")
+
 	flag.StringVar(&frameworkName, "name", "riakMesosFramework", "Framework Instance ID")
-	flag.StringVar(&cmd, "command", "get-url", "get-url, get-clusters, get-cluster, create-cluster, delete-cluster, get-nodes, add-node, add-nodes, get-state")
+	flag.StringVar(&cmd, "command", "get-url",
+		"get-url, get-clusters, get-cluster, create-cluster, "+
+			"delete-cluster, get-nodes, add-node, add-nodes, get-state, "+
+			"get-config, set-config, get-advanced-config, set-advanced-config")
 	flag.Parse()
 
 	if cmd == "" {
@@ -80,6 +87,23 @@ func main() {
 		for i := 1; i <= nodes; i++ {
 			respond(client.AddNode(clusterName))
 		}
+	case "get-config":
+		client = NewSchedulerHTTPClient(getURL())
+		requireClusterName()
+		respond(client.GetClusterConfig(clusterName))
+	case "set-config":
+		client = NewSchedulerHTTPClient(getURL())
+		requireClusterName()
+		client.SetClusterConfig(clusterName, getConfigData())
+	case "get-advanced-config":
+		client = NewSchedulerHTTPClient(getURL())
+		requireClusterName()
+		respond(client.GetClusterAdvancedConfig(clusterName))
+
+	case "set-advanced-config":
+		client = NewSchedulerHTTPClient(getURL())
+		requireClusterName()
+		client.SetClusterAdvancedConfig(clusterName, getConfigData())
 	default:
 		log.Fatal("Unknown command")
 	}
@@ -155,6 +179,19 @@ func zkDelete() error {
 	zkDeleteChildren(conn, frameworkName)
 
 	return nil
+}
+
+func getConfigData() io.Reader {
+	if config == "" {
+		fmt.Println("Please specify value for configuration file name")
+		os.Exit(1)
+	}
+	data, err := os.Open(config)
+	if err != nil {
+		fmt.Println("Error while retrieving configuration file: ", err)
+		os.Exit(2)
+	}
+	return data
 }
 
 func requireClusterName() {
