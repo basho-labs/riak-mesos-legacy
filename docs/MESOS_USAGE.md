@@ -49,7 +49,7 @@ Add Riak nodes
     -nodes=5
 ```
 
-Get the base URL for the Riak Mesos Framework [HTTP API](docs/HTTP-API.md) endpoints for more ways to interact with the framework.
+Get the base URL for the Riak Mesos Framework [HTTP API](../docs/HTTP-API.md) endpoints for more ways to interact with the framework.
 
 ```
 ./tools_linux_amd64 -name=$NAME -zk=$ZK -command="get-url"
