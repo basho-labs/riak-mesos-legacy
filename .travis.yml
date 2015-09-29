@@ -14,7 +14,7 @@ install:
   - go get github.com/gogo/protobuf/protoc-gen-gogo
 before_script:
   - sudo /etc/init.d/zookeeper start
-  - cd $GOPATH/src/github.com/mesos/mesos-go/mesosproto && make
 script:
   - TAGS=dev make
+  - cd $GOPATH/src/github.com/mesos/mesos-go/mesosproto && make
   - go test -v=true ./...
