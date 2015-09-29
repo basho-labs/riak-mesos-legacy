@@ -43,3 +43,6 @@ artifacts/data/trusty.tar.gz
 process_manager/schroot/data/plain_chroot
 process_manager/schroot/data/super_chroot
 goroot
+.director.bindata_generated_ubuntu
+artifacts/bindata_ubuntu.go
+director/bindata_ubuntu.go

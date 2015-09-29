@@ -258,8 +258,11 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(sc *SchedulerCor
 			Executable: proto.Bool(true),
 		},
 	}
-	//executorUris = append(executorUris,
-	//	&mesos.CommandInfo_URI{Value: &(frn.frc.sc.schedulerHTTPServer.hostURI), Executable: proto.Bool(true)})
+
+	chrootValue := true
+	if os.Getenv("USE_CHROOT") == "false" {
+		chrootValue = false
+	}
 	superChrootValue := true
 	if os.Getenv("USE_SUPER_CHROOT") == "false" {
 		superChrootValue = false
@@ -297,6 +300,7 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(sc *SchedulerCor
 		FrameworkName:             sc.frameworkName,
 		URI:                       sc.schedulerHTTPServer.GetURI(),
 		ClusterName:               frn.ClusterName,
+		UseChroot:                 chrootValue,
 		UseSuperChroot:            superChrootValue,
 		RexPort:                   <-ports,
 		HTTPPort:                  <-ports,

@@ -46,17 +46,28 @@ func (directorNode *DirectorNode) runLoop() {
 
 func decompress() {
 	var err error
+	var asset []byte
 	if err := os.Mkdir("director", 0777); err != nil {
 		log.Fatal("Unable to make director directory: ", err)
 	}
 
-	asset, err := Asset("trusty.tar.gz")
-	if err != nil {
-		log.Fatal(err)
+	chrootValue := true
+	if os.Getenv("USE_CHROOT") == "false" {
+		chrootValue = false
 	}
-	if err = common.ExtractGZ("director", bytes.NewReader(asset)); err != nil {
-		log.Fatal("Unable to extract trusty root: ", err)
+
+	if chrootValue {
+		asset, err = Asset("trusty.tar.gz")
+		if err != nil {
+			log.Fatal(err)
+		}
+		if err = common.ExtractGZ("director", bytes.NewReader(asset)); err != nil {
+			log.Fatal("Unable to extract trusty root: ", err)
+		}
+	} else {
+		os.Mkdir("director", 0777)
 	}
+
 	asset, err = Asset("riak_mesos_director-bin.tar.gz")
 
 	if err != nil {
@@ -94,13 +105,16 @@ func (directorNode *DirectorNode) Run() {
 
 	log.Debugf("Starting up Director %v", exepath)
 
+	chrootValue := true
+	if os.Getenv("USE_CHROOT") == "false" {
+		chrootValue = false
+	}
 	chroot := filepath.Join(".", "director")
 	superChrootValue := true
 	if os.Getenv("USE_SUPER_CHROOT") == "false" {
 		superChrootValue = false
 	}
-
-	directorNode.pm, err = process_manager.NewProcessManager(tearDownFun, exepath, args, healthCheckFun, &chroot, superChrootValue)
+	directorNode.pm, err = process_manager.NewProcessManager(tearDownFun, exepath, args, healthCheckFun, chrootValue, &chroot, superChrootValue)
 
 	if err != nil {
 		log.Error("Could not start Director: ", err)

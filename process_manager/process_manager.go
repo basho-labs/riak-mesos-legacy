@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -20,9 +21,9 @@ type ProcessManager struct {
 	subscribe chan chan int
 }
 
-func NewProcessManager(tdcb TeardownCallback, executablePath string, args []string, healthcheck Healthchecker, chroot *string, useSuperChroot bool) (*ProcessManager, error) {
+func NewProcessManager(tdcb TeardownCallback, executablePath string, args []string, healthcheck Healthchecker, useChroot bool, chroot *string, useSuperChroot bool) (*ProcessManager, error) {
 	retFuture := make(chan *ProcessManager)
-	go startProcessManager(tdcb, executablePath, args, healthcheck, retFuture, chroot, useSuperChroot)
+	go startProcessManager(tdcb, executablePath, args, healthcheck, retFuture, useChroot, chroot, useSuperChroot)
 	retVal := <-retFuture
 	log.Info("Retval: ", retVal)
 	if retVal == nil {
@@ -44,7 +45,7 @@ func (pm *ProcessManager) TearDown() {
 	<-replyChan
 	return
 }
-func startProcessManager(tdcb TeardownCallback, executablePath string, args []string, healthcheck Healthchecker, retChan chan *ProcessManager, chroot *string, useSuperChroot bool) {
+func startProcessManager(tdcb TeardownCallback, executablePath string, args []string, healthcheck Healthchecker, retChan chan *ProcessManager, useChroot bool, chroot *string, useSuperChroot bool) {
 	defer close(retChan)
 	pm := &ProcessManager{
 		teardown:  make(chan chan interface{}, 10),
@@ -62,7 +63,13 @@ func startProcessManager(tdcb TeardownCallback, executablePath string, args []st
 	sigchlds := make(chan os.Signal, 1000)
 	signal.Notify(sigchlds, syscall.SIGCHLD)
 
-	pm.start(executablePath, args, chroot, useSuperChroot)
+	if useChroot {
+		pm.startChroot(executablePath, args, chroot, useSuperChroot)
+	} else {
+		executablePath = filepath.Join(*chroot, executablePath)
+		pm.start(executablePath, args)
+	}
+
 	waitChan := subscribe(pm.pid)
 	defer unsubscribe(pm.pid)
 	defer close(waitChan)

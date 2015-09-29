@@ -23,7 +23,7 @@ apt-get -y upgrade
 apt-get -y install git bison mercurial autoconf
 cd $HOME/ && bash < <(curl -s -S -L https://raw.githubusercontent.com/moovweb/gvm/master/binscripts/gvm-installer)
 [[ -s "$HOME/.gvm/scripts/gvm" ]] && source "$HOME/.gvm/scripts/gvm"
-gvm install go1.4
+gvm install go1.5
 mkdir -p /vagrant/goroot
 
 # DCOS Prereq
@@ -33,9 +33,9 @@ apt-get -y install s3cmd
 
 echo '# Golang' >> $HOME/.bashrc
 echo '[[ -s "$HOME/.gvm/scripts/gvm" ]] && source "$HOME/.gvm/scripts/gvm"' >> $HOME/.bashrc
-echo 'gvm use go1.4' >> $HOME/.bashrc
+echo 'gvm use go1.5' >> $HOME/.bashrc
 echo 'export GOPATH=/vagrant/goroot' >> $HOME/.bashrc
-echo 'export PATH=$PATH:$GOPATH/bin:$HOME/.gvm/gos/go1.4/bin:$HOME/bin' >> $HOME/.bashrc
+echo 'export PATH=$PATH:$GOPATH/bin:$HOME/.gvm/gos/go1.5/bin:$HOME/bin' >> $HOME/.bashrc
 
 # Fix permissions
 chown -R vagrant $HOME

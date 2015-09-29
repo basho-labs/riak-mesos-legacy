@@ -193,25 +193,31 @@ func (riakNode *RiakNode) startRex(rexPort int64, c *cepm.CEPM) (*rex.RiakExplor
 	if err != nil {
 		log.Panic("Unable to fetch Riak Exploer: ", err)
 	}
-	err = common.ExtractGZ("root", resp.Body)
-	return rex.NewRiakExplorer(rexPort, riakNode.taskData.RexFullyQualifiedNodeName, c, "root", riakNode.taskData.UseSuperChroot)
-}
-func (riakNode *RiakNode) Run() {
 
+	err = common.ExtractGZ("root", resp.Body)
+	return rex.NewRiakExplorer(rexPort, riakNode.taskData.RexFullyQualifiedNodeName, c, riakNode.taskData.UseChroot, "root", riakNode.taskData.UseSuperChroot)
+}
+
+func (riakNode *RiakNode) Run() {
 	var err error
-	log.Info("Other hilarious facts: ", riakNode.taskInfo)
+	var fetchURI string
+	var resp *http.Response
 
 	os.Mkdir("root", 0777)
-	fetchURI := fmt.Sprintf("%s/static2/trusty.tar.gz", riakNode.taskData.URI)
-	log.Info("Preparing to fetch trusty_root from: ", fetchURI)
-	resp, err := http.Get(fetchURI)
-	if err != nil {
-		log.Panic("Unable to fetch trusty root: ", err)
+
+	if riakNode.taskData.UseChroot {
+		fetchURI := fmt.Sprintf("%s/static2/trusty.tar.gz", riakNode.taskData.URI)
+		log.Info("Preparing to fetch trusty_root from: ", fetchURI)
+		resp, err = http.Get(fetchURI)
+		if err != nil {
+			log.Panic("Unable to fetch trusty root: ", err)
+		}
+		err = common.ExtractGZ("root", resp.Body)
+		if err != nil {
+			log.Panic("Unable to extract trusty root: ", err)
+		}
 	}
-	err = common.ExtractGZ("root", resp.Body)
-	if err != nil {
-		log.Panic("Unable to extract trusty root: ", err)
-	}
+
 	fetchURI = fmt.Sprintf("%s/static2/riak-2.1.1-bin.tar.gz", riakNode.taskData.URI)
 	log.Info("Preparing to fetch riak from: ", fetchURI)
 	resp, err = http.Get(fetchURI)
@@ -246,12 +252,6 @@ func (riakNode *RiakNode) Run() {
 	os.MkdirAll(fmt.Sprint(kernelDirs[0], "/priv"), 0777)
 	ioutil.WriteFile(fmt.Sprint(kernelDirs[0], "/priv/cepmd_port"), []byte(fmt.Sprintf("%d.", c.GetPort())), 0777)
 
-	wd, err := os.Getwd()
-	if err != nil {
-		log.Panic("Could not get wd: ", err)
-	}
-	chroot := filepath.Join(wd, "root")
-
 	HealthCheckFun := func() error {
 		log.Info("Checking is Riak is started")
 		data, err := ioutil.ReadFile("root/riak/log/console.log")
@@ -260,14 +260,18 @@ func (riakNode *RiakNode) Run() {
 				log.Info("Riak started, waiting 10 seconds to avoid race conditions (HACK)")
 				time.Sleep(10 * time.Second)
 				return nil
-			} else {
-				return errors.New("Riak KV not yet started")
 			}
-		} else {
-			return err
+			return errors.New("Riak KV not yet started")
 		}
+		return err
 	}
-	riakNode.pm, err = process_manager.NewProcessManager(func() { return }, "/riak/bin/riak", args, HealthCheckFun, &chroot, riakNode.taskData.UseSuperChroot)
+
+	wd, err := os.Getwd()
+	if err != nil {
+		log.Panic("Could not get wd: ", err)
+	}
+	chroot := filepath.Join(wd, "root")
+	riakNode.pm, err = process_manager.NewProcessManager(func() { return }, "/riak/bin/riak", args, HealthCheckFun, riakNode.taskData.UseChroot, &chroot, riakNode.taskData.UseSuperChroot)
 
 	if err != nil {
 		log.Error("Could not start Riak: ", err)
@@ -299,14 +303,6 @@ func (riakNode *RiakNode) Run() {
 		if err != nil {
 			log.Panic(err)
 		}
-
-		// The following is commented out as part of experimenting with moving REX
-		// to the scheduler as opposed to running in the executors
-		// It used to coordinate the cluster join action.
-
-		// lock := coordinator.GetLock()
-		// lock.Lock()
-		// Do cluster joiny stuff
 
 		child, err := coordinatedNodes.MakeChild(riakNode.taskInfo.GetTaskId().GetValue(), true)
 		if err != nil {

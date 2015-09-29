@@ -8,7 +8,8 @@ DEPLOY_OS       ?= coreos
 # The project is actually cross platform, but this is the current repository location for all packages.
 
 .PHONY: all clean clean_bin package clean_package sync
-all: clean_bin framework director
+all: clean_bin artifacts schroot framework director
+ubuntu: clean_bin artifacts_ubuntu framework director_ubuntu
 rebuild_all: clean build_artifacts build_schroot framework director
 clean: clean_package clean_bin
 package: clean_package
@@ -25,7 +26,7 @@ package: clean_package
 .bin.framework_linux_amd64:
 	go build -o bin/framework_linux_amd64 -tags=$(TAGS) ./framework/
 	$(shell touch .bin.framework_linux_amd64)
-framework: .godep schroot cepm artifacts executor scheduler .bin.framework_linux_amd64
+framework: .godep cepm executor scheduler .bin.framework_linux_amd64
 clean_bin: clean_framework
 clean_framework:
 	-rm -f .bin.framework_linux_amd64 bin/framework_linux_amd64
@@ -62,6 +63,9 @@ build_artifacts:
 artifacts:
 	cd artifacts/data && $(MAKE) -f download.make
 	go generate -tags=$(TAGS) ./artifacts
+artifacts_ubuntu:
+	cd artifacts/data && $(MAKE) -f download.make ubuntu
+	go generate -tags=ubuntu ./artifacts
 sync: sync_artifacts
 sync_artifacts:
 	cd artifacts/data/ && \
@@ -92,11 +96,16 @@ clean_tools:
 .director.bindata_generated: .process_manager.bindata_generated
 	go generate -tags=$(TAGS) ./director
 	$(shell touch .director.bindata_generated)
+.director.bindata_generated_ubuntu: .process_manager.bindata_generated
+	go generate -tags=ubuntu ./director
+	$(shell touch .director.bindata_generated_ubuntu)
+director_ubuntu: .director.bindata_generated_ubuntu
+	go build -o bin/director_linux_amd64 -tags=ubuntu ./director/
 director: .director.bindata_generated
 	go build -o bin/director_linux_amd64 -tags=$(TAGS) ./director/
 clean_bin: clean_director
 clean_director:
-	-rm -rf .director.bindata_generated director/bindata_generated.go bin/director_linux_amd64
+	-rm -rf .director.bindata_generated .director.bindata_generated_ubuntu director/bindata_generated.go bin/director_linux_amd64
 ### Scheduler end
 
 ### Schroot begin
@@ -143,7 +152,7 @@ clean_cepmd:
 .riak_explorer.bindata_generated: riak_explorer/data/advanced.config riak_explorer/data/riak_explorer.conf
 	go generate -tags=$(TAGS) ./riak_explorer/...
 	$(shell touch .riak_explorer.bindata_generated)
-riak_explorer: artifacts .riak_explorer.bindata_generated
+riak_explorer: .riak_explorer.bindata_generated
 clean_bin: clean_riak_explorer
 clean_riak_explorer:
 	-rm -f .riak_explorer.bindata_generated riak_explorer/bindata_generated.go
