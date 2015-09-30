@@ -8,7 +8,7 @@ DEPLOY_OS       ?= coreos
 # The project is actually cross platform, but this is the current repository location for all packages.
 
 .PHONY: all clean clean_bin package clean_package sync
-all: clean_bin tools framework director
+all: clean_bin framework director tools
 rebuild_all: clean build_artifacts build_schroot framework director
 clean: clean_package clean_bin
 package: clean_package

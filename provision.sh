@@ -23,6 +23,8 @@ apt-get -y upgrade
 apt-get -y install git bison mercurial autoconf
 cd $HOME/ && bash < <(curl -s -S -L https://raw.githubusercontent.com/moovweb/gvm/master/binscripts/gvm-installer)
 [[ -s "$HOME/.gvm/scripts/gvm" ]] && source "$HOME/.gvm/scripts/gvm"
+gvm install go1.4
+gvm use go1.4
 gvm install go1.5
 mkdir -p /vagrant/goroot
 
