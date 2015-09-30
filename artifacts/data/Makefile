@@ -4,7 +4,6 @@ TMP	   := /tmp
 
 .PHONY: all clean
 all: riak_explorer-bin.tar.gz riak-2.1.1-bin.tar.gz trusty.tar.gz riak_mesos_director-bin.tar.gz
-ubuntu: riak_explorer-bin.tar.gz riak-2.1.1-bin.tar.gz riak_mesos_director-bin.tar.gz
 
 ### Riak Explorer begin
 riak_explorer:

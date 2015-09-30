@@ -92,7 +92,7 @@ func (re *RiakExplorer) configureAdvanced(cepmdPort int, rootDir string) {
 	}
 }
 
-func NewRiakExplorer(port int64, nodename string, c *cepm.CEPM, useChroot bool, root string, useSuperChroot bool) (*RiakExplorer, error) {
+func NewRiakExplorer(port int64, nodename string, c *cepm.CEPM, root string, useSuperChroot bool) (*RiakExplorer, error) {
 	exepath := "/riak_explorer/bin/riak_explorer"
 
 	var err error
@@ -129,7 +129,7 @@ func NewRiakExplorer(port int64, nodename string, c *cepm.CEPM, useChroot bool, 
 	re.configure(port, nodename, root)
 	log.Debugf("Starting up Riak Explorer %v", exepath)
 
-	re.pm, err = process_manager.NewProcessManager(tearDownFun, exepath, args, healthCheckFun, useChroot, &root, useSuperChroot)
+	re.pm, err = process_manager.NewProcessManager(tearDownFun, exepath, args, healthCheckFun, &root, useSuperChroot)
 	if err != nil {
 		log.Error("Could not start Riak Explorer: ", err)
 	}

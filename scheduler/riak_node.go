@@ -259,10 +259,6 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(sc *SchedulerCor
 		},
 	}
 
-	chrootValue := true
-	if os.Getenv("USE_CHROOT") == "false" {
-		chrootValue = false
-	}
 	superChrootValue := true
 	if os.Getenv("USE_SUPER_CHROOT") == "false" {
 		superChrootValue = false
@@ -300,7 +296,6 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(sc *SchedulerCor
 		FrameworkName:             sc.frameworkName,
 		URI:                       sc.schedulerHTTPServer.GetURI(),
 		ClusterName:               frn.ClusterName,
-		UseChroot:                 chrootValue,
 		UseSuperChroot:            superChrootValue,
 		RexPort:                   <-ports,
 		HTTPPort:                  <-ports,

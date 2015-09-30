@@ -12,7 +12,6 @@ type TaskData struct {
 	FrameworkName             string
 	ClusterName               string
 	URI                       string
-	UseChroot                 bool
 	UseSuperChroot            bool
 	HTTPPort                  int64
 	PBPort                    int64

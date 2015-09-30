@@ -8,8 +8,7 @@ DEPLOY_OS       ?= coreos
 # The project is actually cross platform, but this is the current repository location for all packages.
 
 .PHONY: all clean clean_bin package clean_package sync
-all: clean_bin artifacts schroot framework director
-ubuntu: clean_bin artifacts_ubuntu framework director_ubuntu
+all: clean_bin tools framework director
 rebuild_all: clean build_artifacts build_schroot framework director
 clean: clean_package clean_bin
 package: clean_package
@@ -26,7 +25,7 @@ package: clean_package
 .bin.framework_linux_amd64:
 	go build -o bin/framework_linux_amd64 -tags=$(TAGS) ./framework/
 	$(shell touch .bin.framework_linux_amd64)
-framework: .godep cepm executor scheduler .bin.framework_linux_amd64
+framework: .godep schroot artifacts cepm executor scheduler .bin.framework_linux_amd64
 clean_bin: clean_framework
 clean_framework:
 	-rm -f .bin.framework_linux_amd64 bin/framework_linux_amd64
@@ -63,9 +62,6 @@ build_artifacts:
 artifacts:
 	cd artifacts/data && $(MAKE) -f download.make
 	go generate -tags=$(TAGS) ./artifacts
-artifacts_ubuntu:
-	cd artifacts/data && $(MAKE) -f download.make ubuntu
-	go generate -tags=ubuntu ./artifacts
 sync: sync_artifacts
 sync_artifacts:
 	cd artifacts/data/ && \
@@ -85,7 +81,6 @@ clean_artifacts:
 	go build -o bin/tools_linux_amd64 -tags=$(TAGS) ./tools/
 	$(shell touch .bin.tools_linux_amd64)
 tools: .bin.tools_linux_amd64
-all: tools
 clean_bin: clean_tools
 clean_tools:
 	-rm -rf .bin.tools_linux_amd64 bin/tools_linux_amd64
@@ -96,16 +91,11 @@ clean_tools:
 .director.bindata_generated: .process_manager.bindata_generated
 	go generate -tags=$(TAGS) ./director
 	$(shell touch .director.bindata_generated)
-.director.bindata_generated_ubuntu: .process_manager.bindata_generated
-	go generate -tags=ubuntu ./director
-	$(shell touch .director.bindata_generated_ubuntu)
-director_ubuntu: .director.bindata_generated_ubuntu
-	go build -o bin/director_linux_amd64 -tags=ubuntu ./director/
-director: .director.bindata_generated
+director: artifacts .director.bindata_generated
 	go build -o bin/director_linux_amd64 -tags=$(TAGS) ./director/
 clean_bin: clean_director
 clean_director:
-	-rm -rf .director.bindata_generated .director.bindata_generated_ubuntu director/bindata_generated.go bin/director_linux_amd64
+	-rm -rf .director.bindata_generated director/bindata_generated.go bin/director_linux_amd64
 ### Scheduler end
 
 ### Schroot begin

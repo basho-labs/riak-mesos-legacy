@@ -77,11 +77,6 @@
                 "description": "Memory requirements",
                 "default": 2048
             },
-            "chroot":{
-                "type": "string",
-                "description": "When this is false, run embedded erlang applications natively.",
-                "default": "true"
-            },
             "super-chroot":{
                 "type": "string",
                 "description": "When this is false, use the default chroot.",
@@ -113,7 +108,6 @@
             "instances",
             "cpus",
             "mem",
-            "chroot",
             "super-chroot",
             "url",
             "master",

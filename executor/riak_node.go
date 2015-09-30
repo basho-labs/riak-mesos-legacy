@@ -195,7 +195,7 @@ func (riakNode *RiakNode) startRex(rexPort int64, c *cepm.CEPM) (*rex.RiakExplor
 	}
 
 	err = common.ExtractGZ("root", resp.Body)
-	return rex.NewRiakExplorer(rexPort, riakNode.taskData.RexFullyQualifiedNodeName, c, riakNode.taskData.UseChroot, "root", riakNode.taskData.UseSuperChroot)
+	return rex.NewRiakExplorer(rexPort, riakNode.taskData.RexFullyQualifiedNodeName, c, "root", riakNode.taskData.UseSuperChroot)
 }
 
 func (riakNode *RiakNode) Run() {
@@ -204,19 +204,6 @@ func (riakNode *RiakNode) Run() {
 	var resp *http.Response
 
 	os.Mkdir("root", 0777)
-
-	if riakNode.taskData.UseChroot {
-		fetchURI := fmt.Sprintf("%s/static2/trusty.tar.gz", riakNode.taskData.URI)
-		log.Info("Preparing to fetch trusty_root from: ", fetchURI)
-		resp, err = http.Get(fetchURI)
-		if err != nil {
-			log.Panic("Unable to fetch trusty root: ", err)
-		}
-		err = common.ExtractGZ("root", resp.Body)
-		if err != nil {
-			log.Panic("Unable to extract trusty root: ", err)
-		}
-	}
 
 	fetchURI = fmt.Sprintf("%s/static2/riak-2.1.1-bin.tar.gz", riakNode.taskData.URI)
 	log.Info("Preparing to fetch riak from: ", fetchURI)
@@ -271,7 +258,7 @@ func (riakNode *RiakNode) Run() {
 		log.Panic("Could not get wd: ", err)
 	}
 	chroot := filepath.Join(wd, "root")
-	riakNode.pm, err = process_manager.NewProcessManager(func() { return }, "/riak/bin/riak", args, HealthCheckFun, riakNode.taskData.UseChroot, &chroot, riakNode.taskData.UseSuperChroot)
+	riakNode.pm, err = process_manager.NewProcessManager(func() { return }, "/riak/bin/riak", args, HealthCheckFun, &chroot, riakNode.taskData.UseSuperChroot)
 
 	if err != nil {
 		log.Error("Could not start Riak: ", err)

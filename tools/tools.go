@@ -7,7 +7,6 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/basho-labs/riak-mesos/metadata_manager"
-	"github.com/basho-labs/riak-mesos/scheduler"
 	"github.com/kr/pretty"
 	"github.com/samuel/go-zookeeper/zk"
 	"io"
@@ -226,7 +225,9 @@ func getState() {
 	mm := metadata_manager.NewMetadataManager(frameworkName, []string{zookeeperAddr})
 	zkNode, err := mm.GetRootNode().GetChild("SchedulerState")
 	if err != zk.ErrNoNode {
-		ss, err := scheduler.DeserializeSchedulerState(zkNode.GetData())
+		// This results in the inclusion of all of the bindata used for sheduler... Lets not deserialize
+		//ss, err := scheduler.DeserializeSchedulerState(zkNode.GetData())
+		ss := zkNode.GetData()
 		if err != nil {
 			log.Panic(err)
 		}

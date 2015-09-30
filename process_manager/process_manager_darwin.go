@@ -1,4 +1,4 @@
-//build +darwin
+//+build darwin
 
 // This file is merely here so we can run tests in a darwin test environment.
 // Process manager is never meant to run on a Mac OS X system. If you try to
@@ -10,10 +10,6 @@ import (
 	_ "github.com/mitchellh/go-ps"
 )
 
-func (pm *ProcessManager) start(executablePath string, args []string) {
-	panic("Not implemented")
-}
-
-func (pm *ProcessManager) startChroot(executablePath string, args []string, chroot *string, useSuperChroot bool) {
+func (pm *ProcessManager) start(executablePath string, args []string, chroot *string, useSuperChroot bool) {
 	panic("Not implemented")
 }
