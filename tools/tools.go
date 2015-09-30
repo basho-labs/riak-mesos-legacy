@@ -225,7 +225,7 @@ func getState() {
 	mm := metadata_manager.NewMetadataManager(frameworkName, []string{zookeeperAddr})
 	zkNode, err := mm.GetRootNode().GetChild("SchedulerState")
 	if err != zk.ErrNoNode {
-		// This results in the inclusion of all of the bindata used for sheduler... Lets not deserialize
+		// This results in the inclusion of all of the bindata used for scheduler... Lets not deserialize
 		//ss, err := scheduler.DeserializeSchedulerState(zkNode.GetData())
 		ss := zkNode.GetData()
 		if err != nil {
