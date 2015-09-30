@@ -108,6 +108,7 @@
             "instances",
             "cpus",
             "mem",
+            "super-chroot",
             "url",
             "master",
             "zk",

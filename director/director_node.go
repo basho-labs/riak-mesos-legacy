@@ -7,7 +7,6 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/basho-labs/riak-mesos/common"
 	"github.com/basho-labs/riak-mesos/process_manager"
 
 	"bytes"
@@ -44,29 +43,6 @@ func (directorNode *DirectorNode) runLoop() {
 	log.Info("Shutting down")
 }
 
-func decompress() {
-	var err error
-	if err := os.Mkdir("director", 0777); err != nil {
-		log.Fatal("Unable to make director directory: ", err)
-	}
-
-	asset, err := Asset("trusty.tar.gz")
-	if err != nil {
-		log.Fatal(err)
-	}
-	if err = common.ExtractGZ("director", bytes.NewReader(asset)); err != nil {
-		log.Fatal("Unable to extract trusty root: ", err)
-	}
-	asset, err = Asset("riak_mesos_director-bin.tar.gz")
-
-	if err != nil {
-		log.Fatal(err)
-	}
-	if err = common.ExtractGZ("director", bytes.NewReader(asset)); err != nil {
-		log.Fatal("Unable to extract rex: ", err)
-	}
-}
-
 func (directorNode *DirectorNode) Run() {
 	exepath := "/director/bin/director"
 
@@ -99,7 +75,6 @@ func (directorNode *DirectorNode) Run() {
 	if os.Getenv("USE_SUPER_CHROOT") == "false" {
 		superChrootValue = false
 	}
-
 	directorNode.pm, err = process_manager.NewProcessManager(tearDownFun, exepath, args, healthCheckFun, &chroot, superChrootValue)
 
 	if err != nil {

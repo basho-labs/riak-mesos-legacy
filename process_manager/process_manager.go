@@ -63,6 +63,7 @@ func startProcessManager(tdcb TeardownCallback, executablePath string, args []st
 	signal.Notify(sigchlds, syscall.SIGCHLD)
 
 	pm.start(executablePath, args, chroot, useSuperChroot)
+
 	waitChan := subscribe(pm.pid)
 	defer unsubscribe(pm.pid)
 	defer close(waitChan)

@@ -8,7 +8,7 @@ DEPLOY_OS       ?= coreos
 # The project is actually cross platform, but this is the current repository location for all packages.
 
 .PHONY: all clean clean_bin package clean_package sync
-all: clean_bin framework director
+all: clean_bin tools framework director
 rebuild_all: clean build_artifacts build_schroot framework director
 clean: clean_package clean_bin
 package: clean_package
@@ -25,7 +25,7 @@ package: clean_package
 .bin.framework_linux_amd64:
 	go build -o bin/framework_linux_amd64 -tags=$(TAGS) ./framework/
 	$(shell touch .bin.framework_linux_amd64)
-framework: .godep schroot cepm artifacts executor scheduler .bin.framework_linux_amd64
+framework: .godep schroot artifacts cepm executor scheduler .bin.framework_linux_amd64
 clean_bin: clean_framework
 clean_framework:
 	-rm -f .bin.framework_linux_amd64 bin/framework_linux_amd64
@@ -81,7 +81,6 @@ clean_artifacts:
 	go build -o bin/tools_linux_amd64 -tags=$(TAGS) ./tools/
 	$(shell touch .bin.tools_linux_amd64)
 tools: .bin.tools_linux_amd64
-all: tools
 clean_bin: clean_tools
 clean_tools:
 	-rm -rf .bin.tools_linux_amd64 bin/tools_linux_amd64
@@ -92,7 +91,7 @@ clean_tools:
 .director.bindata_generated: .process_manager.bindata_generated
 	go generate -tags=$(TAGS) ./director
 	$(shell touch .director.bindata_generated)
-director: .director.bindata_generated
+director: artifacts .director.bindata_generated
 	go build -o bin/director_linux_amd64 -tags=$(TAGS) ./director/
 clean_bin: clean_director
 clean_director:
@@ -143,7 +142,7 @@ clean_cepmd:
 .riak_explorer.bindata_generated: riak_explorer/data/advanced.config riak_explorer/data/riak_explorer.conf
 	go generate -tags=$(TAGS) ./riak_explorer/...
 	$(shell touch .riak_explorer.bindata_generated)
-riak_explorer: artifacts .riak_explorer.bindata_generated
+riak_explorer: .riak_explorer.bindata_generated
 clean_bin: clean_riak_explorer
 clean_riak_explorer:
 	-rm -f .riak_explorer.bindata_generated riak_explorer/bindata_generated.go
