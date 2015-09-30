@@ -16,15 +16,18 @@ go get github.com/stretchr/testify/mock
 go get github.com/samuel/go-zookeeper/zk
 go get github.com/pborman/uuid
 go get github.com/stretchr/testify/assert
+
+# Mesos go
+# Using Go1.5 this can be tricky... May need to use go1.4, create protos, then switch to go1.5 and repeat these steps
 go get github.com/mesos/mesos-go
-
 go get github.com/gogo/protobuf/protoc-gen-gogo
-
-### Download code and deps
 mkdir -p $GOPATH/src/github.com/mesos
-mkdir -p $GOPATH/src/github.com/basho-labs
-rm -rf $GOPATH/src/github.com/basho-labs/riak-mesos
 rm -rf $GOPATH/src/github.com/mesos/mesos-go
-cd $GOPATH/src/github.com/basho-labs/ && ln -fs /vagrant riak-mesos
 git clone https://github.com/mesos/mesos-go.git $GOPATH/src/github.com/mesos/mesos-go
 cd $GOPATH/src/github.com/mesos/mesos-go/mesosproto && make
+
+### Download code and deps
+mkdir -p $GOPATH/src/github.com/basho-labs
+rm -rf $GOPATH/src/github.com/basho-labs/riak-mesos
+# Next step not necessary when cloning riak-mesos code from git
+cd $GOPATH/src/github.com/basho-labs/ && ln -fs /vagrant riak-mesos
