@@ -9,8 +9,8 @@ export DEPLOY_OS       ?= coreos
 
 .PHONY: all clean clean_bin package clean_package sync
 all: clean_bin framework director tools
-rebuild_all: clean build_artifacts build_schroot framework director
-rebuild_all_native: clean build_artifacts_native framework director
+rebuild_all: clean build_artifacts build_schroot framework director tools
+rebuild_all_native: clean build_artifacts_native framework director tools
 clean: clean_package clean_bin
 package: clean_package
 
