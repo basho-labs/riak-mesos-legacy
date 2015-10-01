@@ -51,6 +51,7 @@ func init() {
 }
 
 func main() {
+	runtime.GOMAXPROCS(1)
 	log.SetLevel(log.DebugLevel)
 
 	if logFile != "" {

@@ -5,7 +5,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/basho-labs/riak-mesos/cepmd/cepm"
 	"github.com/basho-labs/riak-mesos/process_manager"
-
+	rexclient "github.com/basho-labs/riak-mesos/riak_explorer/client"
 	"os"
 	"path/filepath"
 	"text/template"
@@ -26,8 +26,8 @@ type advancedTemplateData struct {
 	CEPMDPort int
 }
 
-func (re *RiakExplorer) NewRiakExplorerClient() *RiakExplorerClient {
-	return NewRiakExplorerClient(fmt.Sprintf("localhost:%d", re.port))
+func (re *RiakExplorer) NewRiakExplorerClient() *rexclient.RiakExplorerClient {
+	return rexclient.NewRiakExplorerClient(fmt.Sprintf("localhost:%d", re.port))
 }
 func (re *RiakExplorer) TearDown() {
 	re.pm.TearDown()
@@ -100,7 +100,7 @@ func NewRiakExplorer(port int64, nodename string, c *cepm.CEPM, root string, use
 	args := []string{"console", "-noinput"}
 	healthCheckFun := func() error {
 		log.Info("Running healthcheck: ", port)
-		_, err := NewRiakExplorerClient(fmt.Sprintf("localhost:%d", port)).Ping()
+		_, err := rexclient.NewRiakExplorerClient(fmt.Sprintf("localhost:%d", port)).Ping()
 		log.Info("Healthcheck result ", err)
 		return err
 	}
