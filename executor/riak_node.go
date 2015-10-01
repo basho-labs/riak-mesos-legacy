@@ -205,6 +205,8 @@ func (riakNode *RiakNode) Run() {
 
 	os.Mkdir("root", 0777)
 
+	riakNode.decompress()
+
 	fetchURI = fmt.Sprintf("%s/static2/riak-2.1.1-bin.tar.gz", riakNode.taskData.URI)
 	log.Info("Preparing to fetch riak from: ", fetchURI)
 	resp, err = http.Get(fetchURI)
