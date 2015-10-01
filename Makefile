@@ -96,7 +96,7 @@ clean_tools:
 	go generate -tags=$(TAGS) ./director
 	$(shell touch .director.bindata_generated)
 director: artifacts .director.bindata_generated
-	go build -o bin/director_linux_amd64 -tags=$(TAGS) ./director/
+	GOOS=linux GOARCH=amd64 go build -o bin/director_linux_amd64 -tags=$(TAGS) ./director/
 clean_bin: clean_director
 clean_director:
 	-rm -rf .director.bindata_generated director/bindata_generated.go bin/director_linux_amd64
