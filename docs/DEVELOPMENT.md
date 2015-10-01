@@ -33,10 +33,22 @@ or for a faster build with lower RAM requirements:
 cd $GOPATH/src/github.com/basho-labs/riak-mesos && TAGS=dev make
 ```
 
+### Creating Native / Platform Specific Builds
+
+By default, the build process will include a Debian Ubuntu image in the binary to support multiple platforms using chroot. To build the framework without relying on chroot, everything can be built natively:
+
+```
+# Rebuild all Erlang artifacts
+cd $GOPATH/src/github.com/basho-labs/riak-mesos && TAGS='"rel native"' make rebuild_all_native
+# Recompile the framework only
+cd $GOPATH/src/github.com/basho-labs/riak-mesos && TAGS='"rel native"' make
+# Create packages in the `_build/` directory
+cd $GOPATH/src/github.com/basho-labs/riak-mesos && make package
+```
+
 ### Start the Framework
 
 ```
-cp /vagrant/bin/framework_linux_amd64 /tmp/; cd /tmp; \
 ./framework_linux_amd64 \
     -master=zk://localhost:2181/mesos \
     -zk=localhost:2181 \
@@ -48,7 +60,6 @@ cp /vagrant/bin/framework_linux_amd64 /tmp/; cd /tmp; \
 ### Create a Cluster
 
 ```
-cd /vagrant/bin; \
 ./tools_linux_amd64 \
     -name=riak \
     -zk=localhost:2181 \
@@ -59,7 +70,6 @@ cd /vagrant/bin; \
 Add Riak nodes
 
 ```
-cd /vagrant/bin; \
 ./tools_linux_amd64 \
     -name=riak \
     -zk=localhost:2181 \
@@ -71,15 +81,12 @@ cd /vagrant/bin; \
 ### Start the Director
 
 ```
-cp /vagrant/bin/director_linux_amd64 /tmp/; cd /tmp; \
-FRAMEWORK_HOST=localhost FRAMEWORK_PORT=9090 DIRECTOR_CLUSTER=mycluster DIRECTOR_FRAMEWORK=riak DIRECTOR_ZK=localhost:2181 ./director_linux_amd64
+DIRECTOR_CLUSTER=mycluster DIRECTOR_FRAMEWORK=riak DIRECTOR_ZK=localhost:2181 ./director_linux_amd64
 ```
 
 ### Endpoints for Testing
 
 * Director API: [http://192.168.0.30:9000/](http://192.168.0.30:9000/)
-* Riak Explorer (Direct): [http://192.168.0.30:9090/](http://192.168.0.30:9090/)
-* Riak Explorer (Director Proxy): [http://192.168.0.30:9999/](http://192.168.0.30:9999/)
 * Riak HTTP (Director Proxy): [http://192.168.0.30:8098/](http://192.168.0.30:8098/)
 * Riak PB (Director Proxy) [http://192.168.0.30:8087/](http://192.168.0.30:8087/)
 * Framework API: Dynamically assigned, check output of framework_linux_amd64
