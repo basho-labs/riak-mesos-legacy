@@ -9,17 +9,19 @@ An [Apache Mesos](http://mesos.apache.org/) framework for [Riak KV](http://basho
 ## Quick Links
 
 * [Installation](#installation)
-    * [Setup DCOS CLI](#setup-dcos-cli)
-    * [Create a Configuration File](#create-a-configuration-file)
-    * [Install the Riak Service](#install-the-riak-service)
-    * [CLI Usage](#cli-usage)
-    * [Add Riak Nodes](#add-riak-nodes)
-    * [Accessing Your Riak Nodes](#accessing-your-riak-nodes)
-    * [Uninstalling](#uninstalling)
+    * Open Source Mesos Users (Non-DCOS)
+        * [docs/MESOS_USAGE.md](docs/MESOS_USAGE.md)
+    * DCOS Users
+        * [Setup DCOS CLI](#setup-dcos-cli)
+        * [Create a Configuration File](#create-a-configuration-file)
+        * [Install the Riak Service](#install-the-riak-service)
+        * [CLI Usage](#cli-usage)
+        * [Add Riak Nodes](#add-riak-nodes)
+        * [Accessing Your Riak Nodes](#accessing-your-riak-nodes)
+        * [Uninstalling](#uninstalling)
 * [Architecture](#architecture)
     * [Scheduler](#scheduler)
     * [Director](#director)
-* [DCOS Resources](#mesos-users)
 * [Development / Contributing](#development--contributing)
 
 ### Other Documentation
@@ -27,15 +29,6 @@ An [Apache Mesos](http://mesos.apache.org/) framework for [Riak KV](http://basho
 * [Development Guide](docs/DEVELOPMENT.md)
 * [Director](docs/DIRECTOR.md)
 * [HTTP API](docs/HTTP-API.md)
-* [Mesos Usage](docs/MESOS-USAGE.md)
-
-### Package Downloads
-
-* Riak Mesos Framework [riak_mesos_linux_amd64_0.1.1.tar.gz](http://riak-tools.s3.amazonaws.com/riak-mesos/coreos/riak_mesos_linux_amd64_0.1.1.tar.gz)
-* Riak Mesos Director [riak_mesos_director_linux_amd64_0.1.1.tar.gz](http://riak-tools.s3.amazonaws.com/riak-mesos/coreos/riak_mesos_director_linux_amd64_0.1.1.tar.gz)
-
-[DCOS](http://docs.mesosphere.com/) support is still in development and is not
-supported on all platforms.
 
 ## Installation
 
@@ -57,7 +50,33 @@ may need to be used. Here is a minimal example:
 }
 ```
 
-More examples can be found in [dcos-riak-cluster-1.json](dcos-riak-cluster-1.json), [dcos-riak-cluster-2.json](dcos-riak-cluster-2.json), and [dcos-riak-cluster-3.json](dcos-riak-cluster-3.json).
+#### Ubuntu (14.04) Configuration
+
+```
+{
+    "riak": {
+        "master": "zk://master.mesos:2181/mesos",
+        "zk": "master.mesos:2181",
+        "user": "root",
+        "framework-name": "riak",
+        "url": "http://riak-tools.s3.amazonaws.com/riak-mesos/ubuntu/riak_mesos_linux_amd64_0.1.1.tar.gz"
+    }
+}
+```
+
+#### CentOS (7.0) Installation
+
+```
+{
+    "riak": {
+        "master": "zk://master.mesos:2181/mesos",
+        "zk": "master.mesos:2181",
+        "user": "root",
+        "framework-name": "riak"
+        "url": "http://riak-tools.s3.amazonaws.com/riak-mesos/centos/riak_mesos_linux_amd64_0.1.1.tar.gz"
+    }
+}
+```
 
 ### Install the Riak Service
 
@@ -82,8 +101,8 @@ Subcommands:
     cluster create
     node list
     node add [--nodes <number>]
-    proxy config [--zk <host:port>]
-    proxy install [--zk <host:port>]
+    proxy config [--zk <host:port> [--os centos|coreos|ubuntu][--disable-super-chroot]]
+    proxy install [--zk <host:port> [--os centos|coreos|ubuntu][--disable-super-chroot]]
     proxy uninstall
     proxy endpoints [--public-dns <host>]
 
@@ -118,6 +137,18 @@ The [Riak Mesos Director](http://github.com/basho-labs/riak-mesos-director) smar
 
 ```
 dcos riak proxy install
+```
+
+#### Ubuntu Proxy Install
+
+```
+dcos riak proxy install --os ubuntu
+```
+
+#### CentOS Proxy Install
+
+```
+dcos riak proxy install --os centos
 ```
 
 Once it is up and running, explore your proxy and Riak cluster using the following command:
@@ -156,44 +187,29 @@ All of the tasks created by the Riak framework can be killed with the following:
 dcos package uninstall riak
 ```
 
-***Note:*** Currently, Zookeeper entries are left behind by the framework even after uninstall.
-To completely remove these entries, use a Zookeeper client to delete the relevant
-nodes.
+**Note:** Currently, Zookeeper entries are left behind by the framework even after uninstall. To completely remove these entries, use the tools binary included in the framework package download (links in [docs/MESOS_USAGE.md](docs/MESOS_USAGE.md)). Execute the following command to remove the framework ZK references:
 
-To remove just one framework instance, delete the `/riak/frameworks/riak` node.
+```
+./tools_linux_amd64 -zk=master.mesos:2181 -name=riak -command="delete-framework"
+```
 
-If you have changed the value of `framework-name` in your config, the last
-`/riak` will change.
-
-To remove all framework instances, delete the `/riak` node in Zookeeper.
+Replace "-name=riak" with the framework name if different than "riak".
 
 ## Architecture
 
 ### Scheduler
 
-The Riak Mesos Framework scheduler will attempt to spread Riak nodes across as many different
-mesos agents as possible to increase fault tolerance. If there are more nodes requested than
-there are agents available, the scheduler will then start adding more Riak nodes to existing
-agents.
+The Riak Mesos Framework scheduler will attempt to spread Riak nodes across as many different mesos agents as possible to increase fault tolerance. If there are more nodes requested than there are agents available, the scheduler will then start adding more Riak nodes to existing agents.
 
 ![Architecture](docs/RiakMesosFramework.png)
 
 ### Director
 
-Due to the nature of Apache Mesos and the potential for Riak nodes to come and
-go on a regular basis, client applications using a Mesos based cluster must
-be kept up to date on the cluster's current state. Instead of requiring this
-intelligence to be built into Riak client libraries, a smart proxy application named
-`Director` has been created which can run alongside client applications.
+Due to the nature of Apache Mesos and the potential for Riak nodes to come and go on a regular basis, client applications using a Mesos based cluster must be kept up to date on the cluster's current state. Instead of requiring this intelligence to be built into Riak client libraries, a smart proxy application named `Director` has been created which can run alongside client applications.
 
 ![Director](docs/RiakMesosControlFrame.png)
 
-For installation and usage instructions related to the Riak Mesos Director, please read [docs/DIRECTOR.md](docs/DIRECTOR.md)
-
-## Mesos Users
-
-The Framework can be used on Mesos clusters without DCOS as well. Follow the
-instructions in [docs/MESOS_USAGE.md](docs/MESOS_USAGE.md) if you are not a DCOS user.
+For more information related to the Riak Mesos Director and instructions on running it outside of Mesos, please read [docs/DIRECTOR.md](docs/DIRECTOR.md)
 
 ## Development / Contributing
 
