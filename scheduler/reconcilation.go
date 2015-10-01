@@ -2,21 +2,19 @@ package scheduler
 
 import (
 	log "github.com/Sirupsen/logrus"
-	mesos "github.com/mesos/mesos-go/mesosproto"
 	sched "github.com/mesos/mesos-go/scheduler"
-	"sync"
 	"time"
+	"sync/atomic"
 )
 
 func newReconciliationServer(driver sched.SchedulerDriver, sc *SchedulerCore) *ReconcilationServer {
 	rs := &ReconcilationServer{
 		nodesToReconcile: make(chan *FrameworkRiakNode, 10),
-		lock:             &sync.Mutex{},
-		enabled:          false,
+		enabled:          atomic.Value{},
 		driver:           driver,
-		wakeup:           make(chan bool, 1),
 		sc:               sc,
 	}
+	rs.enabled.Store(false)
 	go rs.loop()
 	return rs
 }
@@ -24,47 +22,24 @@ func newReconciliationServer(driver sched.SchedulerDriver, sc *SchedulerCore) *R
 type ReconcilationServer struct {
 	nodesToReconcile chan *FrameworkRiakNode
 	driver           sched.SchedulerDriver
-	lock             *sync.Mutex
-	enabled          bool
-	wakeup           chan bool
+	enabled          atomic.Value
 	sc               *SchedulerCore
 }
 
 func (rServer *ReconcilationServer) enable() {
 	log.Info("Reconcilation process enabled")
-	rServer.lock.Lock()
-	defer rServer.lock.Unlock()
-	rServer.enabled = true
-	select {
-	case rServer.wakeup <- true:
-	default:
-	}
+	rServer.enabled.Store(true)
 }
 
 func (rServer *ReconcilationServer) disable() {
 	log.Info("Reconcilation process disabled")
-	rServer.lock.Lock()
-	defer rServer.lock.Unlock()
-	rServer.enabled = true
+	rServer.enabled.Store(false)
 }
 func (rServer *ReconcilationServer) reconcile() {
-	rServer.lock.Lock()
-	defer rServer.lock.Unlock()
-	rServer.sc.lock.Lock()
-	defer rServer.sc.lock.Unlock()
-	if rServer.enabled {
-		tasksToReconcile := []*mesos.TaskStatus{}
-		for _, cluster := range rServer.sc.schedulerState.Clusters {
-			for _, node := range cluster.Nodes {
-				if !node.reconciled {
-					if _, assigned := rServer.sc.frnDict[node.GetTaskStatus().TaskId.GetValue()]; !assigned {
-						rServer.sc.frnDict[node.GetTaskStatus().TaskId.GetValue()] = node
-					}
-					tasksToReconcile = append(tasksToReconcile, node.GetTaskStatus())
-					rServer.driver.ReconcileTasks(tasksToReconcile)
-				}
-			}
-		}
+	//rServer.sc.lock.Lock()
+	//defer rServer.sc.lock.Unlock()
+	if rServer.enabled.Load().(bool) == true {
+		rServer.driver.ReconcileTasks(rServer.sc.GetTasksToReconcile())
 	}
 }
 func (rServer *ReconcilationServer) loop() {

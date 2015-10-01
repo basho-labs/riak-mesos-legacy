@@ -316,3 +316,22 @@ func (sc *SchedulerCore) Error(driver sched.SchedulerDriver, err string) {
 	defer sc.lock.Unlock()
 	log.Info("Scheduler received error:", err)
 }
+
+
+// Callback from reconciliation server
+func (sc *SchedulerCore) GetTasksToReconcile() []*mesos.TaskStatus {
+	sc.lock.Lock()
+	defer sc.lock.Unlock()
+	tasksToReconcile := []*mesos.TaskStatus{}
+	for _, cluster := range sc.schedulerState.Clusters {
+		for _, node := range cluster.Nodes {
+			if !node.reconciled {
+				if _, assigned := sc.frnDict[node.GetTaskStatus().TaskId.GetValue()]; !assigned {
+					sc.frnDict[node.GetTaskStatus().TaskId.GetValue()] = node
+				}
+				tasksToReconcile = append(tasksToReconcile, node.GetTaskStatus())
+			}
+		}
+	}
+	return tasksToReconcile
+}
