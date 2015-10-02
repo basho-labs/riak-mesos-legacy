@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"text/template"
+	"github.com/basho-labs/riak-mesos/common"
 )
 
 type RiakExplorer struct {
@@ -122,6 +123,9 @@ func NewRiakExplorer(port int64, nodename string, c *cepm.CEPM, root string, use
 		err := cepm.InstallInto(libpath)
 		if err != nil {
 			log.Panic(err)
+		}
+		if err := common.KillEPMD(filepath.Join(root, "riak_explorer")); err != nil {
+			log.Fatal("Could not kill EPMd: ", err)
 		}
 		args = append(args, "-no_epmd")
 		re.configureAdvanced(c.GetPort(), root)

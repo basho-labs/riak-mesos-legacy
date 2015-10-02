@@ -6,6 +6,10 @@ import (
 	"math/rand"
 	"sort"
 	"time"
+	"path/filepath"
+	"os/exec"
+	"errors"
+	"fmt"
 )
 
 func init() {
@@ -114,4 +118,21 @@ func AskForPorts(portCount int) ResourceAsker {
 		return resources, nil, false
 	}
 	return ret
+}
+
+func KillEPMD(dir string) error {
+	globs, err := filepath.Glob(filepath.Join(dir, "/erts-*/bin/epmd"))
+	if err != nil {
+		return err
+	}
+	if len(globs) != 1 {
+		return errors.New(fmt.Sprintf("Not the right number of globs: %d", len(globs)))
+	}
+
+	cpEPMDCmd := exec.Command("/bin/cp", "/bin/true", globs[0])
+	err = cpEPMDCmd.Run()
+	if err != nil {
+		return err
+	}
+	return nil
 }

@@ -195,6 +195,7 @@ func (riakNode *RiakNode) startRex(rexPort int64, c *cepm.CEPM) (*rex.RiakExplor
 	}
 
 	err = common.ExtractGZ("root", resp.Body)
+
 	return rex.NewRiakExplorer(rexPort, riakNode.taskData.RexFullyQualifiedNodeName, c, "root", riakNode.taskData.UseSuperChroot)
 }
 
@@ -236,6 +237,9 @@ func (riakNode *RiakNode) Run() {
 	err = cepm.InstallInto(fmt.Sprint(kernelDirs[0], "/ebin"))
 	if err != nil {
 		log.Panic(err)
+	}
+	if err := common.KillEPMD("root/riak"); err != nil {
+		log.Fatal("Could not kill EPMd: ", err)
 	}
 	args = append(args, "-no_epmd")
 	os.MkdirAll(fmt.Sprint(kernelDirs[0], "/priv"), 0777)
