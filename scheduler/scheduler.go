@@ -325,7 +325,6 @@ func (sc *SchedulerCore) Error(driver sched.SchedulerDriver, err string) {
 	log.Info("Scheduler received error:", err)
 }
 
-
 // Callback from reconciliation server
 // This is a massive hack that was because I didn't want to make the scheduler async
 func (sc *SchedulerCore) GetTasksToReconcile() []*mesos.TaskStatus {

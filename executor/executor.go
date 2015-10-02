@@ -9,9 +9,9 @@ import (
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	"os"
 	"os/signal"
+	"runtime"
 	"sync"
 	"syscall"
-	"runtime"
 )
 
 const (

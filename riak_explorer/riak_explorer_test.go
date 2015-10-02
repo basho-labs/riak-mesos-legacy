@@ -2,13 +2,13 @@ package riak_explorer
 
 import (
 	"github.com/basho-labs/riak-mesos/cepmd/cepm"
+	"github.com/basho-labs/riak-mesos/common"
 	metamgr "github.com/basho-labs/riak-mesos/metadata_manager"
 	ps "github.com/mitchellh/go-ps"
 	"github.com/stretchr/testify/assert"
+	"io/ioutil"
 	"os"
 	"testing"
-	"io/ioutil"
-	"github.com/basho-labs/riak-mesos/common"
 )
 
 // TODO: Fix test and decompress trusty into "root"
@@ -36,7 +36,6 @@ func TestREX(t *testing.T) {
 	f, err = os.Open("../artifacts/data/riak_explorer-bin.tar.gz")
 	assert.Nil(err)
 	assert.Nil(common.ExtractGZ(dirname, f))
-
 
 	re, err := NewRiakExplorer(7901, "rex@ubuntu.", c, dirname, true) // 998th  prime number.
 	assert.Equal(nil, err)

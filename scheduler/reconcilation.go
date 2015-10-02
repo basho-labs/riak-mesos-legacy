@@ -3,8 +3,8 @@ package scheduler
 import (
 	log "github.com/Sirupsen/logrus"
 	sched "github.com/mesos/mesos-go/scheduler"
-	"time"
 	"sync/atomic"
+	"time"
 )
 
 func newReconciliationServer(driver sched.SchedulerDriver, sc *SchedulerCore) *ReconcilationServer {
