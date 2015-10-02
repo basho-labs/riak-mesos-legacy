@@ -39,11 +39,16 @@ func (rServer *ReconcilationServer) reconcile() {
 	//rServer.sc.lock.Lock()
 	//defer rServer.sc.lock.Unlock()
 	if rServer.enabled.Load().(bool) == true {
-		rServer.driver.ReconcileTasks(rServer.sc.GetTasksToReconcile())
+		tasksToReconcile := rServer.sc.GetTasksToReconcile()
+		if len(tasksToReconcile) > 0 {
+			log.Debug("Reconciling tasks: ", tasksToReconcile)
+		}
+		rServer.driver.ReconcileTasks(tasksToReconcile)
 	}
 }
 func (rServer *ReconcilationServer) loop() {
 	// TODO: Add exponential backoff
+	rServer.reconcile()
 	ticker := time.Tick(time.Second * 5)
 	for range ticker {
 		rServer.reconcile()

@@ -16,6 +16,7 @@ import (
 	sasl "github.com/mesos/mesos-go/auth/sasl"
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	sched "github.com/mesos/mesos-go/scheduler"
+	"time"
 )
 
 const (
@@ -259,15 +260,22 @@ func (sc *SchedulerCore) ResourceOffers(driver sched.SchedulerDriver, offers []*
 			tasks = []*mesos.TaskInfo{}
 		}
 
-		log.Infof("Launching Tasks: %v for offer %v", tasks, *offer.Id.Value)
-		status, err := driver.LaunchTasks([]*mesos.OfferID{offer.Id}, tasks, &mesos.Filters{RefuseSeconds: proto.Float64(OFFER_INTERVAL)})
+		// This is somewhat of a hack, to avoid synchronously calling the mesos-go SDK
+		// to avoid a deadlock situation.
+		// TODO: Fix and make actually queues around driver interactions
+		// This is a massive hack
+		// -Sargun Dhillon 2015-10-01
+		go func() {
+			log.Infof("Launching Tasks: %v for offer %v", tasks, *offer.Id.Value)
+			status, err := driver.LaunchTasks([]*mesos.OfferID{offer.Id}, tasks, &mesos.Filters{RefuseSeconds: proto.Float64(OFFER_INTERVAL)})
 
-		if status != mesos.Status_DRIVER_RUNNING {
-			log.Fatal("Driver not running, while trying to launch tasks")
-		}
-		if err != nil {
-			log.Panic("Failed to launch tasks: ", err)
-		}
+			if status != mesos.Status_DRIVER_RUNNING {
+				log.Fatal("Driver not running, while trying to launch tasks")
+			}
+			if err != nil {
+				log.Panic("Failed to launch tasks: ", err)
+			}
+		}()
 	}
 }
 func (sc *SchedulerCore) StatusUpdate(driver sched.SchedulerDriver, status *mesos.TaskStatus) {
@@ -319,16 +327,18 @@ func (sc *SchedulerCore) Error(driver sched.SchedulerDriver, err string) {
 
 
 // Callback from reconciliation server
+// This is a massive hack that was because I didn't want to make the scheduler async
 func (sc *SchedulerCore) GetTasksToReconcile() []*mesos.TaskStatus {
 	sc.lock.Lock()
 	defer sc.lock.Unlock()
 	tasksToReconcile := []*mesos.TaskStatus{}
 	for _, cluster := range sc.schedulerState.Clusters {
 		for _, node := range cluster.Nodes {
-			if !node.reconciled {
+			if !node.reconciled && time.Since(node.lastAskedToReconcile).Seconds() > 5 {
 				if _, assigned := sc.frnDict[node.GetTaskStatus().TaskId.GetValue()]; !assigned {
 					sc.frnDict[node.GetTaskStatus().TaskId.GetValue()] = node
 				}
+				node.lastAskedToReconcile = time.Now()
 				tasksToReconcile = append(tasksToReconcile, node.GetTaskStatus())
 			}
 		}

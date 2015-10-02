@@ -13,13 +13,15 @@ import (
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	util "github.com/mesos/mesos-go/mesosutil"
 	"github.com/satori/go.uuid"
+	"time"
 )
 
 // Next Status
 
 type FrameworkRiakNode struct {
 	// This is super hacky, we're relying on the following to be NOT serialized, and defaults. FIX THIS. Somehow..
-	reconciled bool `json:"-"`
+	reconciled           bool `json:"-"`
+	lastAskedToReconcile time.Time  `json:"-"`
 
 	UUID             uuid.UUID
 	DestinationState process_state.ProcessState
