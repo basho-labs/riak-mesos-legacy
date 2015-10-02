@@ -168,9 +168,6 @@ Load Balanced Riak Cluster (Protobuf)
 
 Riak Mesos Director API (HTTP)
     http://<host>:10004
-
-Riak Explorer and API (HTTP)
-    http://<host>:10005
 ```
 
 ### Uninstalling

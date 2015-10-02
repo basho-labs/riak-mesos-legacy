@@ -13,13 +13,13 @@ The Director in turn will update it's list of balanced Riak connections.
 
 ## Marathon Setup
 
-Example `marathon.json` for the director can be found in [../director.marathon.json](../director.marathon.json)
+Example marathon json file for the director can be found here: [../director.marathon.json](../director.marathon.json)
 
 ## Manual Setup
 
 ### Download
 
-Links for downloading the director can be found in [../README.md](../README.md)
+Links for downloading the director package can be found in [MESOS_USAGE.md](MESOS_USAGE.md)
 
 ### Configure
 
