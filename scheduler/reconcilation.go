@@ -36,14 +36,12 @@ func (rServer *ReconcilationServer) disable() {
 	rServer.enabled.Store(false)
 }
 func (rServer *ReconcilationServer) reconcile() {
-	//rServer.sc.lock.Lock()
-	//defer rServer.sc.lock.Unlock()
 	if rServer.enabled.Load().(bool) == true {
 		tasksToReconcile := rServer.sc.GetTasksToReconcile()
-		if len(tasksToReconcile) > 0 {
+		if len(tasksToReconcile) != 0 {
 			log.Debug("Reconciling tasks: ", tasksToReconcile)
+			rServer.driver.ReconcileTasks(tasksToReconcile)
 		}
-		rServer.driver.ReconcileTasks(tasksToReconcile)
 	}
 }
 func (rServer *ReconcilationServer) loop() {

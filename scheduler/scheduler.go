@@ -333,7 +333,7 @@ func (sc *SchedulerCore) GetTasksToReconcile() []*mesos.TaskStatus {
 	tasksToReconcile := []*mesos.TaskStatus{}
 	for _, cluster := range sc.schedulerState.Clusters {
 		for _, node := range cluster.Nodes {
-			if !node.reconciled && time.Since(node.lastAskedToReconcile).Seconds() > 5 {
+			if node.reconciled == false && time.Since(node.lastAskedToReconcile).Seconds() > 5 {
 				if _, assigned := sc.frnDict[node.GetTaskStatus().TaskId.GetValue()]; !assigned {
 					sc.frnDict[node.GetTaskStatus().TaskId.GetValue()] = node
 				}
