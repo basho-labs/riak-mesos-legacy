@@ -3,8 +3,8 @@ ERLC   := $(shell which erlc)
 TMP	   := /tmp
 
 .PHONY: all clean
-all: riak_explorer-bin.tar.gz riak-2.1.1-bin.tar.gz trusty.tar.gz riak_mesos_director-bin.tar.gz
-native: riak_explorer-bin.tar.gz riak-2.1.1-bin.tar.gz riak_mesos_director-bin.tar.gz
+all: riak_explorer-bin.tar.gz riak-2.1.1-bin.tar.gz riak_ts-0.8.0-bin.tar.gz trusty.tar.gz riak_mesos_director-bin.tar.gz
+native: riak_explorer-bin.tar.gz riak-2.1.1-bin.tar.gz riak_ts-0.8.0-bin.tar.gz riak_mesos_director-bin.tar.gz
 
 ### Riak Explorer begin
 riak_explorer:
@@ -19,7 +19,7 @@ clean_riak_explorer:
 	-rm -rf riak_explorer-bin.tar.gz riak_explorer riak_explorer-bin
 ### Riak Explorer end
 
-### Riak begin
+### Riak 2.1.1 begin
 riak-2.1.1.tar.gz:
 	curl -C - -O -L http://s3.amazonaws.com/downloads.basho.com/riak/2.1/2.1.1/riak-2.1.1.tar.gz
 riak-2.1.1-bin: riak-2.1.1.tar.gz OTP_R16B02_basho8-bin
@@ -34,7 +34,24 @@ riak-2.1.1-bin.tar.gz: riak-2.1.1-bin
 clean: clean_riak
 clean_riak:
 	-rm -rf riak-2.1.1.tar.gz riak-2.1.1 riak-2.1.1-bin.tar.gz riak-2.1.1-bin
-### Riak end
+### Riak 2.1.1 end
+
+### Riak-TS begin
+riak_ts-0.8.0.tar.gz:
+	curl -C - -O -L http://s3.amazonaws.com/downloads.basho.com/riak_ts/0.8/0.8.0/riak_ts-0.8.0.tar.gz
+riak_ts-0.8.0-bin: riak_ts-0.8.0.tar.gz OTP_R16B02_basho8-bin
+	tar -xvf riak_ts-0.8.0.tar.gz
+	export PATH
+	rm -rf riak_ts-0.8.0/deps/node_package
+	git clone https://github.com/basho/node_package.git --branch no-epmd riak_ts-0.8.0/deps/node_package
+	cd riak_ts-0.8.0 && PATH=$(PREFIX)OTP_R16B02_basho8-bin/bin:$(PATH) $(MAKE) rel
+	touch riak_ts-0.8.0-bin
+riak_ts-0.8.0-bin.tar.gz: riak_ts-0.8.0-bin
+	tar -C riak_ts-0.8.0/rel/ -czf riak_ts-0.8.0-bin.tar.gz riak || rm -rf riak_ts-0.8.0-bin.tar.gz
+clean: clean_riak_ts
+clean_riak_ts:
+	-rm -rf riak_ts-0.8.0.tar.gz riak_ts-0.8.0 riak_ts-0.8.0-bin.tar.gz riak_ts-0.8.0-bin
+### Riak-TS end
 
 ### Director begin
 riak_mesos_director:
