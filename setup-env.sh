@@ -19,11 +19,15 @@ go get github.com/stretchr/testify/assert
 
 # Mesos go
 # Using Go1.5 this can be tricky... May need to use go1.4, create protos, then switch to go1.5 and repeat these steps
+gvm use go1.4
 go get github.com/mesos/mesos-go
 go get github.com/gogo/protobuf/protoc-gen-gogo
 mkdir -p $GOPATH/src/github.com/mesos
 rm -rf $GOPATH/src/github.com/mesos/mesos-go
 git clone https://github.com/mesos/mesos-go.git $GOPATH/src/github.com/mesos/mesos-go
+cd $GOPATH/src/github.com/mesos/mesos-go/mesosproto && make
+gvm use go1.5
+go get github.com/gogo/protobuf/protoc-gen-gogo
 cd $GOPATH/src/github.com/mesos/mesos-go/mesosproto && make
 
 ### Download code and deps
