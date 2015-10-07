@@ -3,8 +3,8 @@ ERLC   := $(shell which erlc)
 TMP	   := /tmp
 
 .PHONY: all clean
-all: riak_explorer-bin.tar.gz riak-2.1.1-bin.tar.gz riak_ts-0.8.0-bin.tar.gz trusty.tar.gz riak_mesos_director-bin.tar.gz
-native: riak_explorer-bin.tar.gz riak-2.1.1-bin.tar.gz riak_ts-0.8.0-bin.tar.gz riak_mesos_director-bin.tar.gz
+all: riak_explorer-bin.tar.gz riak-2.1.1-bin.tar.gz trusty.tar.gz riak_mesos_director-bin.tar.gz
+native: riak_explorer-bin.tar.gz riak-2.1.1-bin.tar.gz riak_mesos_director-bin.tar.gz
 
 ### Riak Explorer begin
 riak_explorer:
@@ -20,23 +20,30 @@ clean_riak_explorer:
 ### Riak Explorer end
 
 ### Riak 2.1.1 begin
-riak-2.1.1.tar.gz:
-	curl -C - -O -L http://s3.amazonaws.com/downloads.basho.com/riak/2.1/2.1.1/riak-2.1.1.tar.gz
-riak-2.1.1-bin: riak-2.1.1.tar.gz OTP_R16B02_basho8-bin
-	tar -xvf riak-2.1.1.tar.gz
-	export PATH
-	rm -rf riak-2.1.1/deps/node_package
-	git clone https://github.com/basho/node_package.git --branch no-epmd riak-2.1.1/deps/node_package
-	cd riak-2.1.1 && PATH=$(PREFIX)OTP_R16B02_basho8-bin/bin:$(PATH) $(MAKE) rel
-	touch riak-2.1.1-bin
-riak-2.1.1-bin.tar.gz: riak-2.1.1-bin
-	tar -C riak-2.1.1/rel/ -czf riak-2.1.1-bin.tar.gz riak || rm -rf riak-2.1.1-bin.tar.gz
-clean: clean_riak
-clean_riak:
-	-rm -rf riak-2.1.1.tar.gz riak-2.1.1 riak-2.1.1-bin.tar.gz riak-2.1.1-bin
+# riak-2.1.1.tar.gz:
+# 	curl -C - -O -L http://s3.amazonaws.com/downloads.basho.com/riak/2.1/2.1.1/riak-2.1.1.tar.gz
+# riak-2.1.1-bin: riak-2.1.1.tar.gz OTP_R16B02_basho8-bin
+# 	tar -xvf riak-2.1.1.tar.gz
+# 	export PATH
+# 	rm -rf riak-2.1.1/deps/node_package
+# 	git clone https://github.com/basho/node_package.git --branch no-epmd riak-2.1.1/deps/node_package
+# 	cd riak-2.1.1 && PATH=$(PREFIX)OTP_R16B02_basho8-bin/bin:$(PATH) $(MAKE) rel
+# 	touch riak-2.1.1-bin
+# riak-2.1.1-bin.tar.gz: riak-2.1.1-bin
+# 	tar -C riak-2.1.1/rel/ -czf riak-2.1.1-bin.tar.gz riak || rm -rf riak-2.1.1-bin.tar.gz
+# clean: clean_riak
+# clean_riak:
+# 	-rm -rf riak-2.1.1.tar.gz riak-2.1.1 riak-2.1.1-bin.tar.gz riak-2.1.1-bin
 ### Riak 2.1.1 end
 
 ### Riak-TS begin
+#Hax; The code expects "riak-2.1.1-bin.tar.gz" currently, so we'll pretend TS is Riak
+riak-2.1.1-bin.tar.gz: riak_ts-0.8.0-bin.tar.gz
+	cp riak_ts-0.8.0-bin.tar.gz riak-2.1.1-bin.tar.gz
+clean: clean_riak
+clean_riak:
+	-rm -rf riak-2.1.1-bin.tar.gz
+
 riak_ts-0.8.0.tar.gz:
 	curl -C - -O -L http://s3.amazonaws.com/downloads.basho.com/riak_ts/0.8/0.8.0/riak_ts-0.8.0.tar.gz
 riak_ts-0.8.0-bin: riak_ts-0.8.0.tar.gz OTP_R16B02_basho8-bin
