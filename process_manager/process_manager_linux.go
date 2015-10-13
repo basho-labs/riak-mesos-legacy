@@ -11,6 +11,8 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
+const openFilesLimit uint64 = 65536
+
 func GetProcAttributes() *syscall.ProcAttr {
 	env := os.Environ()
 
@@ -56,9 +58,43 @@ func (pm *ProcessManager) start(executablePath string, args []string, chroot *st
 	pm.maybeChroot(executablePath, args, chroot, useSuperChroot)
 }
 
+// setOpenFilesLimit sets the open file limit in the kernel
+// cur is the soft limit, max is the ceiling (or hard limit) for that limit
+func (pm *ProcessManager) setOpenFilesLimit(cur, max uint64) error {
+	var rLimit syscall.Rlimit
+	// First check if the limits are already what we want
+	err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLimit)
+	if err != nil {
+		return err
+	}
+
+	// If the current values are less than we want, set them
+	if rLimit.Cur < cur || rLimit.Max < max {
+		if cur > rLimit.Cur {
+			rLimit.Cur = cur
+		}
+		if max > rLimit.Max {
+			rLimit.Max = max
+		}
+
+		log.Infof("Setting open files limit (soft, hard) to (%v, %v)", rLimit.Cur, rLimit.Max)
+		err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rLimit)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (pm *ProcessManager) doStart(executablePath string, args []string, procattr *syscall.ProcAttr) {
 	var err error
 	log.Infof("Getting Ready to start process: %v with args: %v and ProcAttr: %+v", executablePath, args, procattr)
+	err = pm.setOpenFilesLimit(openFilesLimit, openFilesLimit)
+	if err != nil {
+		log.Error("Error setting open files limit", err)
+	}
+
 	pm.pid, err = syscall.ForkExec(executablePath, args, procattr)
 	if err != nil {
 		log.Panicf("Error starting process %v", err)
