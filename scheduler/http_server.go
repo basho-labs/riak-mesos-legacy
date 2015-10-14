@@ -196,8 +196,8 @@ func (schttp *SchedulerHTTPServer) serveNodes(w http.ResponseWriter, r *http.Req
 
 type simpleNode struct {
 	host     string
-	httpPort int
-	pbPort   int
+	httpPort int64
+	pbPort   int64
 }
 
 func (schttp *SchedulerHTTPServer) serveNodeHosts(w http.ResponseWriter, r *http.Request) {
