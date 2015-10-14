@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"regexp"
-	"strconv"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/basho-labs/riak-mesos/scheduler"
