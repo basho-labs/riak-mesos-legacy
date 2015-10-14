@@ -111,7 +111,7 @@ func (frn *FrameworkRiakNode) attemptJoin(riakNode *FrameworkRiakNode, retry int
 	log.Infof("Joining %+v to %+v", frn.TaskData.FullyQualifiedNodeName, riakNode.TaskData.FullyQualifiedNodeName)
 	joinReply, joinErr := rexc.Join(frn.TaskData.FullyQualifiedNodeName, riakNode.TaskData.FullyQualifiedNodeName)
 	log.Infof("Triggered join: %+v, %+v", joinReply, joinErr)
-	if joinReply.Success == "ok" {
+	if joinReply.Join.Success == "ok" {
 		return true
 	}
 
