@@ -99,15 +99,14 @@ func (frn *FrameworkRiakNode) handleUpToDownTransition(sc *SchedulerCore, frc *F
 	}
 }
 func (frn *FrameworkRiakNode) handleStartingToRunningTransition(sc *SchedulerCore, frc *FrameworkRiakCluster) {
-
-	// rexHostname := fmt.Sprintf("%s:%d", frn.LastOfferUsed.GetHostname(), frn.TaskData.RexPort)
-	rexHostname := fmt.Sprintf("%s:%d", frn.LastOfferUsed.GetHostname(), frn.TaskData.HTTPPort)
-	rexc := rexclient.NewRiakExplorerClient(rexHostname)
 	for _, riakNode := range sc.schedulerState.Clusters[frc.Name].Nodes {
 		if riakNode.CurrentState == process_state.Started {
+			// rexHostname := fmt.Sprintf("%s:%d", frn.LastOfferUsed.GetHostname(), frn.TaskData.RexPort)
+			rexHostname := fmt.Sprintf("%s:%d", frn.LastOfferUsed.GetHostname(), riakNode.TaskData.HTTPPort)
+			rexc := rexclient.NewRiakExplorerClient(rexHostname)
 			// We should try to join against this node
-			log.Infof("Joining %+v to %+v", frn.TaskData.FullyQualifiedNodeName, riakNode.TaskData.FullyQualifiedNodeName)
-			joinReply, joinErr := rexc.Join(frn.TaskData.FullyQualifiedNodeName, riakNode.TaskData.FullyQualifiedNodeName)
+			log.Infof("Joining %+v to %+v", riakNode.TaskData.FullyQualifiedNodeName, frn.TaskData.FullyQualifiedNodeName)
+			joinReply, joinErr := rexc.Join(riakNode.TaskData.FullyQualifiedNodeName, frn.TaskData.FullyQualifiedNodeName)
 			log.Infof("Triggered join: %+v, %+v", joinReply, joinErr)
 			if joinErr == nil {
 				break // We're done here
