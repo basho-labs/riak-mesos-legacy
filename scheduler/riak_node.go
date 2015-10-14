@@ -105,8 +105,8 @@ func (frn *FrameworkRiakNode) handleStartingToRunningTransition(sc *SchedulerCor
 			rexHostname := fmt.Sprintf("%s:%d", frn.LastOfferUsed.GetHostname(), riakNode.TaskData.HTTPPort)
 			rexc := rexclient.NewRiakExplorerClient(rexHostname)
 			// We should try to join against this node
-			log.Infof("Joining %+v to %+v", riakNode.TaskData.FullyQualifiedNodeName, frn.TaskData.FullyQualifiedNodeName)
-			joinReply, joinErr := rexc.Join(riakNode.TaskData.FullyQualifiedNodeName, frn.TaskData.FullyQualifiedNodeName)
+			log.Infof("Joining %+v to %+v", frn.TaskData.FullyQualifiedNodeName, riakNode.TaskData.FullyQualifiedNodeName)
+			joinReply, joinErr := rexc.Join(frn.TaskData.FullyQualifiedNodeName, riakNode.TaskData.FullyQualifiedNodeName)
 			log.Infof("Triggered join: %+v, %+v", joinReply, joinErr)
 			if joinErr == nil {
 				break // We're done here
