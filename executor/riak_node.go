@@ -293,7 +293,7 @@ func (riakNode *RiakNode) Run() {
 			DisterlPort:   int(config.DisterlPort),
 			PBPort:        int(config.PBPort),
 			HTTPPort:      int(config.HTTPPort),
-			Hostname:      riakNode.executor.slaveInfo.GetHostname(),
+			Hostname:      riakNode.LastOfferUsed.GetHostname(),
 			ClusterName:   riakNode.taskData.ClusterName,
 			FrameworkName: riakNode.taskData.FrameworkName,
 		}
