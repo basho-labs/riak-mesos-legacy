@@ -28,7 +28,7 @@ clean_riak_explorer:
 ### Riak begin
 $(RIAK_SOURCE_PKG):
 	curl -C - -O -L $(RIAK_SOURCE_DOWNLOAD)
-riak-bin: $(RIAK_SOURCE_PKG) OTP_R16B02_basho8-bin
+riak-bin: riak_explorer-bin $(RIAK_SOURCE_PKG) OTP_R16B02_basho8-bin
 	tar -xvf $(RIAK_SOURCE_PKG)
 	export PATH
 	rm -rf $(RIAK_SOURCE_DIR)/deps/node_package
