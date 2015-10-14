@@ -68,6 +68,12 @@ func (client *SchedulerHTTPClient) GetNodes(clusterName string) (string, error) 
 	return client.doGet(commandURI)
 }
 
+// GetNodeHosts issues a GET to the Scheduler HTTP Server clusters/{cluster}/nodehosts endpoint
+func (client *SchedulerHTTPClient) GetNodeHosts(clusterName string) (string, error) {
+	commandURI := fmt.Sprintf("clusters/%s/nodehosts", clusterName)
+	return client.doGet(commandURI)
+}
+
 // AddNode issues a POST to the Scheduler HTTP Server clusters/{cluster}/nodes endpoint
 func (client *SchedulerHTTPClient) AddNode(clusterName string) (string, error) {
 	commandURI := fmt.Sprintf("clusters/%s/nodes", clusterName)
