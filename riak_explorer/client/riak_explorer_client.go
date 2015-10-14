@@ -375,7 +375,7 @@ func (client *RiakExplorerClient) RingReady(node string) (RingReadyReply, error)
 }
 
 func (client *RiakExplorerClient) doGet(path string) ([]byte, error) {
-	commandURL := fmt.Sprintf("http://%s/%s", client.Host, path)
+	commandURL := fmt.Sprintf("http://%s/admin/%s", client.Host, path)
 	resp, err := http.Get(commandURL)
 	if err != nil {
 		return nil, err

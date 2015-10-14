@@ -293,19 +293,16 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(sc *SchedulerCor
 	ports := portIter(taskAsk)
 
 	taskData := common.TaskData{
-		FullyQualifiedNodeName:    nodename,
-		RexFullyQualifiedNodeName: "rex-" + nodename,
-		Zookeepers:                sc.zookeepers,
-		NodeID:                    frn.UUID.String(),
-		FrameworkName:             sc.frameworkName,
-		URI:                       sc.schedulerHTTPServer.GetURI(),
-		ClusterName:               frn.ClusterName,
-		UseSuperChroot:            superChrootValue,
-		RexPort:                   <-ports,
-		HTTPPort:                  <-ports,
-		PBPort:                    <-ports,
-		DisterlPort:               <-ports,
-		RexDisterlPort:            <-ports,
+		FullyQualifiedNodeName: nodename,
+		Zookeepers:             sc.zookeepers,
+		NodeID:                 frn.UUID.String(),
+		FrameworkName:          sc.frameworkName,
+		URI:                    sc.schedulerHTTPServer.GetURI(),
+		ClusterName:            frn.ClusterName,
+		UseSuperChroot:         superChrootValue,
+		HTTPPort:               <-ports,
+		PBPort:                 <-ports,
+		DisterlPort:            <-ports,
 	}
 	frn.TaskData = taskData
 
