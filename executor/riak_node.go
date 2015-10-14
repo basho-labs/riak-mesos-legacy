@@ -16,7 +16,6 @@ import (
 	"github.com/basho-labs/riak-mesos/common"
 	metamgr "github.com/basho-labs/riak-mesos/metadata_manager"
 	"github.com/basho-labs/riak-mesos/process_manager"
-	rex "github.com/basho-labs/riak-mesos/riak_explorer"
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	"net/http"
 )
@@ -187,17 +186,6 @@ func (riakNode *RiakNode) configureAdvanced(cepmdPort int) {
 		log.Panic("Got error", err)
 	}
 }
-func (riakNode *RiakNode) startRex(rexPort int64, c *cepm.CEPM) (*rex.RiakExplorer, error) {
-	fetchURI := fmt.Sprintf("%s/static2/riak_explorer-bin.tar.gz", riakNode.taskData.URI)
-	resp, err := http.Get(fetchURI)
-	if err != nil {
-		log.Panic("Unable to fetch Riak Exploer: ", err)
-	}
-
-	err = common.ExtractGZ("root", resp.Body)
-
-	return rex.NewRiakExplorer(rexPort, riakNode.taskData.RexFullyQualifiedNodeName, c, "root", riakNode.taskData.UseSuperChroot)
-}
 
 func (riakNode *RiakNode) Run() {
 	var err error
@@ -282,8 +270,6 @@ func (riakNode *RiakNode) Run() {
 		log.Info("Shutting down due to GC, after failing to bring up Riak node")
 		riakNode.executor.Driver.Stop()
 	} else {
-		rexPort := riakNode.taskData.RexPort
-		riakNode.startRex(rexPort, c)
 		rootNode := riakNode.metadataManager.GetRootNode()
 
 		rootNode.CreateChildIfNotExists("coordinator")
@@ -316,18 +302,9 @@ func (riakNode *RiakNode) Run() {
 		}
 		child.SetData(cdBytes)
 		// lock.Unlock()
-		tsd := common.TaskStatusData{
-			RexPort: rexPort,
-		}
-		tsdBytes, err := tsd.Serialize()
-
-		if err != nil {
-			log.Panic("Could not serialize Riak Explorer data", err)
-		}
 		runStatus := &mesos.TaskStatus{
 			TaskId: riakNode.taskInfo.GetTaskId(),
 			State:  mesos.TaskState_TASK_RUNNING.Enum(),
-			Data:   tsdBytes,
 		}
 		_, err = riakNode.executor.Driver.SendStatusUpdate(runStatus)
 		if err != nil {

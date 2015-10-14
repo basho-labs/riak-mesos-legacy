@@ -84,7 +84,8 @@ func (frn *FrameworkRiakNode) handleUpToDownTransition(sc *SchedulerCore, frc *F
 	for _, riakNode := range sc.schedulerState.Clusters[frc.Name].Nodes {
 		if riakNode.CurrentState == process_state.Started && riakNode != frn {
 
-			rexc := rexclient.NewRiakExplorerClient(fmt.Sprintf("%s:%d", riakNode.LastOfferUsed.GetHostname(), riakNode.TaskData.RexPort))
+			// rexc := rexclient.NewRiakExplorerClient(fmt.Sprintf("%s:%d", riakNode.LastOfferUsed.GetHostname(), riakNode.TaskData.RexPort))
+			rexc := rexclient.NewRiakExplorerClient(fmt.Sprintf("%s:%d", riakNode.LastOfferUsed.GetHostname(), riakNode.TaskData.HTTPPort))
 
 			// We should try to join against this node
 			log.Infof("Making leave: %+v to %+v", frn.TaskData.FullyQualifiedNodeName, riakNode.TaskData.FullyQualifiedNodeName)
@@ -99,7 +100,8 @@ func (frn *FrameworkRiakNode) handleUpToDownTransition(sc *SchedulerCore, frc *F
 }
 func (frn *FrameworkRiakNode) handleStartingToRunningTransition(sc *SchedulerCore, frc *FrameworkRiakCluster) {
 
-	rexHostname := fmt.Sprintf("%s:%d", frn.LastOfferUsed.GetHostname(), frn.TaskData.RexPort)
+	// rexHostname := fmt.Sprintf("%s:%d", frn.LastOfferUsed.GetHostname(), frn.TaskData.RexPort)
+	rexHostname := fmt.Sprintf("%s:%d", frn.LastOfferUsed.GetHostname(), frn.TaskData.HTTPPort)
 	rexc := rexclient.NewRiakExplorerClient(rexHostname)
 	for _, riakNode := range sc.schedulerState.Clusters[frc.Name].Nodes {
 		if riakNode.CurrentState == process_state.Started {
@@ -195,7 +197,7 @@ func (frn *FrameworkRiakNode) GetAsks() []common.ResourceAsker {
 	// Ports:
 	// -Protocol Buffers
 	// -HTTP
-	// -Riak Explorer (rex)
+	// -Riak Explorer (rex) (no longer needed)
 	// 4-10 -- unknown, so far
 	// Potential:
 	// EPM

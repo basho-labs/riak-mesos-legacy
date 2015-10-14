@@ -10,8 +10,6 @@ scheduler/riak_node_states/state_*
 *_linux_amd64
 .DS_Store
 Godeps/_workspace
-riak_explorer/data/*.tar.gz
-riak_explorer/data/*.tar
 scheduler/data/*.tar.gz
 scheduler/cluster_state/clusterstate_jsonenums.go
 scheduler/cluster_state/clusterstate_string.go
@@ -30,11 +28,8 @@ dev-sync.sh
 .director.bindata_generated
 .executor.bindata_generated
 .process_manager.bindata_generated
-.riak_explorer.bindata_generated
 .scheduler.bindata_generated
 artifacts/data/riak-2.1.1-bin
-artifacts/data/riak_explorer-bin
-artifacts/data/riak_explorer-bin.tar.gz
 artifacts/data/riak_explorer/
 artifacts/data/riak_mesos_director-bin
 artifacts/data/riak_mesos_director-bin.tar.gz

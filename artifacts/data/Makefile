@@ -3,20 +3,18 @@ ERLC   := $(shell which erlc)
 TMP	   := /tmp
 
 .PHONY: all clean
-all: riak_explorer-bin.tar.gz riak-2.1.1-bin.tar.gz trusty.tar.gz riak_mesos_director-bin.tar.gz
-native: riak_explorer-bin.tar.gz riak-2.1.1-bin.tar.gz riak_mesos_director-bin.tar.gz
+all: riak-2.1.1-bin.tar.gz trusty.tar.gz riak_mesos_director-bin.tar.gz
+native: riak-2.1.1-bin.tar.gz riak_mesos_director-bin.tar.gz
 
 ### Riak Explorer begin
 riak_explorer:
 	git clone --depth=1 https://github.com/basho-labs/riak_explorer.git
 riak_explorer-bin: riak_explorer OTP_R16B02_basho8-bin
-	cd riak_explorer && PATH=$(PREFIX)OTP_R16B02_basho8-bin/bin:$(PATH) $(MAKE) rel-backend
+	cd riak_explorer && PATH=$(PREFIX)OTP_R16B02_basho8-bin/bin:$(PATH) $(MAKE) riak-addon
 	touch riak_explorer-bin
-riak_explorer-bin.tar.gz: riak_explorer-bin
-	tar -C riak_explorer/rel -czf riak_explorer-bin.tar.gz riak_explorer || rm -rf riak_explorer-bin.tar.gz
 clean: clean_riak_explorer
 clean_riak_explorer:
-	-rm -rf riak_explorer-bin.tar.gz riak_explorer riak_explorer-bin
+	-rm -rf riak_explorer riak_explorer-bin
 ### Riak Explorer end
 
 ### Riak 2.1.1 begin
@@ -46,12 +44,15 @@ clean_riak:
 
 riak_ts-0.8.0.tar.gz:
 	curl -C - -O -L http://s3.amazonaws.com/downloads.basho.com/riak_ts/0.8/0.8.0/riak_ts-0.8.0.tar.gz
-riak_ts-0.8.0-bin: riak_ts-0.8.0.tar.gz OTP_R16B02_basho8-bin
+riak_ts-0.8.0-bin: riak_explorer-bin riak_ts-0.8.0.tar.gz OTP_R16B02_basho8-bin
 	tar -xvf riak_ts-0.8.0.tar.gz
 	export PATH
 	rm -rf riak_ts-0.8.0/deps/node_package
 	git clone https://github.com/basho/node_package.git --branch no-epmd riak_ts-0.8.0/deps/node_package
 	cd riak_ts-0.8.0 && PATH=$(PREFIX)OTP_R16B02_basho8-bin/bin:$(PATH) $(MAKE) rel
+	cp riak_explorer/rel/riak-addon/ebin/* riak_ts-0.8.0/rel/riak/lib/basho-patches/
+	-rm -rf riak_ts-0.8.0/rel/riak/priv
+	cp -R riak_explorer/rel/riak-addon/priv riak_ts-0.8.0/rel/riak/
 	touch riak_ts-0.8.0-bin
 riak_ts-0.8.0-bin.tar.gz: riak_ts-0.8.0-bin
 	tar -C riak_ts-0.8.0/rel/ -czf riak_ts-0.8.0-bin.tar.gz riak || rm -rf riak_ts-0.8.0-bin.tar.gz
