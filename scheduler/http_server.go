@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/http/httputil"
 	"net/http/pprof"
+	"net/url"
 	"os"
 	"strconv"
 
@@ -209,11 +211,9 @@ func (schttp *SchedulerHTTPServer) riakProxy(handler http.Handler) http.Handler 
 		vars := mux.Vars(r)
 		clusterName := vars["cluster"]
 		for _, riakNode := range schttp.sc.schedulerState.Clusters[clusterName].Nodes {
-			if riakNode.CurrentState == process_state.Started {
-				r.URL.Host = fmt.Sprintf("%s:%d", riakNode.LastOfferUsed.GetHostname(), riakNode.TaskData.HTTPPort)
-				r.Host = r.URL.Host
-				handler.ServeHTTP(w, r)
-			}
+			r.URL.Host = fmt.Sprintf("%s:%d", riakNode.LastOfferUsed.GetHostname(), riakNode.TaskData.HTTPPort)
+			r.Host = r.URL.Host
+			handler.ServeHTTP(w, r)
 		}
 	})
 }
