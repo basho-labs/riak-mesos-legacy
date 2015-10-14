@@ -270,6 +270,7 @@ func (riakNode *RiakNode) Run() {
 		log.Info("Shutting down due to GC, after failing to bring up Riak node")
 		riakNode.executor.Driver.Stop()
 	} else {
+		rexPort := riakNode.taskData.HTTPPort
 		rootNode := riakNode.metadataManager.GetRootNode()
 
 		rootNode.CreateChildIfNotExists("coordinator")
@@ -302,9 +303,18 @@ func (riakNode *RiakNode) Run() {
 		}
 		child.SetData(cdBytes)
 		// lock.Unlock()
+		tsd := common.TaskStatusData{
+			RexPort: rexPort,
+		}
+		tsdBytes, err := tsd.Serialize()
+
+		if err != nil {
+			log.Panic("Could not serialize Riak Explorer data", err)
+		}
 		runStatus := &mesos.TaskStatus{
 			TaskId: riakNode.taskInfo.GetTaskId(),
 			State:  mesos.TaskState_TASK_RUNNING.Enum(),
+			Data:   tsdBytes,
 		}
 		_, err = riakNode.executor.Driver.SendStatusUpdate(runStatus)
 		if err != nil {

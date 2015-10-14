@@ -65,3 +65,18 @@ func DeserializeDisterlData(data []byte) (DisterlData, error) {
 	err := json.Unmarshal(data, &t)
 	return t, err
 }
+
+type TaskStatusData struct {
+	RexPort int64
+}
+
+func (s *TaskStatusData) Serialize() ([]byte, error) {
+	b, err := json.Marshal(s)
+	return b, err
+}
+
+func DeserializeTaskStatusData(data []byte) (TaskStatusData, error) {
+	t := TaskStatusData{}
+	err := json.Unmarshal(data, &t)
+	return t, err
+}
