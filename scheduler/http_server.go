@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"net/http/httputil"
 	"net/http/pprof"
-	"net/url"
 	"os"
 	"strconv"
 
@@ -206,18 +204,6 @@ func (schttp *SchedulerHTTPServer) healthcheck(w http.ResponseWriter, r *http.Re
 
 }
 
-func (schttp *SchedulerHTTPServer) riakProxy(handler http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		vars := mux.Vars(r)
-		clusterName := vars["cluster"]
-		for _, riakNode := range schttp.sc.schedulerState.Clusters[clusterName].Nodes {
-			r.URL.Host = fmt.Sprintf("%s:%d", riakNode.LastOfferUsed.GetHostname(), riakNode.TaskData.HTTPPort)
-			r.Host = r.URL.Host
-			handler.ServeHTTP(w, r)
-		}
-	})
-}
-
 func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *SchedulerHTTPServer {
 	// When starting scheduler from Marathon, PORT0-N env vars will be set
 	strBindPort := os.Getenv("PORT0")
@@ -295,15 +281,8 @@ func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *Schedul
 	router.Methods("POST").Path("/api/v1/clusters/{cluster}/nodes").HandlerFunc(schttp.createNode)
 	router.Methods("GET").Path("/healthcheck").HandlerFunc(schttp.healthcheck)
 
-	fakeRiakURL := &url.URL{
-		Host:   fmt.Sprintf("localhost:%d", port),
-		Scheme: "http",
-		Path:   "/",
-	}
-
-	riakProxy := httputil.NewSingleHostReverseProxy(fakeRiakURL)
-	dynamicRiakProxy := schttp.riakProxy(riakProxy)
-	router.PathPrefix("/").Handler(dynamicRiakProxy)
+	// TODO: Add a function handler for /
+	//http.Serve(ln, newHandler())
 
 	middleWare := http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
 		log.Infof("%v %s %s %s ? %s %s %s", request.Host, request.RemoteAddr, request.Method, request.URL.Path, request.URL.RawQuery, request.Proto, request.Header.Get("User-Agent"))
