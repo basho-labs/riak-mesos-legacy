@@ -105,7 +105,7 @@ func (frn *FrameworkRiakNode) attemptJoin(riakNode *FrameworkRiakNode, retry int
 		return false
 	}
 
-	rexHostname := fmt.Sprintf("%s:%d", frn.LastOfferUsed.GetHostname(), riakNode.TaskData.HTTPPort)
+	rexHostname := fmt.Sprintf("%s:%d", riakNode.LastOfferUsed.GetHostname(), riakNode.TaskData.HTTPPort)
 	rexc := rexclient.NewRiakExplorerClient(rexHostname)
 	// We should try to join against this node
 	log.Infof("Joining %+v to %+v", frn.TaskData.FullyQualifiedNodeName, riakNode.TaskData.FullyQualifiedNodeName)
