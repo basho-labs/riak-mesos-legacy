@@ -310,15 +310,16 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(sc *SchedulerCor
 
 	taskData := common.TaskData{
 		FullyQualifiedNodeName: nodename,
-		Zookeepers:             sc.zookeepers,
-		NodeID:                 frn.UUID.String(),
-		FrameworkName:          sc.frameworkName,
-		URI:                    sc.schedulerHTTPServer.GetURI(),
-		ClusterName:            frn.ClusterName,
-		UseSuperChroot:         superChrootValue,
-		HTTPPort:               <-ports,
-		PBPort:                 <-ports,
-		DisterlPort:            <-ports,
+		Host:           offer.GetHostname(),
+		Zookeepers:     sc.zookeepers,
+		NodeID:         frn.UUID.String(),
+		FrameworkName:  sc.frameworkName,
+		URI:            sc.schedulerHTTPServer.GetURI(),
+		ClusterName:    frn.ClusterName,
+		UseSuperChroot: superChrootValue,
+		HTTPPort:       <-ports,
+		PBPort:         <-ports,
+		DisterlPort:    <-ports,
 	}
 	frn.TaskData = taskData
 
