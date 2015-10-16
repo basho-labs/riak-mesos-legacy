@@ -11,6 +11,7 @@ export DEPLOY_OS       ?= coreos
 all: clean_bin framework director tools
 rebuild_all: clean build_artifacts build_schroot framework director tools
 rebuild_all_native: clean build_artifacts_native framework director tools
+rebuild_all_native_git: clean build_artifacts_native_git framework director tools
 clean: clean_package clean_bin
 package: clean_package
 
@@ -56,7 +57,10 @@ clean_executor:
 ### Executor end
 
 ### Artifact begin
-.PHONY: build_artifacts build_artifacts_native artifacts clean_artifacts
+.PHONY: build_artifacts build_artifacts_native build_artifacts_native_git artifacts clean_artifacts
+build_artifacts_native_git:
+	cd artifacts/data && $(MAKE) native_git
+	go generate -tags=$(TAGS) ./artifacts
 build_artifacts_native:
 	cd artifacts/data && $(MAKE) native
 	go generate -tags=$(TAGS) ./artifacts

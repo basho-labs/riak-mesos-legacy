@@ -12,6 +12,7 @@ RIAK_SOURCE_DOWNLOAD ?= http://s3.amazonaws.com/downloads.basho.com/riak/2.1/2.1
 .PHONY: all clean
 all: riak-bin.tar.gz trusty.tar.gz riak_mesos_director-bin.tar.gz
 native: riak-bin.tar.gz riak_mesos_director-bin.tar.gz
+native_git: riak-bin.tar.gz-git riak_mesos_director-bin.tar.gz
 
 ### Riak Explorer begin
 riak_explorer:
@@ -24,6 +25,27 @@ clean: clean_riak_explorer
 clean_riak_explorer:
 	-rm -rf riak_explorer riak_explorer-bin
 ### Riak Explorer end
+
+### Riak Git begin
+riak-bin-git: riak_explorer-bin OTP_R16B02_basho8-bin
+	export PATH
+	git clone https://github.com/basho/riak.git
+	cd riak && git checkout tags/riak_ts-0.8.0
+	cd riak && make locked-deps
+	rm -rf riak/deps/node_package
+	git clone https://github.com/basho/node_package.git --branch no-epmd riak/deps/node_package
+	cd riak && make rel
+	cp riak_explorer/rel/riak-addon/ebin/* riak/rel/riak/lib/basho-patches/
+	-rm -rf riak/rel/riak/priv
+	cp -R riak_explorer/rel/riak-addon/priv riak/rel/riak/
+	touch riak-bin-git
+riak-bin.tar.gz-git: riak-bin-git
+	tar -C riak/rel/ -czf riak-bin.tar.gz riak || rm -rf riak-bin.tar.gz
+	touch riak-bin.tar.gz-git
+clean: clean_riak_git
+clean_riak_git:
+	-rm -rf riak riak-bin.tar.gz riak-bin.tar.gz-git riak-bin-git
+### Riak Git end
 
 ### Riak begin
 $(RIAK_SOURCE_PKG):
