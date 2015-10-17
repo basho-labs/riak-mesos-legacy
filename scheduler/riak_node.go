@@ -219,7 +219,7 @@ func (frn *FrameworkRiakNode) GetAsks() []common.ResourceAsker {
 	// EPM
 
 	// return []common.ResourceAsker{common.AskForCPU(0.3), common.AskForPorts(10), common.AskForMemory(320)}
-	return []common.ResourceAsker{common.AskForCPU(2.0), common.AskForPorts(10), common.AskForMemory(16000)}
+	return []common.ResourceAsker{common.AskForCPU(1.0), common.AskForPorts(10), common.AskForMemory(16000)}
 }
 
 func portIter(resources []*mesos.Resource) chan int64 {
