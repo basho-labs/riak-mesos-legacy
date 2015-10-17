@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"regexp"
-	"strconv"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/basho-labs/riak-mesos/scheduler"
@@ -64,19 +63,6 @@ func main() {
 
 	if frameNameRegex.FindString(frameworkName) != frameworkName {
 		log.Fatal("Error, framework name not valid")
-	}
-	// When starting scheduler from Marathon, PORT0-N env vars will be set
-	rexPortStr := os.Getenv("PORT1")
-
-	// If PORT1 isn't set, fallback to a hardcoded one for now
-	// TODO: Sargun fix me
-	if rexPortStr == "" {
-		rexPortStr = "9090"
-	}
-
-	_, portErr := strconv.Atoi(rexPortStr)
-	if portErr != nil {
-		log.Fatal(portErr)
 	}
 
 	sched := scheduler.NewSchedulerCore(

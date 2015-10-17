@@ -193,6 +193,38 @@ func (schttp *SchedulerHTTPServer) serveNodes(w http.ResponseWriter, r *http.Req
 		json.NewEncoder(w).Encode(cluster.Nodes)
 	}
 }
+
+type simpleNode struct {
+	host     string
+	httpPort int64
+	pbPort   int64
+}
+
+func (schttp *SchedulerHTTPServer) serveNodeHosts(w http.ResponseWriter, r *http.Request) {
+	schttp.sc.lock.Lock()
+	defer schttp.sc.lock.Unlock()
+	vars := mux.Vars(r)
+	clusterName := vars["cluster"]
+	cluster, assigned := schttp.sc.schedulerState.Clusters[clusterName]
+	simpleNodes := []simpleNode{}
+
+	if !assigned {
+		w.WriteHeader(404)
+		fmt.Fprintf(w, "Cluster %s not found", clusterName)
+	} else {
+		for _, riakNode := range cluster.Nodes {
+			sn := simpleNode{
+				host:     riakNode.LastOfferUsed.GetHostname(),
+				httpPort: riakNode.TaskData.HTTPPort,
+				pbPort:   riakNode.TaskData.PBPort,
+			}
+			simpleNodes = append(simpleNodes, sn)
+		}
+		w.WriteHeader(200)
+		json.NewEncoder(w).Encode(simpleNodes)
+	}
+}
+
 func (schttp *SchedulerHTTPServer) GetURI() string {
 	return schttp.URI
 }
@@ -272,6 +304,7 @@ func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *Schedul
 	router.Methods("POST", "PUT").Path("/api/v1/clusters/{cluster}").HandlerFunc(schttp.createCluster)
 	router.Methods("GET").Path("/api/v1/clusters/{cluster}").HandlerFunc(schttp.getCluster)
 	router.Methods("GET").Path("/api/v1/clusters/{cluster}/nodes").HandlerFunc(schttp.serveNodes)
+	router.Methods("GET").Path("/api/v1/clusters/{cluster}/nodehosts").HandlerFunc(schttp.serveNodeHosts)
 
 	router.Methods("POST").Path("/api/v1/clusters/{cluster}/config").HandlerFunc(schttp.setConfig)
 	router.Methods("GET").Path("/api/v1/clusters/{cluster}/config").HandlerFunc(schttp.getConfig)

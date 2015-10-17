@@ -20,7 +20,7 @@ func TestJoin(t *testing.T) {
 // 	}
 // 	ensureJoined(t, "dev1@127.0.0.1", "dev2@127.0.0.1")
 // 	assert := assert.New(t)
-// 	client := NewRiakExplorerClient("localhost:9000")
+// 	client := NewRiakExplorerClient("localhost:8098")
 // 	resp, err := client.Leave("dev1@127.0.0.1", "dev2@127.0.0.1")
 //
 // 	assert.Equal(nil, err)
@@ -41,7 +41,7 @@ func TestReplace(t *testing.T) {
 	}
 	ensureJoined(t, "dev1@127.0.0.1", "dev2@127.0.0.1")
 	assert := assert.New(t)
-	client := NewRiakExplorerClient("localhost:9000")
+	client := NewRiakExplorerClient("localhost:8098")
 
 	resp, err := client.StagedJoin("dev3@127.0.0.1", "dev1@127.0.0.1")
 
@@ -68,7 +68,7 @@ func TestReplace(t *testing.T) {
 
 func ensureJoined(t *testing.T, node1 string, node2 string) {
 	assert := assert.New(t)
-	client := NewRiakExplorerClient("localhost:9000")
+	client := NewRiakExplorerClient("localhost:8098")
 
 	if isJoined(node1, node2) {
 		return
@@ -109,7 +109,7 @@ func ensureJoined(t *testing.T, node1 string, node2 string) {
 // 		return
 // 	}
 // 	assert := assert.New(t)
-// 	client := NewRiakExplorerClient("localhost:9000")
+// 	client := NewRiakExplorerClient("localhost:8098")
 // 	resp, err := client.Ping()
 // 	assert.Equal(nil, err)
 // 	assert.Equal("pong", resp.Ping.Message)
@@ -128,7 +128,7 @@ func ensureJoined(t *testing.T, node1 string, node2 string) {
 // 	}
 // 	ensureStagedJoined(t, "dev1@127.0.0.1", "dev2@127.0.0.1")
 // 	assert := assert.New(t)
-// 	client := NewRiakExplorerClient("localhost:9000")
+// 	client := NewRiakExplorerClient("localhost:8098")
 // 	resp, err := client.StagedLeave("dev2@127.0.0.1")
 //
 // 	assert.Equal(nil, err)
@@ -159,7 +159,7 @@ func ensureJoined(t *testing.T, node1 string, node2 string) {
 // 	}
 // 	ensureStagedJoined(t, "dev1@127.0.0.1", "dev2@127.0.0.1")
 // 	assert := assert.New(t)
-// 	client := NewRiakExplorerClient("localhost:9000")
+// 	client := NewRiakExplorerClient("localhost:8098")
 // 	resp, err := client.StagedLeaveTarget("dev1@127.0.0.1", "dev2@127.0.0.1")
 //
 // 	assert.Equal(nil, err)
@@ -190,7 +190,7 @@ func ensureJoined(t *testing.T, node1 string, node2 string) {
 // 	}
 // 	ensureStagedJoined(t, "dev1@127.0.0.1", "dev2@127.0.0.1")
 // 	assert := assert.New(t)
-// 	client := NewRiakExplorerClient("localhost:9000")
+// 	client := NewRiakExplorerClient("localhost:8098")
 // 	resp, err := client.ForceRemove("dev1@127.0.0.1", "dev2@127.0.0.1")
 //
 // 	assert.Equal(nil, err)
@@ -219,7 +219,7 @@ func ensureJoined(t *testing.T, node1 string, node2 string) {
 // 	}
 // 	ensureStagedJoined(t, "dev1@127.0.0.1", "dev2@127.0.0.1")
 // 	assert := assert.New(t)
-// 	client := NewRiakExplorerClient("localhost:9000")
+// 	client := NewRiakExplorerClient("localhost:8098")
 // 	resp, err := client.StagedLeave("dev2@127.0.0.1")
 //
 // 	assert.Equal(nil, err)
@@ -247,7 +247,7 @@ func ensureJoined(t *testing.T, node1 string, node2 string) {
 // 	}
 // 	ensureStagedJoined(t, "dev1@127.0.0.1", "dev2@127.0.0.1")
 // 	assert := assert.New(t)
-// 	client := NewRiakExplorerClient("localhost:9000")
+// 	client := NewRiakExplorerClient("localhost:8098")
 //
 // 	resp, err := client.StagedJoin("dev3@127.0.0.1", "dev1@127.0.0.1")
 //
@@ -288,7 +288,7 @@ func ensureJoined(t *testing.T, node1 string, node2 string) {
 // 	}
 // 	ensureStagedJoined(t, "dev1@127.0.0.1", "dev2@127.0.0.1")
 // 	assert := assert.New(t)
-// 	client := NewRiakExplorerClient("localhost:9000")
+// 	client := NewRiakExplorerClient("localhost:8098")
 //
 // 	client.StagedJoin("dev4@127.0.0.1", "dev1@127.0.0.1")
 //
@@ -320,7 +320,7 @@ func ensureJoined(t *testing.T, node1 string, node2 string) {
 //
 // func assertPlan(t *testing.T, changes []NodeChangeReply) {
 // 	assert := assert.New(t)
-// 	client := NewRiakExplorerClient("localhost:9000")
+// 	client := NewRiakExplorerClient("localhost:8098")
 // 	resp, err := client.Plan("dev1@127.0.0.1")
 //
 // 	assert.Equal(nil, err)
@@ -330,7 +330,7 @@ func ensureJoined(t *testing.T, node1 string, node2 string) {
 //
 // func assertCommit(t *testing.T) {
 // 	assert := assert.New(t)
-// 	client := NewRiakExplorerClient("localhost:9000")
+// 	client := NewRiakExplorerClient("localhost:8098")
 // 	resp, err := client.Commit("dev1@127.0.0.1")
 //
 // 	assert.Equal(nil, err)
@@ -340,7 +340,7 @@ func ensureJoined(t *testing.T, node1 string, node2 string) {
 //
 // func assertClear(t *testing.T) {
 // 	assert := assert.New(t)
-// 	client := NewRiakExplorerClient("localhost:9000")
+// 	client := NewRiakExplorerClient("localhost:8098")
 // 	resp, err := client.Clear("dev1@127.0.0.1")
 //
 // 	assert.Equal(nil, err)
@@ -350,7 +350,7 @@ func ensureJoined(t *testing.T, node1 string, node2 string) {
 //
 // func ensureStagedJoined(t *testing.T, node1 string, node2 string) {
 // 	assert := assert.New(t)
-// 	client := NewRiakExplorerClient("localhost:9000")
+// 	client := NewRiakExplorerClient("localhost:8098")
 //
 // 	if isJoined(node1, node2) {
 // 		return
@@ -383,7 +383,7 @@ func ensureJoined(t *testing.T, node1 string, node2 string) {
 
 func assertStatusCounts(t *testing.T, down int, exiting int, joining int, leaving int, valid int) {
 	assert := assert.New(t)
-	client := NewRiakExplorerClient("localhost:9000")
+	client := NewRiakExplorerClient("localhost:8098")
 	resp, err := client.Status("dev1@127.0.0.1")
 
 	assert.Equal(nil, err)
@@ -396,7 +396,7 @@ func assertStatusCounts(t *testing.T, down int, exiting int, joining int, leavin
 
 func assertStatusNodes(t *testing.T, nodes []NodeStatusReply) {
 	assert := assert.New(t)
-	client := NewRiakExplorerClient("localhost:9000")
+	client := NewRiakExplorerClient("localhost:8098")
 	resp, err := client.Status("dev1@127.0.0.1")
 
 	assert.Equal(nil, err)
@@ -405,7 +405,7 @@ func assertStatusNodes(t *testing.T, nodes []NodeStatusReply) {
 
 func assertRingReady(t *testing.T) {
 	assert := assert.New(t)
-	client := NewRiakExplorerClient("localhost:9000")
+	client := NewRiakExplorerClient("localhost:8098")
 	resp, err := client.RingReady("dev1@127.0.0.1")
 
 	assert.Equal(nil, err)
@@ -413,7 +413,7 @@ func assertRingReady(t *testing.T) {
 }
 
 func isJoined(node1 string, node2 string) bool {
-	client := NewRiakExplorerClient("localhost:9000")
+	client := NewRiakExplorerClient("localhost:8098")
 
 	statusResp, _ := client.Status(node1)
 	var alreadyJoined []NodeStatusReply
@@ -432,7 +432,7 @@ func waitForJoined(node1 string, node2 string) {
 }
 
 func riakExplorerAlive() bool {
-	client := NewRiakExplorerClient("localhost:9000")
+	client := NewRiakExplorerClient("localhost:8098")
 	resp, _ := client.Ping()
 	return resp.Ping.Message == "pong"
 }

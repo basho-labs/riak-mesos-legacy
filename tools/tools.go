@@ -76,6 +76,10 @@ func main() {
 		client = NewSchedulerHTTPClient(getURL())
 		requireClusterName()
 		respond(client.GetNodes(clusterName))
+	case "get-node-hosts":
+		client = NewSchedulerHTTPClient(getURL())
+		requireClusterName()
+		respond(client.GetNodeHosts(clusterName))
 	case "add-node":
 		client = NewSchedulerHTTPClient(getURL())
 		requireClusterName()
@@ -106,6 +110,10 @@ func main() {
 	default:
 		log.Fatal("Unknown command")
 	}
+}
+
+func createBucketType(name string, props string) {
+	// TODO
 }
 
 func respondList(val []string, err error) {

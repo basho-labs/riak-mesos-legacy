@@ -46,7 +46,7 @@ clean_scheduler:
 ### Executor begin
 .PHONY: executor clean_executor .scheduler.data.executor_linux_amd64
 executor: .scheduler.data.executor_linux_amd64
-.scheduler.data.executor_linux_amd64: cepm .process_manager.bindata_generated riak_explorer
+.scheduler.data.executor_linux_amd64: cepm .process_manager.bindata_generated
 	GOOS=linux GOARCH=amd64 go build -o scheduler/data/executor_linux_amd64 -tags=$(TAGS) ./executor/
 	$(shell touch .scheduler.data.executor_linux_amd64)
 clean_bin: clean_executor
@@ -69,8 +69,7 @@ artifacts:
 sync: sync_artifacts
 sync_artifacts:
 	cd artifacts/data/ && \
-		s3cmd put --acl-public riak_explorer-bin.tar.gz s3://$(DEPLOY_BASE)/$(DEPLOY_OS)/artifacts/$(PACKAGE_VERSION)/ && \
-		s3cmd put --acl-public riak-2.1.1-bin.tar.gz s3://$(DEPLOY_BASE)/$(DEPLOY_OS)/artifacts/$(PACKAGE_VERSION)/ && \
+		s3cmd put --acl-public riak-bin.tar.gz s3://$(DEPLOY_BASE)/$(DEPLOY_OS)/artifacts/$(PACKAGE_VERSION)/ && \
 		s3cmd put --acl-public riak_mesos_director-bin.tar.gz s3://$(DEPLOY_BASE)/$(DEPLOY_OS)/artifacts/$(PACKAGE_VERSION)/ && \
 		s3cmd put --acl-public trusty.tar.gz s3://$(DEPLOY_BASE)/$(DEPLOY_OS)/artifacts/$(PACKAGE_VERSION)/
 clean: clean_artifacts
@@ -140,17 +139,6 @@ clean_bin: clean_cepmd
 clean_cepmd:
 	-rm -f .cepmd.cepm.bindata_generated cepmd/cepm/bindata_generated.go
 ### CEPMd end
-
-### Riak Explorer begin
-.PHONY: riak_explorer clean_riak_explorer
-.riak_explorer.bindata_generated: riak_explorer/data/advanced.config riak_explorer/data/riak_explorer.conf
-	go generate -tags=$(TAGS) ./riak_explorer/...
-	$(shell touch .riak_explorer.bindata_generated)
-riak_explorer: .riak_explorer.bindata_generated
-clean_bin: clean_riak_explorer
-clean_riak_explorer:
-	-rm -f .riak_explorer.bindata_generated riak_explorer/bindata_generated.go
-### Riak Explorer end
 
 ### Go Tools begin
 test:

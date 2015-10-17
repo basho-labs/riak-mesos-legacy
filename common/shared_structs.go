@@ -5,20 +5,18 @@ import (
 )
 
 type TaskData struct {
-	FullyQualifiedNodeName    string
-	RexFullyQualifiedNodeName string
-	Zookeepers                []string
-	NodeID                    string
-	FrameworkName             string
-	ClusterName               string
-	URI                       string
-	UseSuperChroot            bool
-	HTTPPort                  int64
-	PBPort                    int64
-	HandoffPort               int64
-	DisterlPort               int64
-	RexPort                   int64
-	RexDisterlPort            int64
+	FullyQualifiedNodeName string
+	Zookeepers             []string
+	NodeID                 string
+	FrameworkName          string
+	ClusterName            string
+	URI                    string
+	Host                   string
+	UseSuperChroot         bool
+	HTTPPort               int64
+	PBPort                 int64
+	HandoffPort            int64
+	DisterlPort            int64
 }
 
 func (s *TaskData) Serialize() ([]byte, error) {

@@ -84,7 +84,8 @@ func (frn *FrameworkRiakNode) handleUpToDownTransition(sc *SchedulerCore, frc *F
 	for _, riakNode := range sc.schedulerState.Clusters[frc.Name].Nodes {
 		if riakNode.CurrentState == process_state.Started && riakNode != frn {
 
-			rexc := rexclient.NewRiakExplorerClient(fmt.Sprintf("%s:%d", riakNode.LastOfferUsed.GetHostname(), riakNode.TaskData.RexPort))
+			// rexc := rexclient.NewRiakExplorerClient(fmt.Sprintf("%s:%d", riakNode.LastOfferUsed.GetHostname(), riakNode.TaskData.RexPort))
+			rexc := rexclient.NewRiakExplorerClient(fmt.Sprintf("%s:%d", riakNode.LastOfferUsed.GetHostname(), riakNode.TaskData.HTTPPort))
 
 			// We should try to join against this node
 			log.Infof("Making leave: %+v to %+v", frn.TaskData.FullyQualifiedNodeName, riakNode.TaskData.FullyQualifiedNodeName)
@@ -97,17 +98,34 @@ func (frn *FrameworkRiakNode) handleUpToDownTransition(sc *SchedulerCore, frc *F
 		}
 	}
 }
-func (frn *FrameworkRiakNode) handleStartingToRunningTransition(sc *SchedulerCore, frc *FrameworkRiakCluster) {
 
-	rexHostname := fmt.Sprintf("%s:%d", frn.LastOfferUsed.GetHostname(), frn.TaskData.RexPort)
+func (frn *FrameworkRiakNode) attemptJoin(riakNode *FrameworkRiakNode, retry int, maxRetry int) bool {
+	if retry > maxRetry {
+		log.Infof("Attempted joining %+v to %+v %+v times and failed.", frn.TaskData.FullyQualifiedNodeName, riakNode.TaskData.FullyQualifiedNodeName, maxRetry)
+		return false
+	}
+
+	rexHostname := fmt.Sprintf("%s:%d", riakNode.LastOfferUsed.GetHostname(), riakNode.TaskData.HTTPPort)
 	rexc := rexclient.NewRiakExplorerClient(rexHostname)
+	// We should try to join against this node
+	log.Infof("Joining %+v to %+v", frn.TaskData.FullyQualifiedNodeName, riakNode.TaskData.FullyQualifiedNodeName)
+	joinReply, joinErr := rexc.Join(frn.TaskData.FullyQualifiedNodeName, riakNode.TaskData.FullyQualifiedNodeName)
+	log.Infof("Triggered join: %+v, %+v", joinReply, joinErr)
+	if joinReply.Join.Success == "ok" {
+		return true
+	}
+
+	time.Sleep(5 * time.Second)
+	return frn.attemptJoin(riakNode, retry+1, maxRetry)
+}
+
+func (frn *FrameworkRiakNode) handleStartingToRunningTransition(sc *SchedulerCore, frc *FrameworkRiakCluster) {
 	for _, riakNode := range sc.schedulerState.Clusters[frc.Name].Nodes {
 		if riakNode.CurrentState == process_state.Started {
-			// We should try to join against this node
-			log.Infof("Joining %+v to %+v", frn.TaskData.FullyQualifiedNodeName, riakNode.TaskData.FullyQualifiedNodeName)
-			joinReply, joinErr := rexc.Join(frn.TaskData.FullyQualifiedNodeName, riakNode.TaskData.FullyQualifiedNodeName)
-			log.Infof("Triggered join: %+v, %+v", joinReply, joinErr)
-			if joinErr == nil {
+
+			joinSuccess := frn.attemptJoin(riakNode, 0, 5)
+
+			if joinSuccess {
 				break // We're done here
 			}
 		}
@@ -195,12 +213,13 @@ func (frn *FrameworkRiakNode) GetAsks() []common.ResourceAsker {
 	// Ports:
 	// -Protocol Buffers
 	// -HTTP
-	// -Riak Explorer (rex)
+	// -Riak Explorer (rex) (no longer needed)
 	// 4-10 -- unknown, so far
 	// Potential:
 	// EPM
 
-	return []common.ResourceAsker{common.AskForCPU(0.3), common.AskForPorts(10), common.AskForMemory(320)}
+	// return []common.ResourceAsker{common.AskForCPU(0.3), common.AskForPorts(10), common.AskForMemory(320)}
+	return []common.ResourceAsker{common.AskForCPU(1.0), common.AskForPorts(10), common.AskForMemory(16000)}
 }
 
 func portIter(resources []*mesos.Resource) chan int64 {
@@ -291,19 +310,17 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(sc *SchedulerCor
 	ports := portIter(taskAsk)
 
 	taskData := common.TaskData{
-		FullyQualifiedNodeName:    nodename,
-		RexFullyQualifiedNodeName: "rex-" + nodename,
-		Zookeepers:                sc.zookeepers,
-		NodeID:                    frn.UUID.String(),
-		FrameworkName:             sc.frameworkName,
-		URI:                       sc.schedulerHTTPServer.GetURI(),
-		ClusterName:               frn.ClusterName,
-		UseSuperChroot:            superChrootValue,
-		RexPort:                   <-ports,
-		HTTPPort:                  <-ports,
-		PBPort:                    <-ports,
-		DisterlPort:               <-ports,
-		RexDisterlPort:            <-ports,
+		FullyQualifiedNodeName: nodename,
+		Host:           offer.GetHostname(),
+		Zookeepers:     sc.zookeepers,
+		NodeID:         frn.UUID.String(),
+		FrameworkName:  sc.frameworkName,
+		URI:            sc.schedulerHTTPServer.GetURI(),
+		ClusterName:    frn.ClusterName,
+		UseSuperChroot: superChrootValue,
+		HTTPPort:       <-ports,
+		PBPort:         <-ports,
+		DisterlPort:    <-ports,
 	}
 	frn.TaskData = taskData
 
