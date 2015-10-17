@@ -180,7 +180,7 @@ func (sc *SchedulerCore) Disconnected(sched.SchedulerDriver) {
 func (sc *SchedulerCore) spreadNodesAcrossOffers(allOffers []*mesos.Offer, allResources [][]*mesos.Resource, allNodes []*FrameworkRiakNode, currentOfferIndex int, currentRiakNodeIndex int, launchTasks map[string][]*mesos.TaskInfo) (map[string][]*mesos.TaskInfo, error) {
 	log.Infof("spreadNodesAcrossOffers: currentOfferIndex: %+v, currentRiakNodeIndex: %+v", currentOfferIndex, currentRiakNodeIndex)
 	log.Infof("spreadNodesAcrossOffers: allNodes: %+v, allResources: %+v, allOffers: %+v, launchTasks: %+v", len(allNodes), len(allResources), len(allOffers), len(launchTasks))
-	
+
 	if len(allNodes) == 0 || len(allResources) == 0 || len(allOffers) == 0 {
 		return launchTasks, nil
 	}
@@ -214,7 +214,6 @@ func (sc *SchedulerCore) spreadNodesAcrossOffers(allOffers []*mesos.Offer, allRe
 		sc.schedulerState.Persist()
 
 		// Everything went well, add to the launch tasks
-		allNodes = append(allNodes[:currentRiakNodeIndex], allNodes[currentRiakNodeIndex+1:]...)
 		return sc.spreadNodesAcrossOffers(allOffers, allResources, allNodes, currentOfferIndex+1, currentRiakNodeIndex+1, launchTasks)
 	}
 
