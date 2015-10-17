@@ -178,7 +178,10 @@ func (sc *SchedulerCore) Disconnected(sched.SchedulerDriver) {
 }
 
 func (sc *SchedulerCore) spreadNodesAcrossOffers(allOffers []*mesos.Offer, allResources [][]*mesos.Resource, allNodes []*FrameworkRiakNode, currentOfferIndex int, currentRiakNodeIndex int, launchTasks map[string][]*mesos.TaskInfo) (map[string][]*mesos.TaskInfo, error) {
-	if len(allNodes) == 0 || len(allResources) == 0 {
+	log.Infof("spreadNodesAcrossOffers: currentOfferIndex: %+v, currentRiakNodeIndex: %+v", currentOfferIndex, currentRiakNodeIndex)
+	log.Infof("spreadNodesAcrossOffers: allNodes: %+v, allResources: %+v, allOffers: %+v, launchTasks: %+v", len(allNodes), len(allResources), len(allOffers), len(launchTasks))
+	
+	if len(allNodes) == 0 || len(allResources) == 0 || len(allOffers) == 0 {
 		return launchTasks, nil
 	}
 
@@ -188,7 +191,7 @@ func (sc *SchedulerCore) spreadNodesAcrossOffers(allOffers []*mesos.Offer, allRe
 	}
 
 	// No more offers, start from the beginning (round robin)
-	if currentOfferIndex >= len(allResources) {
+	if currentOfferIndex >= len(allOffers) {
 		return sc.spreadNodesAcrossOffers(allOffers, allResources, allNodes, 0, currentRiakNodeIndex, launchTasks)
 	}
 
