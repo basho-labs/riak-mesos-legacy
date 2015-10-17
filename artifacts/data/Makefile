@@ -4,10 +4,6 @@ TMP	   := /tmp
 RIAK_SOURCE_DIR ?= riak-2.1.1
 RIAK_SOURCE_PKG ?= riak-2.1.1.tar.gz
 RIAK_SOURCE_DOWNLOAD ?= http://s3.amazonaws.com/downloads.basho.com/riak/2.1/2.1.1/riak-2.1.1.tar.gz
-# RIAK_SOURCE_DIR ?= riak_ts-0.8.0
-# RIAK_SOURCE_PKG ?= riak_ts-0.8.0.tar.gz
-# RIAK_SOURCE_DOWNLOAD ?= http://s3.amazonaws.com/downloads.basho.com/riak_ts/0.8/0.8.0/riak_ts-0.8.0.tar.gz
-# RIAK_SOURCE_DIR='riak_ts-0.8.0' RIAK_SOURCE_PKG='riak_ts-0.8.0.tar.gz' RIAK_SOURCE_DOWNLOAD='http://s3.amazonaws.com/downloads.basho.com/riak_ts/0.8/0.8.0/riak_ts-0.8.0.tar.gz' TAGS='"rel native"' make rebuild_all_native
 
 .PHONY: all clean
 all: riak-bin.tar.gz trusty.tar.gz riak_mesos_director-bin.tar.gz
