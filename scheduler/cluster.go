@@ -25,7 +25,7 @@ func NewFrameworkRiakCluster(name string) *FrameworkRiakCluster {
 	}
 	riakConfig, err := Asset("riak.conf")
 	if err != nil {
-		log.Error("Unable to open up advanced.config: ", err)
+		log.Error("Unable to open up riak.conf: ", err)
 	}
 
 	return &FrameworkRiakCluster{
