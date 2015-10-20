@@ -181,6 +181,7 @@ func (sc *SchedulerCore) spreadNodesAcrossOffers(allOffers []*mesos.Offer, allRe
 	log.Infof("spreadNodesAcrossOffers: currentOfferIndex: %+v, currentRiakNodeIndex: %+v", currentOfferIndex, currentRiakNodeIndex)
 	log.Infof("spreadNodesAcrossOffers: allNodes: %+v, allResources: %+v, allOffers: %+v, launchTasks: %+v", len(allNodes), len(allResources), len(allOffers), len(launchTasks))
 
+	// Nothing to launch
 	if len(allNodes) == 0 || len(allResources) == 0 || len(allOffers) == 0 {
 		return launchTasks, nil
 	}
@@ -190,9 +191,9 @@ func (sc *SchedulerCore) spreadNodesAcrossOffers(allOffers []*mesos.Offer, allRe
 		return launchTasks, nil
 	}
 
-	// No more offers, start from the beginning (round robin)
+	// No more offers, just get out now, more offers will come
 	if currentOfferIndex >= len(allOffers) {
-		return sc.spreadNodesAcrossOffers(allOffers, allResources, allNodes, 0, currentRiakNodeIndex, launchTasks)
+		return launchTasks, nil
 	}
 
 	offer := allOffers[currentOfferIndex]
@@ -222,14 +223,6 @@ func (sc *SchedulerCore) spreadNodesAcrossOffers(allOffers []*mesos.Offer, allRe
 		return sc.spreadNodesAcrossOffers(allOffers, allResources, allNodes, currentOfferIndex+1, currentRiakNodeIndex+1, launchTasks)
 	}
 
-	// There are no more offers with sufficient resources for a single node
-	if len(allResources) <= 1 {
-		return launchTasks, errors.New("Not enough resources to schedule RiakNode")
-	}
-
-	// This offer no longer has sufficient resources available, remove it from the pool
-	allOffers = append(allOffers[:currentOfferIndex], allOffers[currentOfferIndex+1:]...)
-	allResources = append(allResources[:currentOfferIndex], allResources[currentOfferIndex+1:]...)
 	return sc.spreadNodesAcrossOffers(allOffers, allResources, allNodes, currentOfferIndex+1, currentRiakNodeIndex, launchTasks)
 }
 
