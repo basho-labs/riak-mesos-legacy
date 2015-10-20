@@ -267,17 +267,17 @@ func (sc *SchedulerCore) ResourceOffers(driver sched.SchedulerDriver, offers []*
 		// TODO: Fix and make actually queues around driver interactions
 		// This is a massive hack
 		// -Sargun Dhillon 2015-10-01
-		go func(offer *mesos.Offer) {
-			log.Infof("Launching Tasks: %v for offer %v", tasks, *offer.Id.Value)
-			status, err := driver.LaunchTasks([]*mesos.OfferID{offer.Id}, tasks, &mesos.Filters{RefuseSeconds: proto.Float64(OFFER_INTERVAL)})
+		go func(innerOffer *mesos.Offer, innerTasks []*mesos.TaskInfo) {
+			log.Infof("Launching Tasks: %v for offer %v", innerTasks, *innerOffer.Id.Value)
+			innerStatus, innerErr := driver.LaunchTasks([]*mesos.OfferID{innerOffer.Id}, innerTasks, &mesos.Filters{RefuseSeconds: proto.Float64(OFFER_INTERVAL)})
 
-			if status != mesos.Status_DRIVER_RUNNING {
+			if innerStatus != mesos.Status_DRIVER_RUNNING {
 				log.Fatal("Driver not running, while trying to launch tasks")
 			}
-			if err != nil {
-				log.Panic("Failed to launch tasks: ", err)
+			if innerErr != nil {
+				log.Panic("Failed to launch tasks: ", innerErr)
 			}
-		}(offer)
+		}(offer, tasks)
 	}
 }
 func (sc *SchedulerCore) StatusUpdate(driver sched.SchedulerDriver, status *mesos.TaskStatus) {
