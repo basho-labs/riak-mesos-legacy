@@ -1,7 +1,6 @@
 package scheduler
 
 import (
-	"errors"
 	"io/ioutil"
 	"sync"
 
