@@ -210,7 +210,12 @@ func (sc *SchedulerCore) spreadNodesAcrossOffers(allOffers []*mesos.Offer, allRe
 			launchTasks[*offer.Id.Value] = []*mesos.TaskInfo{}
 		}
 
+		log.Infof("spreadNodesAcrossOffers: Using offerId: %+v, for riakNode.CurrentID(): %+v", *offer.Id.Value, riakNode.CurrentID())
+
 		launchTasks[*offer.Id.Value] = append(launchTasks[*offer.Id.Value], taskInfo)
+
+		log.Infof("spreadNodesAcrossOffers: New LaunchTasks: %+v", launchTasks)
+
 		sc.schedulerState.Persist()
 
 		// Everything went well, add to the launch tasks
@@ -262,13 +267,15 @@ func (sc *SchedulerCore) ResourceOffers(driver sched.SchedulerDriver, offers []*
 			tasks = []*mesos.TaskInfo{}
 		}
 
+		log.Infof("Resource Offers: In launch loop, currently on offerId: %+v, tasks for offer: %+v", *offer.Id.Value, tasks)
+
 		// This is somewhat of a hack, to avoid synchronously calling the mesos-go SDK
 		// to avoid a deadlock situation.
 		// TODO: Fix and make actually queues around driver interactions
 		// This is a massive hack
 		// -Sargun Dhillon 2015-10-01
 		go func(innerOffer *mesos.Offer, innerTasks []*mesos.TaskInfo) {
-			log.Infof("Launching Tasks: %v for offer %v", innerTasks, *innerOffer.Id.Value)
+			log.Infof("Resource Offers: In launch loop inner go func, currently on offerId: %+v, tasks for offer: %+v", *innerOffer.Id.Value, innerTasks)
 			innerStatus, innerErr := driver.LaunchTasks([]*mesos.OfferID{innerOffer.Id}, innerTasks, &mesos.Filters{RefuseSeconds: proto.Float64(OFFER_INTERVAL)})
 
 			if innerStatus != mesos.Status_DRIVER_RUNNING {
