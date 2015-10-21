@@ -89,7 +89,7 @@
                     "mem": {
                         "type": "number",
                         "description": "Per Node Memory requirements",
-                        "default": 16000
+                        "default": 8000
                     },
                     "disk": {
                         "type": "number",

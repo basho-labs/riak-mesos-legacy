@@ -45,7 +45,11 @@ may need to be used. Here is a minimal example:
         "master": "zk://master.mesos:2181/mesos",
         "zk": "master.mesos:2181",
         "user": "root",
-        "framework-name": "riak"
+        "framework-name": "riak",
+        "node": {
+            "cpus": 1,
+            "mem": 8000
+        }
     }
 }
 ```
@@ -59,7 +63,11 @@ may need to be used. Here is a minimal example:
         "zk": "master.mesos:2181",
         "user": "root",
         "framework-name": "riak",
-        "url": "http://riak-tools.s3.amazonaws.com/riak-mesos/ubuntu/riak_mesos_linux_amd64_0.1.1.tar.gz"
+        "url": "http://riak-tools.s3.amazonaws.com/riak-mesos/ubuntu/riak_mesos_linux_amd64_0.1.1.tar.gz",
+        "node": {
+            "cpus": 1,
+            "mem": 8000
+        }
     }
 }
 ```
@@ -73,7 +81,11 @@ may need to be used. Here is a minimal example:
         "zk": "master.mesos:2181",
         "user": "root",
         "framework-name": "riak"
-        "url": "http://riak-tools.s3.amazonaws.com/riak-mesos/centos/riak_mesos_linux_amd64_0.1.1.tar.gz"
+        "url": "http://riak-tools.s3.amazonaws.com/riak-mesos/centos/riak_mesos_linux_amd64_0.1.1.tar.gz",
+        "node": {
+            "cpus": 1,
+            "mem": 8000
+        }
     }
 }
 ```
