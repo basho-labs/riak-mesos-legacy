@@ -83,6 +83,7 @@ may need to be used. Here is a minimal example:
 The Riak framework should have at least 2GB of RAM and 0.5 CPUs to perform successfully.
 
 ```
+dcos config set package.sources '["http://riak-tools.s3.amazonaws.com/riak-mesos/dcos-repo-0.1.1.zip"]'
 dcos package update
 dcos package install riak --options=dcos-riak.json
 ```
