@@ -196,30 +196,22 @@ func (frn *FrameworkRiakNode) GetTaskStatus() *mesos.TaskStatus {
 }
 
 func (frn *FrameworkRiakNode) GetExecutorAsks() []common.ResourceAsker {
-	// 10 for good measure
-	// Ports:
-	// -Protocol Buffers
-	// -HTTP
-	// -Riak Explorer (rex)
-	// 4-10 -- unknown, so far
-	// Potential:
-	// EPM
-
 	return []common.ResourceAsker{common.AskForCPU(0.01), common.AskForMemory(32)}
 }
 
-func (frn *FrameworkRiakNode) GetAsks() []common.ResourceAsker {
+func (frn *FrameworkRiakNode) GetAsks(nodeCpus float64, nodeMem int, nodeDisk int) []common.ResourceAsker {
 	// 10 for good measure
 	// Ports:
 	// -Protocol Buffers
 	// -HTTP
-	// -Riak Explorer (rex) (no longer needed)
 	// 4-10 -- unknown, so far
 	// Potential:
 	// EPM
 
-	// return []common.ResourceAsker{common.AskForCPU(0.3), common.AskForPorts(10), common.AskForMemory(320)}
-	return []common.ResourceAsker{common.AskForCPU(1.0), common.AskForPorts(10), common.AskForMemory(16000)}
+	log.Infof("Creating Resource Asks for Riak Node: CPU: %+v, MEM: %+v, DISK: %+v.", nodeCpus, nodeMem, nodeDisk)
+
+	// nodeDisk unused until we can use DR/PV
+	return []common.ResourceAsker{common.AskForCPU(nodeCpus), common.AskForPorts(10), common.AskForMemory(nodeMem)}
 }
 
 func portIter(resources []*mesos.Resource) chan int64 {
@@ -235,14 +227,28 @@ func portIter(resources []*mesos.Resource) chan int64 {
 	return ports
 }
 
-func (frn *FrameworkRiakNode) GetCombinedAsk() common.CombinedResourceAsker {
+func (frn *FrameworkRiakNode) GetCombinedAsk(sc *SchedulerCore) common.CombinedResourceAsker {
 	ret := func(offer []*mesos.Resource) ([]*mesos.Resource, []*mesos.Resource, []*mesos.Resource, bool) {
 		executorAsks := []*mesos.Resource{}
 		taskAsks := []*mesos.Resource{}
 
 		success := true
 		remaining := offer
-		for _, fun := range frn.GetAsks() {
+
+		nodeCpusFloat, err := strconv.ParseFloat(sc.NodeCpus, 64)
+		if err != nil {
+			log.Panicf("Unable to determine node_cpus: %+v", err)
+		}
+		nodeMemInt, err := strconv.Atoi(sc.NodeMem)
+		if err != nil {
+			log.Panicf("Unable to determine node_mem: %+v", err)
+		}
+		nodeDiskInt, err := strconv.Atoi(sc.NodeDisk)
+		if err != nil {
+			log.Panicf("Unable to determine node_disk: %+v", err)
+		}
+
+		for _, fun := range frn.GetAsks(nodeCpusFloat, nodeMemInt, nodeDiskInt) {
 			var newAsk *mesos.Resource
 			remaining, newAsk, success = fun(remaining)
 			taskAsks = append(taskAsks, newAsk)

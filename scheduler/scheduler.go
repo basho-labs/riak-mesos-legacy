@@ -34,6 +34,9 @@ type SchedulerCore struct {
 	cepm                *cepm.CEPM
 	frameworkName       string
 	frameworkRole       string
+	nodeCpus            string
+	nodeMem             string
+	nodeDisk            string
 	schedulerState      *SchedulerState
 	authProvider        string
 	mesosAuthPrincipal  string
@@ -47,6 +50,9 @@ func NewSchedulerCore(
 	zookeepers []string,
 	schedulerIPAddr string,
 	user string,
+	NodeCpus string,
+	NodeMem string,
+	NodeDisk string,
 	authProvider string,
 	mesosAuthPrincipal string,
 	mesosAuthSecretFile string) *SchedulerCore {
@@ -67,6 +73,9 @@ func NewSchedulerCore(
 		cepm:            c,
 		frameworkName:   frameworkName,
 		frameworkRole:   frameworkRole,
+		NodeCpus:        nodeCpus,
+		NodeMem:         nodeMem,
+		NodeDisk:        nodeDisk,
 		schedulerState:  ss,
 	}
 	scheduler.schedulerHTTPServer = ServeExecutorArtifact(scheduler, schedulerHostname)
@@ -200,7 +209,7 @@ func (sc *SchedulerCore) spreadNodesAcrossOffers(allOffers []*mesos.Offer, allRe
 
 	var success bool
 	var executorAsk, taskAsk []*mesos.Resource
-	allResources[currentOfferIndex], executorAsk, taskAsk, success = riakNode.GetCombinedAsk()(allResources[currentOfferIndex])
+	allResources[currentOfferIndex], executorAsk, taskAsk, success = riakNode.GetCombinedAsk(sc)(allResources[currentOfferIndex])
 
 	if success {
 		taskInfo := riakNode.PrepareForLaunchAndGetNewTaskInfo(sc, offer, executorAsk, taskAsk)

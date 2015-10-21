@@ -26,6 +26,9 @@ var (
 	logFile             string
 	frameworkName       string
 	frameworkRole       string
+	nodeCpus            string
+	nodeMem             string
+	nodeDisk            string
 	authProvider        string
 	mesosAuthPrincipal  string
 	mesosAuthSecretFile string
@@ -41,6 +44,9 @@ func init() {
 	flag.StringVar(&logFile, "log", "", "Log File Location")
 	flag.StringVar(&frameworkName, "name", "riakMesosFramework", "Framework Instance Name")
 	flag.StringVar(&frameworkRole, "role", "*", "Framework Role Name")
+	flag.StringVar(&nodeCpus, "node_cpus", "1.0", "Per Node CPUs")
+	flag.StringVar(&nodeMem, "node_mem", "16000", "Per Node Mem")
+	flag.StringVar(&nodeDisk, "node_disk", "20000", "Per Node Disk")
 	flag.StringVar(&authProvider, "mesos_authentication_provider", sasl.ProviderName,
 		fmt.Sprintf("Authentication provider to use, default is SASL that supports mechanisms: %+v", mech.ListSupported()))
 	flag.StringVar(&mesosAuthPrincipal, "mesos_authentication_principal", "", "Mesos authentication principal.")
@@ -72,6 +78,9 @@ func main() {
 		[]string{zookeeperAddr},
 		schedulerIPAddr,
 		user,
+		nodeCpus,
+		nodeMem,
+		nodeDisk,
 		authProvider,
 		mesosAuthPrincipal,
 		mesosAuthSecretFile)

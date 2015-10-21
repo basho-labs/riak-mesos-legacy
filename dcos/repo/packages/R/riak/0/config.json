@@ -77,6 +77,27 @@
                 "description": "Memory requirements",
                 "default": 2048
             },
+            "node": {
+                "type": "object",
+                "depscription": "Resource Requirements Per Riak Node",
+                "properties": {
+                    "cpus": {
+                        "type": "number",
+                        "description": "Per Node CPU requirements",
+                        "default": 1.0
+                    },
+                    "mem": {
+                        "type": "number",
+                        "description": "Per Node Memory requirements",
+                        "default": 16000
+                    },
+                    "disk": {
+                        "type": "number",
+                        "description": "Per Node Disk requirements",
+                        "default": 20000
+                    }
+                }
+            },
             "super-chroot":{
                 "type": "string",
                 "description": "When this is false, use the default chroot.",
