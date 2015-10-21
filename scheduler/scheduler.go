@@ -34,9 +34,9 @@ type SchedulerCore struct {
 	cepm                *cepm.CEPM
 	frameworkName       string
 	frameworkRole       string
-	nodeCpus            string
-	nodeMem             string
-	nodeDisk            string
+	NodeCpus            string
+	NodeMem             string
+	NodeDisk            string
 	schedulerState      *SchedulerState
 	authProvider        string
 	mesosAuthPrincipal  string
@@ -50,9 +50,9 @@ func NewSchedulerCore(
 	zookeepers []string,
 	schedulerIPAddr string,
 	user string,
-	NodeCpus string,
-	NodeMem string,
-	NodeDisk string,
+	nodeCpus string,
+	nodeMem string,
+	nodeDisk string,
 	authProvider string,
 	mesosAuthPrincipal string,
 	mesosAuthSecretFile string) *SchedulerCore {

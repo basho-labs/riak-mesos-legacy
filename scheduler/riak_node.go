@@ -200,7 +200,7 @@ func (frn *FrameworkRiakNode) GetExecutorAsks() []common.ResourceAsker {
 	return []common.ResourceAsker{common.AskForCPU(0.01), common.AskForMemory(32)}
 }
 
-func (frn *FrameworkRiakNode) GetAsks(nodeCpus float64, nodeMem int, nodeDisk int) []common.ResourceAsker {
+func (frn *FrameworkRiakNode) GetAsks(nodeCpus float64, nodeMem float64, nodeDisk float64) []common.ResourceAsker {
 	// 10 for good measure
 	// Ports:
 	// -Protocol Buffers
@@ -240,16 +240,16 @@ func (frn *FrameworkRiakNode) GetCombinedAsk(sc *SchedulerCore) common.CombinedR
 		if err != nil {
 			log.Panicf("Unable to determine node_cpus: %+v", err)
 		}
-		nodeMemInt, err := strconv.Atoi(sc.NodeMem)
+		nodeMemFloat, err := strconv.ParseFloat(sc.NodeMem, 64)
 		if err != nil {
 			log.Panicf("Unable to determine node_mem: %+v", err)
 		}
-		nodeDiskInt, err := strconv.Atoi(sc.NodeDisk)
+		nodeDiskFloat, err := strconv.ParseFloat(sc.NodeDisk, 64)
 		if err != nil {
 			log.Panicf("Unable to determine node_disk: %+v", err)
 		}
 
-		for _, fun := range frn.GetAsks(nodeCpusFloat, nodeMemInt, nodeDiskInt) {
+		for _, fun := range frn.GetAsks(nodeCpusFloat, nodeMemFloat, nodeDiskFloat) {
 			var newAsk *mesos.Resource
 			remaining, newAsk, success = fun(remaining)
 			taskAsks = append(taskAsks, newAsk)
