@@ -17,8 +17,6 @@ import (
 	"time"
 )
 
-// Next Status
-
 type FrameworkRiakNode struct {
 	// This is super hacky, we're relying on the following to be NOT serialized, and defaults. FIX THIS. Somehow..
 	reconciled           bool      `json:"-"`
@@ -34,18 +32,30 @@ type FrameworkRiakNode struct {
 	TaskData         common.TaskData
 	FrameworkName    string
 	ClusterName      string
+	PersistenceID    string
+	ContainerPath    string
+	TaskCPUs         float64
+	TaskMem          float64
+	TaskDisk         float64
+	ExecutorCPUs     float64
+	ExecutorMem      float64
 }
 
-func NewFrameworkRiakNode(FrameworkName string, ClusterName string) *FrameworkRiakNode {
+func NewFrameworkRiakNode(frameworkName string, clusterName string, cpus float64, mem float64, disk float64) *FrameworkRiakNode {
 	return &FrameworkRiakNode{
 		// We can assume this for now? I think
 		DestinationState: process_state.Started,
 		CurrentState:     process_state.Unknown,
 		Generation:       0,
 		reconciled:       false,
-		FrameworkName:    FrameworkName,
+		FrameworkName:    frameworkName,
 		UUID:             uuid.NewV4(),
-		ClusterName:      ClusterName,
+		ClusterName:      clusterName,
+		TaskCPUs:         cpus,
+		TaskMem:          mem,
+		TaskDisk:         disk,
+		ExecutorCPUs:     0.1,
+		ExecutorMem:      32,
 	}
 }
 
@@ -268,6 +278,43 @@ func (frn *FrameworkRiakNode) GetCombinedAsk(sc *SchedulerCore) common.CombinedR
 		return remaining, executorAsks, taskAsks, success
 	}
 	return ret
+}
+
+func (frn *FrameworkRiakNode) PrepareForReservation(sc *SchedulerCore, offer *mesos.Offer, executorAsk []*mesos.Resource, taskAsk []*mesos.Resource) *AcceptOfferInfo {
+	var cpus float64 = 0
+	var mem float64 = 0
+	var disk float64 = 0
+
+	for _, resource := range util.FilterResources(executorAsk, func(res *mesos.Resource) bool { return res.GetName() == "cpus" }) {
+		cpus += resource.GetScalar().GetValue()
+	}
+	for _, resource := range util.FilterResources(executorAsk, func(res *mesos.Resource) bool { return res.GetName() == "mem" }) {
+		mem += resource.GetScalar().GetValue()
+	}
+	for _, resource := range util.FilterResources(taskAsk, func(res *mesos.Resource) bool { return res.GetName() == "cpus" }) {
+		cpus += resource.GetScalar().GetValue()
+	}
+	for _, resource := range util.FilterResources(taskAsk, func(res *mesos.Resource) bool { return res.GetName() == "mem" }) {
+		mem += resource.GetScalar().GetValue()
+	}
+	for _, resource := range util.FilterResources(taskAsk, func(res *mesos.Resource) bool { return res.GetName() == "disk" }) {
+		disk += resource.GetScalar().GetValue()
+	}
+
+	acceptInfo := &AcceptOfferInfo{
+		frameworkID:   *sc.schedulerState.FrameworkID,
+		offerID:       *offer.Id.Value,
+		cpus:          cpus,
+		mem:           mem,
+		disk:          disk,
+		refuseSeconds: 5,
+		role:          sc.frameworkRole,
+		principal:     sc.mesosAuthPrincipal,
+		persistenceID: frn.PersistenceID,
+		containerPath: frn.ContainerPath,
+	}
+
+	return acceptInfo
 }
 
 func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(sc *SchedulerCore, offer *mesos.Offer, executorAsk []*mesos.Resource, taskAsk []*mesos.Resource) *mesos.TaskInfo {

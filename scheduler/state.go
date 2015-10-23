@@ -14,6 +14,7 @@ import (
 
 type SchedulerState struct {
 	zkNode      *metadata_manager.ZkNode
+	MesosMaster string
 	FrameworkID *string
 	Clusters    map[string]*FrameworkRiakCluster
 }
