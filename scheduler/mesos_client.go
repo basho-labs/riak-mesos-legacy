@@ -1,38 +1,34 @@
 package scheduler
 
 // https://github.com/apache/mesos/blob/master/docs/scheduler-http-api.md#accept
+//TODO: add content type application/json to headers (Or try protobuf stuff)
+//TODO: add Accepts application/json to headers
+//TODO: add user / pass encoded as auth header
+//TODO: need to fix all the disk stuff, diskInfo?
 
 import (
 	"bytes"
 	json "encoding/json"
 	"fmt"
+	mesos "github.com/mesos/mesos-go/mesosproto"
 	"io"
 	"io/ioutil"
 	"net/http"
 )
 
-type AcceptOfferInfo struct {
-	frameworkID   string
-	offerID       string
-	cpus          float64
-	mem           float64
-	disk          float64
-	refuseSeconds float64
-	role          string
-	principal     string
-	persistenceID string
-	containerPath string
-}
-
 // MesosClient contains information common to all Mesos HTTP Server requests
 type MesosClient struct {
-	BaseURL string
+	baseURL       string
+	frameworkID   string
+	refuseSeconds float64
 }
 
 // NewMesosClient creates a client struct to be used for future calls
-func NewMesosClient(baseURL string) *MesosClient {
+func NewMesosClient(baseURL string, frameworkID string, refuseSeconds float64) *MesosClient {
 	c := &MesosClient{
-		BaseURL: baseURL,
+		baseURL:       baseURL,
+		frameworkID:   frameworkID,
+		refuseSeconds: refuseSeconds,
 	}
 
 	return c
@@ -109,14 +105,14 @@ func getResourceRequest(acceptInfo *AcceptOfferInfo) []Resource {
 	cpusObj.Name = "cpus"
 	cpusObj.Type = "SCALAR"
 	cpusObj.Scalar = Scalar{}
-	cpusObj.Scalar.Value = acceptInfo.cpus
+	cpusObj.Scalar.Value = acceptInfo.cpus + acceptInfo.ExecCpus
 	cpusObj.Role = acceptInfo.role
 	cpusObj.Reservation.Principal = acceptInfo.principal
 	memObj := Resource{}
 	memObj.Name = "mem"
 	memObj.Type = "SCALAR"
 	memObj.Scalar = Scalar{}
-	memObj.Scalar.Value = acceptInfo.mem
+	memObj.Scalar.Value = acceptInfo.mem + acceptInfo.execMem
 	memObj.Role = acceptInfo.role
 	memObj.Reservation.Principal = acceptInfo.principal
 	diskObj := Resource{}
@@ -155,101 +151,20 @@ func getCreateOperation(resources []Resource) AnyOperation {
 	return createOperation
 }
 
-func getAcceptMessage(acceptInfo *AcceptOfferInfo, operations []AnyOperation) AcceptMessage {
-	filterObj := Filter{}
-	filterObj.RefuseSeconds = acceptInfo.refuseSeconds
-	filters := []Filter{filterObj}
+func (client *MesosClient) getAcceptMessage(acceptInfo *AcceptOfferInfo, operations []*mesos.Offer_Operation) *mesos.Call {
+	frameworkId := *mesos.FrameworkID{
+		Value: client.frameworkID,
+	}
+	accept := *mesos.Call_Accept{
+		OfferIds:   []*mesos.OfferID{acceptInfo.offerID},
+		Operations: operations,
+		Filters:    &mesos.Filters{RefuseSeconds: proto.Float64(client.refuseSeconds)},
+	}
+	message := *mesos.Call{
+		FrameworkId: &frameworkId,
+		Type:        &mesos.Call_ACCEPT,
+		Accept:      &accept,
+	}
 
-	offerIDObj := OfferID{}
-	offerIDObj.Value = acceptInfo.offerID
-	offerIDs := []OfferID{offerIDObj}
-
-	acceptMessageObj := AcceptMessage{}
-	acceptMessageObj.FrameworkID = FrameworkID{}
-	acceptMessageObj.FrameworkID.Value = acceptInfo.frameworkID
-	acceptMessageObj.Type = "ACCEPT"
-	acceptMessageObj.Accept = Accept{}
-	acceptMessageObj.Accept.OfferIDs = offerIDs
-	acceptMessageObj.Accept.Operations = operations
-	acceptMessageObj.Accept.Filters = filters
-
-	return acceptMessageObj
-}
-
-//OfferID is the id for the offer being accepted
-type OfferID struct {
-	Value string `json:"value"`
-}
-
-//Scalar is a value type
-type Scalar struct {
-	Value float64 `json:"value"`
-}
-
-//Reservation contains the principal
-type Reservation struct {
-	Principal string `json:"principal"`
-}
-
-//Persistence is an ID to track a volume request
-type Persistence struct {
-	ID string `json:"id"`
-}
-
-//Volume contains the persistent volume path location and mode
-type Volume struct {
-	ContainerPath string `json:"container_path"`
-	Mode          string `json:"mode"`
-}
-
-//Disk is an optional part of a resource
-type Disk struct {
-	Persistence Persistence `json:"persistence"`
-	Volume      Volume      `json:"volume"`
-}
-
-//Resource is a cpu, mem, or disk definition
-type Resource struct {
-	Name        string      `json:"name"`
-	Type        string      `json:"type"`
-	Scalar      Scalar      `json:"scalar"`
-	Role        string      `json:"role"`
-	Reservation Reservation `json:"reservation"`
-	Disk        *Disk       `json:"disk"`
-}
-
-//Operation contains resources
-type Operation struct {
-	Resources []Resource `json:"resources"`
-}
-
-//AnyOperation lives in an AcceptMessage to reserve or create resources
-type AnyOperation struct {
-	Type    string     `json:"type"`
-	Reserve *Operation `json:"reserve"`
-	Create  *Operation `json:"create"`
-}
-
-//Filter lives in an AcceptMessage to give a refuse seconds argument
-type Filter struct {
-	RefuseSeconds float64 `json:"refuse_seconds"`
-}
-
-//Accept is the contents of an ACCEPT message
-type Accept struct {
-	OfferIDs   []OfferID      `json:"offer_ids"`
-	Operations []AnyOperation `json:"operations"`
-	Filters    []Filter       `json:"filters"`
-}
-
-//FrameworkID is a single value object
-type FrameworkID struct {
-	Value string `json:"value"`
-}
-
-//AcceptMessage is the top level message sent to reserve resources and create volumes
-type AcceptMessage struct {
-	FrameworkID FrameworkID `json:"framework_id"`
-	Type        string      `json:"type"`
-	Accept      Accept      `json:"accept"`
+	return message
 }

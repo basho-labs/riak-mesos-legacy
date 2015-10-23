@@ -8,6 +8,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/basho-labs/riak-mesos/cepmd/cepm"
+	"github.com/basho-labs/riak-mesos/common"
 	metamgr "github.com/basho-labs/riak-mesos/metadata_manager"
 	//rex "github.com/basho-labs/riak-mesos/riak_explorer"
 	"github.com/golang/protobuf/proto"
@@ -41,6 +42,7 @@ type SchedulerCore struct {
 	authProvider        string
 	mesosAuthPrincipal  string
 	mesosAuthSecretFile string
+	mesosHttpClient     *MesosClient
 }
 
 func NewSchedulerCore(
@@ -62,6 +64,8 @@ func NewSchedulerCore(
 
 	c := cepm.NewCPMd(0, mgr)
 	c.Background()
+
+	mesosHttpClient := NewMesosClient(ss.MesosMaster)
 
 	scheduler := &SchedulerCore{
 		lock:            &sync.Mutex{},
@@ -258,10 +262,43 @@ func (sc *SchedulerCore) ResourceOffers(driver sched.SchedulerDriver, offers []*
 		}
 	}
 
+	for _, offer := range offers {
+		for _, riakNode := range toBeScheduled {
+			// The state of the nodes will be modified inside the loop, so ignore starting nodes
+			if !riakNode.NeedsToBeScheduled() {
+				continue
+			}
+
+			// Someone has claimed this offer, was it me?
+			if common.ResourcesHaveReservations(offer.Resources) {
+				if riakNode.OfferCompatible(offer) {
+					// Assign the updated offer and make sure we still fit
+					applySuccess, offer = riakNode.ApplyOffer(offer)
+					if applySuccess {
+						// Launch
+
+					}
+				}
+				continue
+			}
+
+			// Fresh node, apply offer
+			if !riakNode.HasReservation() {
+				applySuccess, offer = riakNode.ApplyOffer(offer)
+				if applySuccess {
+					// Reserve
+					sc.mesosHttpClient.ReserveResourceAndCreateVolume(riakNode)
+				}
+			}
+		}
+	}
+
 	// Populate a mutable slice of offer resources
 	allResources := [][]*mesos.Resource{}
+	copiedResources := *[]mesos.Resource{}
 	for _, offer := range offers {
-		allResources = append(allResources, offer.Resources)
+		copy(copiedResources, offer.Resources)
+		allResources = append(allResources, copiedResources)
 	}
 
 	acceptedOffers, launchOffers, launchTasks, err := sc.spreadNodesAcrossOffers(offers, allResources, toBeScheduled, 0, 0, acceptedOffers, launchTasks)

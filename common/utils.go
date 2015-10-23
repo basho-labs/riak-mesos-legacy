@@ -1,50 +1,79 @@
 package common
 
 import (
+	"errors"
+	"fmt"
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	util "github.com/mesos/mesos-go/mesosutil"
 	"math/rand"
+	"os/exec"
+	"path/filepath"
 	"sort"
 	"time"
-	"path/filepath"
-	"os/exec"
-	"errors"
-	"fmt"
 )
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-// The new value for the resource, the ask, and whether or not the ask was accomodated - the ask may be nil if it wasn't accomodated
-type ResourceAsker (func([]*mesos.Resource) (remaining []*mesos.Resource, ask *mesos.Resource, success bool))
-type CombinedResourceAsker (func([]*mesos.Resource) (remaining []*mesos.Resource, executorAsk []*mesos.Resource, taskAsk []*mesos.Resource, success bool))
+func ApplyScalarResources(mutableResources []*mesos.Resource, cpus float64, mem float64, disk float64) []*mesos.Resource {
+	mutableResources = ApplyScalarResource(mutableResources, "cpus", cpus)
+	mutableResources = ApplyScalarResource(mutableResources, "mem", mem)
+	mutableResources = ApplyScalarResource(mutableResources, "disk", disk)
+	return mutableResources
+}
 
-func AskForScalar(resourceName string, askSize float64) ResourceAsker {
-	return func(resources []*mesos.Resource) ([]*mesos.Resource, *mesos.Resource, bool) {
-		newResources := make([]*mesos.Resource, len(resources))
-		copy(newResources, resources)
-		for idx, resource := range resources {
-			if resource.GetName() == resourceName && askSize <= resource.GetScalar().GetValue() {
-				newResources[idx] = util.NewScalarResource(resourceName, resource.GetScalar().GetValue()-askSize)
-				ask := util.NewScalarResource(resourceName, askSize)
-				return newResources, ask, true
-			}
-		}
-		return newResources, nil, false
+func ApplyScalarResource(mutableResources []*mesos.Resource, name string, value float64) []*mesos.Resource {
+	for _, resource := range util.FilterResources(mutableResources, func(res *mesos.Resource) bool { return res.GetName() == name }) {
+		resource.Scalar.Value = &value
 	}
-}
-func AskForCPU(cpuAsk float64) ResourceAsker {
-	return AskForScalar("cpus", cpuAsk)
+	return mutableResources
 }
 
-func AskForMemory(memory float64) ResourceAsker {
-	return AskForScalar("mem", memory)
+func ScalarResourcesWillFit(immutableResources []*mesos.Resource, cpus float64, mem float64, disk float64) bool {
+	if !ScalarResourceWillFit(immutableResources, "cpus", cpus) {
+		return false
+	}
+	if !ScalarResourceWillFit(immutableResources, "mem", mem) {
+		return false
+	}
+	if !ScalarResourceWillFit(immutableResources, "disk", disk) {
+		return false
+	}
 
+	return true
 }
 
-func AskForDisk(disk float64) ResourceAsker {
-	return AskForScalar("disk", disk)
+func ScalarResourceWillFit(immutableResources []*mesos.Resource, name string, value float64) bool {
+	for _, resource := range util.FilterResources(immutableResources, func(res *mesos.Resource) bool { return res.GetName() == name }) {
+		if resource.GetScalar().GetValue() < (value) {
+			return false
+		}
+	}
+	return true
+}
+
+func ResourcesHaveReservations(immutableResources []*mesos.Resource) {
+	if common.ResourceHasReservation(immutableResources, "cpus") &&
+		common.ResourceHasReservation(immutableResources, "mem") &&
+		common.ResourceHasReservation(immutableResources, "disk") {
+		return true
+	}
+
+	return false
+}
+
+func ResourceHasReservation(immutableResources []*mesos.Resource, name string) bool {
+	for _, resource := range util.FilterResources(immutableResources, func(res *mesos.Resource) bool { return res.GetName() == name }) {
+		if name == "disk" {
+			if resource.Disk != nil && resource.Reservation != nil {
+				return true
+			}
+		} else if resource.Reservation != nil
+			return true
+		}
+	}
+	return false
 }
 
 type intarray []int64
@@ -52,6 +81,8 @@ type intarray []int64
 func (a intarray) Len() int           { return len(a) }
 func (a intarray) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a intarray) Less(i, j int) bool { return a[i] < a[j] }
+
+type ResourceAsker (func([]*mesos.Resource) (remaining []*mesos.Resource, ask *mesos.Resource, success bool))
 
 // We assume the input is sorted
 func ArrayToRanges(ports []int64) []*mesos.Value_Range {

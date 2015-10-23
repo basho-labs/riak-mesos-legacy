@@ -2,10 +2,6 @@ package scheduler
 
 import (
 	"fmt"
-	"os"
-	"strconv"
-	"strings"
-
 	log "github.com/Sirupsen/logrus"
 	"github.com/basho-labs/riak-mesos/common"
 	rexclient "github.com/basho-labs/riak-mesos/riak_explorer/client"
@@ -14,7 +10,17 @@ import (
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	util "github.com/mesos/mesos-go/mesosutil"
 	"github.com/satori/go.uuid"
+	"os"
+	"strconv"
+	"strings"
 	"time"
+)
+
+const (
+	CPUS_PER_EXECUTOR = 0.1
+	MEM_PER_EXECUTOR  = 32
+	PORTS_PER_TASK    = 10
+	CONTAINER_PATH    = "data"
 )
 
 type FrameworkRiakNode struct {
@@ -27,35 +33,56 @@ type FrameworkRiakNode struct {
 	CurrentState     process_state.ProcessState
 	TaskStatus       *mesos.TaskStatus
 	Generation       int
-	LastTaskInfo     *mesos.TaskInfo
 	LastOfferUsed    *mesos.Offer
 	TaskData         common.TaskData
 	FrameworkName    string
 	ClusterName      string
+	FrameworkID      *string
+	Role             *string
+	Principal        *string
+	Cpus             float64
+	Mem              float64
+	Disk             float64
+	Ports            int
+	ExecCpus         float64
+	ExecMem          float64
 	PersistenceID    string
 	ContainerPath    string
-	TaskCPUs         float64
-	TaskMem          float64
-	TaskDisk         float64
-	ExecutorCPUs     float64
-	ExecutorMem      float64
 }
 
-func NewFrameworkRiakNode(frameworkName string, clusterName string, cpus float64, mem float64, disk float64) *FrameworkRiakNode {
+func NewFrameworkRiakNode(sc *SchedulerCore, clusterName string) *FrameworkRiakNode {
+	nodeCpusFloat, err := strconv.ParseFloat(sc.NodeCpus, 64)
+	if err != nil {
+		log.Panicf("Unable to determine node_cpus: %+v", err)
+	}
+	nodeMemFloat, err := strconv.ParseFloat(sc.NodeMem, 64)
+	if err != nil {
+		log.Panicf("Unable to determine node_mem: %+v", err)
+	}
+	nodeDiskFloat, err := strconv.ParseFloat(sc.NodeDisk, 64)
+	if err != nil {
+		log.Panicf("Unable to determine node_disk: %+v", err)
+	}
+
 	return &FrameworkRiakNode{
-		// We can assume this for now? I think
 		DestinationState: process_state.Started,
 		CurrentState:     process_state.Unknown,
 		Generation:       0,
 		reconciled:       false,
-		FrameworkName:    frameworkName,
+		FrameworkName:    &sc.schedulerState.FrameworkID,
+		FrameworkName:    sc.frameworkName,
+		Role:             sc.frameworkRole,
+		Principal:        sc.mesosAuthPrincipal,
 		UUID:             uuid.NewV4(),
 		ClusterName:      clusterName,
-		TaskCPUs:         cpus,
-		TaskMem:          mem,
-		TaskDisk:         disk,
-		ExecutorCPUs:     0.1,
-		ExecutorMem:      32,
+		Cpus:             nodeCpusFloat,
+		Mem:              nodeMemFloat,
+		Disk:             nodeDiskFloat,
+		Ports:            PORTS_PER_TASK,
+		ExecCpus:         CPUS_PER_EXECUTOR,
+		ExecMem:          MEM_PER_EXECUTOR,
+		PersistenceID:    uuid.NewV4().String(),
+		ContainerPath:    CONTAINER_PATH,
 	}
 }
 
@@ -83,6 +110,184 @@ func (frn *FrameworkRiakNode) NeedsToBeScheduled() bool {
 	log.Panicf("Hit unknown, Current State: (%v), Destination State: (%v)", frn.CurrentState, frn.DestinationState)
 	return false
 }
+
+func (frn *FrameworkRiakNode) GetExecutorResources() []*mesos.Resource {
+	return frn.GetReservedResources(frn.ExecCpus, frn.ExecMem, 0, 0)
+}
+
+func (frn *FrameworkRiakNode) GetTaskResources() []*mesos.Resource {
+	return frn.GetReservedResources(frn.Cpus, frn.Mem, frn.Disk, frn.Ports)
+}
+
+func (frn *FrameworkRiakNode) GetCombinedResources() []*mesos.Resource {
+	return frn.GetReservedResources(frn.Cpus+frn.ExecCpus, frn.Mem+frn.ExecMem, frn.Disk, frn.Ports)
+}
+
+func (frn *FrameworkRiakNode) GetReservedResources(cpusValue float64, memValue float64, diskValue float64, portsValue int) []*mesos.Resource {
+	resources := []*mesos.Resource{}
+
+	reservation := &mesos.Resource_ReservationInfo{}
+	if frn.Principal != nil {
+		reservation.Principal = frn.Principal
+	}
+
+	if cpusValue > 0 {
+		cpus := util.NewScalarResource("cpus", cpusValue)
+		cpus.Role = frn.Role
+		cpus.Reservation = reservation
+		resources = append(resources, cpus)
+	}
+
+	if memValue > 0 {
+		mem := util.NewScalarResource("mem", memValue)
+		mem.Role = frn.Role
+		mem.Reservation = reservation
+		resources = append(resources, mem)
+	}
+
+	if diskValue > 0 {
+		mode := mesos.Volume_RW
+		volume := &mesos.Volume{
+			ContainerPath: frn.AcceptOfferInfo.containerPath,
+			Mode:          &mode,
+		}
+		persistence := &mesos.Resource_DiskInfo_Persistence{
+			Id: frn.AcceptOfferInfo.persistenceID,
+		}
+		info := &mesos.Resource_DiskInfo{
+			Persistence: persistence,
+			Volume:      volume,
+		}
+		disk := util.NewScalarResource("disk", DISK_PER_TASK)
+		disk.Role = role
+		disk.Reservation = reservation
+		disk.Disk = info
+	}
+
+	return resources
+}
+
+func portIter(resources []*mesos.Resource) chan int64 {
+	ports := make(chan int64)
+	go func() {
+		defer close(ports)
+		for _, resource := range util.FilterResources(resources, func(res *mesos.Resource) bool { return res.GetName() == "ports" }) {
+			for _, port := range common.RangesToArray(resource.GetRanges().GetRange()) {
+				ports <- port
+			}
+		}
+	}()
+	return ports
+}
+
+func (frn *FrameworkRiakNode) ApplyOffer(mutableOffer *mesos.Offer) (bool, *mesos.Offer) {
+	if !common.ScalarResourcesWillFit(mutableOffer.Resources, frn.Cpus+frn.ExecCpus, frn.Mem+frn.ExecMem, frn.Disk) {
+		return false, mutableResources
+	}
+
+	mutableOffer.Resources = common.ApplyScalarResources(mutableOffer.Resources, frn.Cpus+frn.ExecCpus, frn.Mem+frn.ExecMem, frn.Disk)
+	frn.LastOfferUsed = offer
+	return true, mutableOffer
+}
+
+func (frn *FrameworkRiakNode) HasReservation() {
+	if frn.LastOfferUsed == nil {
+		return false
+	}
+
+	if common.ResourcesHaveReservations(frn.LastOfferUsed.Resources) {
+		return true
+	}
+
+	return false
+}
+
+func (frn *FrameworkRiakNode) OfferCompatible(immutableOffer *mesos.Offer) {
+	if immutableOffer.SlaveId != frn.LastOfferUsed.SlaveId {
+		return false
+	}
+	return true
+}
+
+func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(sc *SchedulerCore, offer *mesos.Offer, executorAsk []*mesos.Resource, taskAsk []*mesos.Resource) *mesos.TaskInfo {
+	// THIS IS A MUTATING CALL
+	if frn.CurrentState != process_state.Shutdown && frn.CurrentState != process_state.Failed && frn.CurrentState != process_state.Unknown {
+		log.Panicf("Trying to generate Task Info while node is up. ZK FRN State: %v", frn.CurrentState)
+	}
+	frn.Generation = frn.Generation + 1
+	frn.TaskStatus = nil
+	frn.CurrentState = process_state.Starting
+	frn.LastOfferUsed = offer
+
+	executorUris := []*mesos.CommandInfo_URI{
+		&mesos.CommandInfo_URI{
+			Value:      &(sc.schedulerHTTPServer.hostURI),
+			Executable: proto.Bool(true),
+		},
+	}
+
+	superChrootValue := true
+	if os.Getenv("USE_SUPER_CHROOT") == "false" {
+		superChrootValue = false
+	}
+
+	exec := &mesos.ExecutorInfo{
+		//No idea is this is the "right" way to do it, but I think so?
+		ExecutorId: util.NewExecutorID(frn.ExecutorID()),
+		Name:       proto.String("Executor (Go)"),
+		Source:     proto.String("Riak Mesos Framework (Go)"),
+		Command: &mesos.CommandInfo{
+			Value:     proto.String(sc.schedulerHTTPServer.executorName),
+			Uris:      executorUris,
+			Shell:     proto.Bool(false),
+			Arguments: []string{sc.schedulerHTTPServer.executorName, "-logtostderr=true", "-taskinfo", frn.CurrentID()},
+		},
+		Resources: executorAsk,
+	}
+	taskId := &mesos.TaskID{
+		Value: proto.String(frn.CurrentID()),
+	}
+
+	nodename := frn.CurrentID() + "@" + offer.GetHostname()
+
+	if !strings.Contains(offer.GetHostname(), ".") {
+		nodename = nodename + "."
+	}
+	ports := portIter(taskAsk)
+
+	taskData := common.TaskData{
+		FullyQualifiedNodeName: nodename,
+		Host:           offer.GetHostname(),
+		Zookeepers:     sc.zookeepers,
+		NodeID:         frn.UUID.String(),
+		FrameworkName:  sc.frameworkName,
+		URI:            sc.schedulerHTTPServer.GetURI(),
+		ClusterName:    frn.ClusterName,
+		UseSuperChroot: superChrootValue,
+		HTTPPort:       <-ports,
+		PBPort:         <-ports,
+		DisterlPort:    <-ports,
+	}
+	frn.TaskData = taskData
+
+	binTaskData, err := taskData.Serialize()
+
+	if err != nil {
+		log.Panic(err)
+	}
+
+	taskInfo := &mesos.TaskInfo{
+		Name:      proto.String(frn.CurrentID()),
+		TaskId:    taskId,
+		SlaveId:   offer.SlaveId,
+		Executor:  exec,
+		Resources: taskAsk,
+		Data:      binTaskData,
+	}
+
+	return taskInfo
+}
+
 func (frn *FrameworkRiakNode) CurrentID() string {
 	return fmt.Sprintf("%s-%s-%s-%d", frn.FrameworkName, frn.ClusterName, frn.UUID.String(), frn.Generation)
 }
@@ -193,6 +398,7 @@ func (frn *FrameworkRiakNode) handleStatusUpdate(sc *SchedulerCore, frc *Framewo
 		log.Fatal("Received unknown status update")
 	}
 }
+
 func (frn *FrameworkRiakNode) GetTaskStatus() *mesos.TaskStatus {
 	if frn.TaskStatus != nil {
 		return frn.TaskStatus
@@ -204,195 +410,4 @@ func (frn *FrameworkRiakNode) GetTaskStatus() *mesos.TaskStatus {
 		State:   &ts,
 		SlaveId: &mesos.SlaveID{Value: proto.String("")}, // Slave ID isn't required
 	}
-}
-
-func (frn *FrameworkRiakNode) GetExecutorAsks() []common.ResourceAsker {
-	return []common.ResourceAsker{common.AskForCPU(0.01), common.AskForMemory(32)}
-}
-
-func (frn *FrameworkRiakNode) GetAsks(nodeCpus float64, nodeMem float64, nodeDisk float64) []common.ResourceAsker {
-	// 10 for good measure
-	// Ports:
-	// -Protocol Buffers
-	// -HTTP
-	// 4-10 -- unknown, so far
-	// Potential:
-	// EPM
-
-	log.Infof("Creating Resource Asks for Riak Node: CPU: %+v, MEM: %+v, DISK: %+v.", nodeCpus, nodeMem, nodeDisk)
-
-	// nodeDisk unused until we can use DR/PV
-	return []common.ResourceAsker{common.AskForCPU(nodeCpus), common.AskForPorts(10), common.AskForMemory(nodeMem)}
-}
-
-func portIter(resources []*mesos.Resource) chan int64 {
-	ports := make(chan int64)
-	go func() {
-		defer close(ports)
-		for _, resource := range util.FilterResources(resources, func(res *mesos.Resource) bool { return res.GetName() == "ports" }) {
-			for _, port := range common.RangesToArray(resource.GetRanges().GetRange()) {
-				ports <- port
-			}
-		}
-	}()
-	return ports
-}
-
-func (frn *FrameworkRiakNode) GetCombinedAsk(sc *SchedulerCore) common.CombinedResourceAsker {
-	ret := func(offer []*mesos.Resource) ([]*mesos.Resource, []*mesos.Resource, []*mesos.Resource, bool) {
-		executorAsks := []*mesos.Resource{}
-		taskAsks := []*mesos.Resource{}
-
-		success := true
-		remaining := offer
-
-		nodeCpusFloat, err := strconv.ParseFloat(sc.NodeCpus, 64)
-		if err != nil {
-			log.Panicf("Unable to determine node_cpus: %+v", err)
-		}
-		nodeMemFloat, err := strconv.ParseFloat(sc.NodeMem, 64)
-		if err != nil {
-			log.Panicf("Unable to determine node_mem: %+v", err)
-		}
-		nodeDiskFloat, err := strconv.ParseFloat(sc.NodeDisk, 64)
-		if err != nil {
-			log.Panicf("Unable to determine node_disk: %+v", err)
-		}
-
-		for _, fun := range frn.GetAsks(nodeCpusFloat, nodeMemFloat, nodeDiskFloat) {
-			var newAsk *mesos.Resource
-			remaining, newAsk, success = fun(remaining)
-			taskAsks = append(taskAsks, newAsk)
-			if !success {
-				return offer, []*mesos.Resource{}, []*mesos.Resource{}, false
-			}
-		}
-		for _, fun := range frn.GetExecutorAsks() {
-			var newAsk *mesos.Resource
-			remaining, newAsk, success = fun(remaining)
-			executorAsks = append(executorAsks, newAsk)
-			if !success {
-				return offer, []*mesos.Resource{}, []*mesos.Resource{}, false
-			}
-		}
-		return remaining, executorAsks, taskAsks, success
-	}
-	return ret
-}
-
-func (frn *FrameworkRiakNode) PrepareForReservation(sc *SchedulerCore, offer *mesos.Offer, executorAsk []*mesos.Resource, taskAsk []*mesos.Resource) *AcceptOfferInfo {
-	var cpus float64 = 0
-	var mem float64 = 0
-	var disk float64 = 0
-
-	for _, resource := range util.FilterResources(executorAsk, func(res *mesos.Resource) bool { return res.GetName() == "cpus" }) {
-		cpus += resource.GetScalar().GetValue()
-	}
-	for _, resource := range util.FilterResources(executorAsk, func(res *mesos.Resource) bool { return res.GetName() == "mem" }) {
-		mem += resource.GetScalar().GetValue()
-	}
-	for _, resource := range util.FilterResources(taskAsk, func(res *mesos.Resource) bool { return res.GetName() == "cpus" }) {
-		cpus += resource.GetScalar().GetValue()
-	}
-	for _, resource := range util.FilterResources(taskAsk, func(res *mesos.Resource) bool { return res.GetName() == "mem" }) {
-		mem += resource.GetScalar().GetValue()
-	}
-	for _, resource := range util.FilterResources(taskAsk, func(res *mesos.Resource) bool { return res.GetName() == "disk" }) {
-		disk += resource.GetScalar().GetValue()
-	}
-
-	acceptInfo := &AcceptOfferInfo{
-		frameworkID:   *sc.schedulerState.FrameworkID,
-		offerID:       *offer.Id.Value,
-		cpus:          cpus,
-		mem:           mem,
-		disk:          disk,
-		refuseSeconds: 5,
-		role:          sc.frameworkRole,
-		principal:     sc.mesosAuthPrincipal,
-		persistenceID: frn.PersistenceID,
-		containerPath: frn.ContainerPath,
-	}
-
-	return acceptInfo
-}
-
-func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(sc *SchedulerCore, offer *mesos.Offer, executorAsk []*mesos.Resource, taskAsk []*mesos.Resource) *mesos.TaskInfo {
-	// THIS IS A MUTATING CALL
-	if frn.CurrentState != process_state.Shutdown && frn.CurrentState != process_state.Failed && frn.CurrentState != process_state.Unknown {
-		log.Panicf("Trying to generate Task Info while node is up. ZK FRN State: %v", frn.CurrentState)
-	}
-	frn.Generation = frn.Generation + 1
-	frn.TaskStatus = nil
-	frn.CurrentState = process_state.Starting
-	frn.LastOfferUsed = offer
-
-	executorUris := []*mesos.CommandInfo_URI{
-		&mesos.CommandInfo_URI{
-			Value:      &(sc.schedulerHTTPServer.hostURI),
-			Executable: proto.Bool(true),
-		},
-	}
-
-	superChrootValue := true
-	if os.Getenv("USE_SUPER_CHROOT") == "false" {
-		superChrootValue = false
-	}
-
-	exec := &mesos.ExecutorInfo{
-		//No idea is this is the "right" way to do it, but I think so?
-		ExecutorId: util.NewExecutorID(frn.ExecutorID()),
-		Name:       proto.String("Executor (Go)"),
-		Source:     proto.String("Riak Mesos Framework (Go)"),
-		Command: &mesos.CommandInfo{
-			Value:     proto.String(sc.schedulerHTTPServer.executorName),
-			Uris:      executorUris,
-			Shell:     proto.Bool(false),
-			Arguments: []string{sc.schedulerHTTPServer.executorName, "-logtostderr=true", "-taskinfo", frn.CurrentID()},
-		},
-		Resources: executorAsk,
-	}
-	taskId := &mesos.TaskID{
-		Value: proto.String(frn.CurrentID()),
-	}
-
-	nodename := frn.CurrentID() + "@" + offer.GetHostname()
-
-	if !strings.Contains(offer.GetHostname(), ".") {
-		nodename = nodename + "."
-	}
-	ports := portIter(taskAsk)
-
-	taskData := common.TaskData{
-		FullyQualifiedNodeName: nodename,
-		Host:           offer.GetHostname(),
-		Zookeepers:     sc.zookeepers,
-		NodeID:         frn.UUID.String(),
-		FrameworkName:  sc.frameworkName,
-		URI:            sc.schedulerHTTPServer.GetURI(),
-		ClusterName:    frn.ClusterName,
-		UseSuperChroot: superChrootValue,
-		HTTPPort:       <-ports,
-		PBPort:         <-ports,
-		DisterlPort:    <-ports,
-	}
-	frn.TaskData = taskData
-
-	binTaskData, err := taskData.Serialize()
-
-	if err != nil {
-		log.Panic(err)
-	}
-
-	taskInfo := &mesos.TaskInfo{
-		Name:      proto.String(frn.CurrentID()),
-		TaskId:    taskId,
-		SlaveId:   offer.SlaveId,
-		Executor:  exec,
-		Resources: taskAsk,
-		Data:      binTaskData,
-	}
-	frn.LastTaskInfo = taskInfo
-
-	return taskInfo
 }
