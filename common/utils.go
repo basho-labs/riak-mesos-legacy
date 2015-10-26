@@ -25,9 +25,20 @@ func ApplyScalarResources(mutableResources []*mesos.Resource, cpus float64, mem 
 
 func ApplyScalarResource(mutableResources []*mesos.Resource, name string, value float64) []*mesos.Resource {
 	for _, resource := range util.FilterResources(mutableResources, func(res *mesos.Resource) bool { return res.GetName() == name }) {
-		resource.Scalar.Value = &value
+		newValue := *resource.Scalar.Value - value
+		resource.Scalar.Value = &newValue
 	}
 	return mutableResources
+}
+
+func PortResourceWillFit(immutableResources []*mesos.Resource, portCount int) bool {
+	for _, resource := range util.FilterResources(immutableResources, func(res *mesos.Resource) bool { return res.GetName() == "ports" }) {
+		ports := RangesToArray(resource.GetRanges().GetRange())
+		if len(ports) < portCount {
+			return false
+		}
+	}
+	return true
 }
 
 func ScalarResourcesWillFit(immutableResources []*mesos.Resource, cpus float64, mem float64, disk float64) bool {
@@ -53,10 +64,10 @@ func ScalarResourceWillFit(immutableResources []*mesos.Resource, name string, va
 	return true
 }
 
-func ResourcesHaveReservations(immutableResources []*mesos.Resource) {
-	if common.ResourceHasReservation(immutableResources, "cpus") &&
-		common.ResourceHasReservation(immutableResources, "mem") &&
-		common.ResourceHasReservation(immutableResources, "disk") {
+func ResourcesHaveReservations(immutableResources []*mesos.Resource) bool {
+	if ResourceHasReservation(immutableResources, "cpus") &&
+		ResourceHasReservation(immutableResources, "mem") &&
+		ResourceHasReservation(immutableResources, "disk") {
 		return true
 	}
 
@@ -69,11 +80,28 @@ func ResourceHasReservation(immutableResources []*mesos.Resource, name string) b
 			if resource.Disk != nil && resource.Reservation != nil {
 				return true
 			}
-		} else if resource.Reservation != nil
+		} else if resource.Reservation != nil {
 			return true
 		}
 	}
 	return false
+}
+
+func CreatePortsResourceFromResources(immutableResources []*mesos.Resource, portCount int) *mesos.Resource {
+	ret := &mesos.Resource{}
+
+	for _, resource := range util.FilterResources(immutableResources, func(res *mesos.Resource) bool { return res.GetName() == "ports" }) {
+		ports := RangesToArray(resource.GetRanges().GetRange())
+		sliceLoc := 0
+		if len(ports)-portCount > 0 {
+			sliceLoc = rand.Intn(len(ports) - portCount)
+		}
+		takingPorts := make([]int64, portCount)
+		copy(takingPorts, ports[sliceLoc:(sliceLoc+portCount)])
+		ret = util.NewRangesResource("ports", ArrayToRanges(takingPorts))
+	}
+
+	return ret
 }
 
 type intarray []int64

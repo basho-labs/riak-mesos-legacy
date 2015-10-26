@@ -35,9 +35,10 @@ func NewMesosClient(baseURL string, frameworkID string, refuseSeconds float64) *
 }
 
 //ReserveResourceAndCreateVolume attempts to reserve resources from an offer
-func (client *MesosClient) ReserveResourceAndCreateVolume(acceptInfo *AcceptOfferInfo) (bool, error) {
-	resources := getResourceRequest(acceptInfo)
+func (client *MesosClient) ReserveResourceAndCreateVolume(riakNode *FrameworkRiakNode) (bool, error) {
+	resources := riakNode.GetCombinedResources()
 
+	//TODO: Fix these functions to create protobuf versions and then fix launch tasks stuff
 	createOperation := getCreateOperation(resources)
 	reserveOperation := getReserveOperation(resources)
 	operations := []AnyOperation{reserveOperation, createOperation}

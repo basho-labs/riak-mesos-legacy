@@ -112,7 +112,7 @@ func (frn *FrameworkRiakNode) NeedsToBeScheduled() bool {
 }
 
 func (frn *FrameworkRiakNode) GetExecutorResources() []*mesos.Resource {
-	return frn.GetReservedResources(frn.ExecCpus, frn.ExecMem, 0, 0)
+	return frn.GetReservedResources(nil, frn.ExecCpus, frn.ExecMem, 0, 0)
 }
 
 func (frn *FrameworkRiakNode) GetTaskResources() []*mesos.Resource {
@@ -162,6 +162,12 @@ func (frn *FrameworkRiakNode) GetReservedResources(cpusValue float64, memValue f
 		disk.Role = role
 		disk.Reservation = reservation
 		disk.Disk = info
+		resources = append(resources, disk)
+	}
+
+	if portsValue > 0 {
+		ports := common.CreatePortsResourceFromResources(frn.LastOfferUsed.Resources, portsValue)
+		resources = append(resources, ports)
 	}
 
 	return resources
@@ -181,13 +187,27 @@ func portIter(resources []*mesos.Resource) chan int64 {
 }
 
 func (frn *FrameworkRiakNode) ApplyOffer(mutableOffer *mesos.Offer) (bool, *mesos.Offer) {
-	if !common.ScalarResourcesWillFit(mutableOffer.Resources, frn.Cpus+frn.ExecCpus, frn.Mem+frn.ExecMem, frn.Disk) {
+	if !common.ScalarResourcesWillFit(mutableOffer.Resources, frn.Cpus+frn.ExecCpus, frn.Mem+frn.ExecMem, frn.Disk) ||
+		!common.PortResourceWillFit(frn.Ports) {
 		return false, mutableResources
 	}
 
 	mutableOffer.Resources = common.ApplyScalarResources(mutableOffer.Resources, frn.Cpus+frn.ExecCpus, frn.Mem+frn.ExecMem, frn.Disk)
 	frn.LastOfferUsed = offer
+	frn.CurrentState = process_state.ReservationRequested
 	return true, mutableOffer
+}
+
+func (frn *FrameworkRiakNode) HasRequestedReservation() {
+	if frn.LastOfferUsed == nil {
+		return false
+	}
+
+	if frn.CurrentState == process_state.ReservationRequested {
+		return true
+	}
+
+	return false
 }
 
 func (frn *FrameworkRiakNode) HasReservation() {
