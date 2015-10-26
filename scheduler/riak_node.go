@@ -37,7 +37,6 @@ type FrameworkRiakNode struct {
 	TaskData         common.TaskData
 	FrameworkName    string
 	ClusterName      string
-	FrameworkID      *string
 	Role             *string
 	Principal        *string
 	Cpus             float64
@@ -69,10 +68,9 @@ func NewFrameworkRiakNode(sc *SchedulerCore, clusterName string) *FrameworkRiakN
 		CurrentState:     process_state.Unknown,
 		Generation:       0,
 		reconciled:       false,
-		FrameworkName:    &sc.schedulerState.FrameworkID,
 		FrameworkName:    sc.frameworkName,
-		Role:             sc.frameworkRole,
-		Principal:        sc.mesosAuthPrincipal,
+		Role:             &sc.frameworkRole,
+		Principal:        &sc.mesosAuthPrincipal,
 		UUID:             uuid.NewV4(),
 		ClusterName:      clusterName,
 		Cpus:             nodeCpusFloat,
@@ -97,7 +95,9 @@ func (frn *FrameworkRiakNode) NeedsToBeScheduled() bool {
 			case process_state.Started:
 				return false
 			case process_state.Unknown:
-				return false
+				return true
+			case process_state.ReservationRequested:
+				return true
 			case process_state.Starting:
 				return false
 			case process_state.Shutdown:
@@ -112,7 +112,7 @@ func (frn *FrameworkRiakNode) NeedsToBeScheduled() bool {
 }
 
 func (frn *FrameworkRiakNode) GetExecutorResources() []*mesos.Resource {
-	return frn.GetReservedResources(nil, frn.ExecCpus, frn.ExecMem, 0, 0)
+	return frn.GetReservedResources(frn.ExecCpus, frn.ExecMem, 0, 0)
 }
 
 func (frn *FrameworkRiakNode) GetTaskResources() []*mesos.Resource {
@@ -148,18 +148,18 @@ func (frn *FrameworkRiakNode) GetReservedResources(cpusValue float64, memValue f
 	if diskValue > 0 {
 		mode := mesos.Volume_RW
 		volume := &mesos.Volume{
-			ContainerPath: frn.AcceptOfferInfo.containerPath,
+			ContainerPath: &frn.ContainerPath,
 			Mode:          &mode,
 		}
 		persistence := &mesos.Resource_DiskInfo_Persistence{
-			Id: frn.AcceptOfferInfo.persistenceID,
+			Id: &frn.PersistenceID,
 		}
 		info := &mesos.Resource_DiskInfo{
 			Persistence: persistence,
 			Volume:      volume,
 		}
-		disk := util.NewScalarResource("disk", DISK_PER_TASK)
-		disk.Role = role
+		disk := util.NewScalarResource("disk", diskValue)
+		disk.Role = frn.Role
 		disk.Reservation = reservation
 		disk.Disk = info
 		resources = append(resources, disk)
@@ -188,17 +188,17 @@ func portIter(resources []*mesos.Resource) chan int64 {
 
 func (frn *FrameworkRiakNode) ApplyOffer(mutableOffer *mesos.Offer) (bool, *mesos.Offer) {
 	if !common.ScalarResourcesWillFit(mutableOffer.Resources, frn.Cpus+frn.ExecCpus, frn.Mem+frn.ExecMem, frn.Disk) ||
-		!common.PortResourceWillFit(frn.Ports) {
-		return false, mutableResources
+		!common.PortResourceWillFit(mutableOffer.Resources, frn.Ports) {
+		return false, mutableOffer
 	}
 
 	mutableOffer.Resources = common.ApplyScalarResources(mutableOffer.Resources, frn.Cpus+frn.ExecCpus, frn.Mem+frn.ExecMem, frn.Disk)
-	frn.LastOfferUsed = offer
+	frn.LastOfferUsed = mutableOffer
 	frn.CurrentState = process_state.ReservationRequested
 	return true, mutableOffer
 }
 
-func (frn *FrameworkRiakNode) HasRequestedReservation() {
+func (frn *FrameworkRiakNode) HasRequestedReservation() bool {
 	if frn.LastOfferUsed == nil {
 		return false
 	}
@@ -210,7 +210,7 @@ func (frn *FrameworkRiakNode) HasRequestedReservation() {
 	return false
 }
 
-func (frn *FrameworkRiakNode) HasReservation() {
+func (frn *FrameworkRiakNode) HasReservation() bool {
 	if frn.LastOfferUsed == nil {
 		return false
 	}
@@ -222,14 +222,14 @@ func (frn *FrameworkRiakNode) HasReservation() {
 	return false
 }
 
-func (frn *FrameworkRiakNode) OfferCompatible(immutableOffer *mesos.Offer) {
+func (frn *FrameworkRiakNode) OfferCompatible(immutableOffer *mesos.Offer) bool {
 	if immutableOffer.SlaveId != frn.LastOfferUsed.SlaveId {
 		return false
 	}
 	return true
 }
 
-func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(sc *SchedulerCore, offer *mesos.Offer, executorAsk []*mesos.Resource, taskAsk []*mesos.Resource) *mesos.TaskInfo {
+func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(sc *SchedulerCore) *mesos.TaskInfo {
 	// THIS IS A MUTATING CALL
 	if frn.CurrentState != process_state.Shutdown && frn.CurrentState != process_state.Failed && frn.CurrentState != process_state.Unknown {
 		log.Panicf("Trying to generate Task Info while node is up. ZK FRN State: %v", frn.CurrentState)
@@ -237,7 +237,10 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(sc *SchedulerCor
 	frn.Generation = frn.Generation + 1
 	frn.TaskStatus = nil
 	frn.CurrentState = process_state.Starting
-	frn.LastOfferUsed = offer
+
+	offer := frn.LastOfferUsed
+	executorAsk := frn.GetExecutorResources()
+	taskAsk := frn.GetTaskResources()
 
 	executorUris := []*mesos.CommandInfo_URI{
 		&mesos.CommandInfo_URI{

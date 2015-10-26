@@ -10,10 +10,10 @@ type ProcessState int
 // Also, never retire an enum, otherwise legacy JSON may fail to deserialize properly
 const (
 	Unknown ProcessState = iota
-	ReservationRequested
 	Starting
 	Started
 	ShuttingDown
 	Shutdown
 	Failed
+	ReservationRequested
 )
