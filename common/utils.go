@@ -104,6 +104,16 @@ func CreatePortsResourceFromResources(immutableResources []*mesos.Resource, port
 	return ret
 }
 
+func RemoveReservations(resources []*mesos.Resource) []*mesos.Resource {
+	for _, resource := range resources {
+		resource.Reservation = nil
+		resource.Disk = nil
+		resource.Role = nil
+	}
+
+	return resources
+}
+
 type intarray []int64
 
 func (a intarray) Len() int           { return len(a) }

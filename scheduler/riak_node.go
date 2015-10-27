@@ -189,6 +189,7 @@ func portIter(resources []*mesos.Resource) chan int64 {
 func (frn *FrameworkRiakNode) ApplyOffer(mutableOffer *mesos.Offer) (bool, *mesos.Offer) {
 	if !common.ScalarResourcesWillFit(mutableOffer.Resources, frn.Cpus+frn.ExecCpus, frn.Mem+frn.ExecMem, frn.Disk) ||
 		!common.PortResourceWillFit(mutableOffer.Resources, frn.Ports) {
+		log.Info("Attempted to apply offer but offer does not have enough capacity")
 		return false, mutableOffer
 	}
 
@@ -231,7 +232,7 @@ func (frn *FrameworkRiakNode) OfferCompatible(immutableOffer *mesos.Offer) bool 
 
 func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(sc *SchedulerCore) *mesos.TaskInfo {
 	// THIS IS A MUTATING CALL
-	if frn.CurrentState != process_state.Shutdown && frn.CurrentState != process_state.Failed && frn.CurrentState != process_state.Unknown {
+	if frn.CurrentState != process_state.Shutdown && frn.CurrentState != process_state.Failed && frn.CurrentState != process_state.Unknown && frn.CurrentState != process_state.ReservationRequested {
 		log.Panicf("Trying to generate Task Info while node is up. ZK FRN State: %v", frn.CurrentState)
 	}
 	frn.Generation = frn.Generation + 1
@@ -241,6 +242,11 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(sc *SchedulerCor
 	offer := frn.LastOfferUsed
 	executorAsk := frn.GetExecutorResources()
 	taskAsk := frn.GetTaskResources()
+
+	if sc.compatibilityMode {
+		executorAsk = common.RemoveReservations(executorAsk)
+		taskAsk = common.RemoveReservations(taskAsk)
+	}
 
 	executorUris := []*mesos.CommandInfo_URI{
 		&mesos.CommandInfo_URI{
