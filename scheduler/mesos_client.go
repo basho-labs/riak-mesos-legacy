@@ -12,6 +12,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
 	mesos "github.com/mesos/mesos-go/mesosproto"
+	util "github.com/mesos/mesos-go/mesosutil"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -35,34 +36,62 @@ func NewMesosClient(baseURL string, frameworkID *string, refuseSeconds float64) 
 	return c
 }
 
-//ReserveResourceAndCreateVolume attempts to reserve resources from an offer
-func (client *MesosClient) ReserveResourceAndCreateVolume(riakNode *FrameworkRiakNode) (bool, error) {
-	resources := riakNode.GetCombinedResources()
+//UnreserveResourceAndDestroyVolume attempts to unreserve resources from an offer
+func (client *MesosClient) UnreserveResourceAndDestroyVolume(offer *mesos.Offer) error {
+	destroyOperation := getDestroyOperation(offer.Resources)
+	unreserveOperation := getUnreserveOperation(offer.Resources)
 
-	createOperation := getCreateOperation(resources)
-	reserveOperation := getReserveOperation(resources)
-	operations := []*mesos.Offer_Operation{reserveOperation, createOperation}
+	operations := []*mesos.Offer_Operation{destroyOperation, unreserveOperation}
 
-	acceptMessageObj := client.getAcceptMessage(riakNode.LastOfferUsed.Id, operations)
+	acceptMessageObj := client.getAcceptMessage(offer.Id, operations)
 	acceptMessageBytes, _ := proto.Marshal(acceptMessageObj)
 
-	// acceptMessageBytes, _ := json.Marshal(acceptMessageObj)
-	// acceptMessageJSON := string(acceptMessageBytes)
-
-	log.Infof("Sending reserve / create operations. Client: %+v, Message: %+v, RiakNode: %+v.", client, acceptMessageObj, riakNode)
+	log.Infof("Sending destroy / unreserve operations. Client: %+v, Message: %+v.", client, acceptMessageObj)
 
 	code, body, err := client.doPostWithData("api/v1/scheduler", bytes.NewReader(acceptMessageBytes))
 
 	if err != nil {
-		return false, err
+		return err
 	}
 	if code != 202 {
-		return false, fmt.Errorf("Unable to reserve resources and create volume, code: %+v, response body: %+v", code, body)
+		return fmt.Errorf("Unable to destroy volume and unreserve resources, code: %+v, response body: %+v", code, body)
 	}
-	return true, nil
+	return nil
 }
 
-func getReserveOperation(reservations []*mesos.Resource) *mesos.Offer_Operation {
+//ReserveResourceAndCreateVolume attempts to reserve resources from an offer
+func (client *MesosClient) ReserveResourceAndCreateVolume(offerID *mesos.OfferID, reserveResources []*mesos.Resource, createResources []*mesos.Resource) error {
+	reserveOperation := getReserveOperation(reserveResources)
+	createOperation := getCreateOperation(createResources)
+
+	operations := []*mesos.Offer_Operation{reserveOperation, createOperation}
+
+	acceptMessageObj := client.getAcceptMessage(offerID, operations)
+	acceptMessageBytes, _ := proto.Marshal(acceptMessageObj)
+
+	log.Infof("Sending reserve / create operations. Client: %+v, Message: %+v.", client, acceptMessageObj)
+
+	code, body, err := client.doPostWithData("api/v1/scheduler", bytes.NewReader(acceptMessageBytes))
+
+	if err != nil {
+		return err
+	}
+	if code != 202 {
+		return fmt.Errorf("Unable to reserve resources and create volume, code: %+v, response body: %+v", code, body)
+	}
+	return nil
+}
+
+func getReserveOperation(resources []*mesos.Resource) *mesos.Offer_Operation {
+	// Make sure we're only sending what can be reserved
+	var reservations []*mesos.Resource
+	for _, resource := range util.FilterResources(resources, func(res *mesos.Resource) bool { return res.Reservation != nil }) {
+		if resource.GetName() == "disk" {
+			resource.Disk = nil
+		}
+		reservations = append(reservations, resource)
+	}
+
 	reserve := &mesos.Offer_Operation_Reserve{
 		Resources: reservations,
 	}
@@ -75,7 +104,35 @@ func getReserveOperation(reservations []*mesos.Resource) *mesos.Offer_Operation 
 	return operation
 }
 
-func getCreateOperation(volumes []*mesos.Resource) *mesos.Offer_Operation {
+func getUnreserveOperation(reservations []*mesos.Resource) *mesos.Offer_Operation {
+	// Make sure we're only sending what can be unreserved
+	var unreservations []*mesos.Resource
+	for _, resource := range util.FilterResources(reservations, func(res *mesos.Resource) bool { return res.Reservation != nil }) {
+		if resource.GetName() == "disk" {
+			resource.Disk = nil
+		}
+		unreservations = append(unreservations, resource)
+	}
+
+	unreserve := &mesos.Offer_Operation_Unreserve{
+		Resources: unreservations,
+	}
+	operationType := mesos.Offer_Operation_UNRESERVE
+	operation := &mesos.Offer_Operation{
+		Type:      &operationType,
+		Unreserve: unreserve,
+	}
+
+	return operation
+}
+
+func getCreateOperation(resources []*mesos.Resource) *mesos.Offer_Operation {
+	// Make sure we're only sending the disk portion
+	var volumes []*mesos.Resource
+	for _, resource := range util.FilterResources(resources, func(res *mesos.Resource) bool { return res.GetName() == "disk" }) {
+		volumes = append(volumes, resource)
+	}
+
 	create := &mesos.Offer_Operation_Create{
 		Volumes: volumes,
 	}
@@ -83,6 +140,25 @@ func getCreateOperation(volumes []*mesos.Resource) *mesos.Offer_Operation {
 	operation := &mesos.Offer_Operation{
 		Type:   &operationType,
 		Create: create,
+	}
+
+	return operation
+}
+
+func getDestroyOperation(resources []*mesos.Resource) *mesos.Offer_Operation {
+	// Make sure we're only sending the disk portion
+	var volumes []*mesos.Resource
+	for _, resource := range util.FilterResources(resources, func(res *mesos.Resource) bool { return res.Reservation != nil && res.GetName() == "disk" }) {
+		volumes = append(volumes, resource)
+	}
+
+	destroy := &mesos.Offer_Operation_Destroy{
+		Volumes: volumes,
+	}
+	operationType := mesos.Offer_Operation_DESTROY
+	operation := &mesos.Offer_Operation{
+		Type:    &operationType,
+		Destroy: destroy,
 	}
 
 	return operation

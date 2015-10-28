@@ -16,11 +16,21 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-func ApplyScalarResources(mutableResources []*mesos.Resource, cpus float64, mem float64, disk float64) []*mesos.Resource {
+func ApplyScalarResources(mutableResources []*mesos.Resource, cpus float64, mem float64, disk float64, ports int) []*mesos.Resource) {
+	var extractedPorts *mesos.Resource
 	mutableResources = ApplyScalarResource(mutableResources, "cpus", cpus)
 	mutableResources = ApplyScalarResource(mutableResources, "mem", mem)
 	mutableResources = ApplyScalarResource(mutableResources, "disk", disk)
 	return mutableResources
+}
+
+func ApplyRangesResource(mutableResources []*mesos.Resource, portCount int) ([]*mesos.Resource, *mesos.Resource) {
+	leftoverPorts, extractedPorts := CreatePortsResourceFromResources(mutableResources, portCount)
+
+	for idx := range util.FilterResources(mutableResources, func(res *mesos.Resource) bool { return res.GetName() == "ports" }) {
+		mutableResources[idx] = leftoverPorts
+	}
+	return mutableResources, extractedPorts
 }
 
 func ApplyScalarResource(mutableResources []*mesos.Resource, name string, value float64) []*mesos.Resource {
@@ -87,21 +97,28 @@ func ResourceHasReservation(immutableResources []*mesos.Resource, name string) b
 	return false
 }
 
-func CreatePortsResourceFromResources(immutableResources []*mesos.Resource, portCount int) *mesos.Resource {
-	ret := &mesos.Resource{}
+func CreatePortsResourceFromResources(immutableResources []*mesos.Resource, portCount int) (*mesos.Resource, *mesos.Resource) {
+	leftoverPortsResource := &mesos.Resource{}
+	ask := &mesos.Resource{}
 
 	for _, resource := range util.FilterResources(immutableResources, func(res *mesos.Resource) bool { return res.GetName() == "ports" }) {
 		ports := RangesToArray(resource.GetRanges().GetRange())
+
 		sliceLoc := 0
 		if len(ports)-portCount > 0 {
 			sliceLoc = rand.Intn(len(ports) - portCount)
 		}
 		takingPorts := make([]int64, portCount)
 		copy(takingPorts, ports[sliceLoc:(sliceLoc+portCount)])
-		ret = util.NewRangesResource("ports", ArrayToRanges(takingPorts))
+		leavingPorts := make([]int64, len(ports)-portCount)
+		copy(leavingPorts, ports[:sliceLoc])
+		copy(leavingPorts[sliceLoc:], ports[(sliceLoc+portCount):])
+		leftoverPortsResource = util.NewRangesResource("ports", ArrayToRanges(leavingPorts))
+		ask := util.NewRangesResource("ports", ArrayToRanges(takingPorts))
+		return leftoverPortsResource, ask
 	}
 
-	return ret
+	return leftoverPortsResource, ask
 }
 
 func RemoveReservations(resources []*mesos.Resource) []*mesos.Resource {
@@ -154,39 +171,6 @@ func RangesToArray(ranges []*mesos.Value_Range) []int64 {
 		array = append(array, temp...)
 	}
 	return array
-}
-
-func AskForPorts(portCount int) ResourceAsker {
-	ret := func(resources []*mesos.Resource) ([]*mesos.Resource, *mesos.Resource, bool) {
-		newResources := make([]*mesos.Resource, len(resources))
-		copy(newResources, resources)
-		for idx, resource := range resources {
-			if resource.GetName() == "ports" {
-				ports := RangesToArray(resource.GetRanges().GetRange())
-
-				// Now we have to see if there are N ports
-				if len(ports) >= portCount {
-					var sliceLoc int
-					// Calculate the slice where I'm taking ports:
-					if len(ports)-portCount == 0 {
-						sliceLoc = 0
-					} else {
-						sliceLoc = rand.Intn(len(ports) - portCount)
-					}
-					takingPorts := make([]int64, portCount)
-					copy(takingPorts, ports[sliceLoc:(sliceLoc+portCount)])
-					leavingPorts := make([]int64, len(ports)-portCount)
-					copy(leavingPorts, ports[:sliceLoc])
-					copy(leavingPorts[sliceLoc:], ports[(sliceLoc+portCount):])
-					newResources[idx] = util.NewRangesResource("ports", ArrayToRanges(leavingPorts))
-					ask := util.NewRangesResource("ports", ArrayToRanges(takingPorts))
-					return newResources, ask, true
-				}
-			}
-		}
-		return resources, nil, false
-	}
-	return ret
 }
 
 func KillEPMD(dir string) error {

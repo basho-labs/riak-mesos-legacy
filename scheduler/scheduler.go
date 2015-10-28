@@ -66,20 +66,23 @@ func NewSchedulerCore(
 	c.Background()
 
 	scheduler := &SchedulerCore{
-		lock:              &sync.Mutex{},
-		schedulerIPAddr:   schedulerIPAddr,
-		mgr:               mgr,
-		frnDict:           make(map[string]*FrameworkRiakNode),
-		user:              user,
-		zookeepers:        zookeepers,
-		cepm:              c,
-		frameworkName:     frameworkName,
-		frameworkRole:     frameworkRole,
-		NodeCpus:          nodeCpus,
-		NodeMem:           nodeMem,
-		NodeDisk:          nodeDisk,
-		schedulerState:    ss,
-		compatibilityMode: false,
+		lock:                &sync.Mutex{},
+		schedulerIPAddr:     schedulerIPAddr,
+		mgr:                 mgr,
+		frnDict:             make(map[string]*FrameworkRiakNode),
+		user:                user,
+		zookeepers:          zookeepers,
+		cepm:                c,
+		frameworkName:       frameworkName,
+		frameworkRole:       frameworkRole,
+		NodeCpus:            nodeCpus,
+		NodeMem:             nodeMem,
+		NodeDisk:            nodeDisk,
+		schedulerState:      ss,
+		compatibilityMode:   false,
+		authProvider:        authProvider,
+		mesosAuthPrincipal:  mesosAuthPrincipal,
+		mesosAuthSecretFile: mesosAuthSecretFile,
 	}
 	scheduler.schedulerHTTPServer = ServeExecutorArtifact(scheduler, schedulerHostname)
 	return scheduler
@@ -115,6 +118,8 @@ func (sc *SchedulerCore) Run(mesosMaster string) {
 	cred := (*mesos.Credential)(nil)
 	if sc.mesosAuthPrincipal != "" {
 		fwinfo.Principal = proto.String(sc.mesosAuthPrincipal)
+	}
+	if sc.mesosAuthSecretFile != "" && sc.mesosAuthPrincipal != "" {
 		secret, err := ioutil.ReadFile(sc.mesosAuthSecretFile)
 		if err != nil {
 			log.Fatal(err)
@@ -136,7 +141,7 @@ func (sc *SchedulerCore) Run(mesosMaster string) {
 		config.BindingAddress = parseIP(sc.schedulerIPAddr)
 	}
 
-	if sc.mesosAuthPrincipal != "" {
+	if sc.authProvider != "" && sc.mesosAuthPrincipal != "" {
 		config.WithAuthContext = func(ctx context.Context) context.Context {
 			ctx = auth.WithLoginProvider(ctx, sc.authProvider)
 			if sc.schedulerIPAddr != "" {
@@ -202,16 +207,18 @@ func FindNodeForOffer(offer *mesos.Offer, nodes []*FrameworkRiakNode) (*Framewor
 	return nil, nodes
 }
 
-func FindNodeForReservation(offerWithReservation *mesos.Offer, nodes []*FrameworkRiakNode) (*FrameworkRiakNode, []*FrameworkRiakNode) {
+func FindNodeForReservation(offerWithReservation *mesos.Offer, nodes []*FrameworkRiakNode, offersToUnreserve map[string]bool) (*FrameworkRiakNode, []*FrameworkRiakNode, map[string]bool) {
 	for _, riakNode := range nodes {
 		if riakNode.HasRequestedReservation() && riakNode.OfferCompatible(offerWithReservation) {
 			log.Infof("Found an offer with a reservation for a node. Offer: %+v, Node: %+v", offerWithReservation, riakNode)
-			return riakNode, nodes
+			return riakNode, nodes, offersToUnreserve
 		}
 	}
 
-	log.Warnf("Found an offer with a reservation, but no nodes were compatible with it. Offer: %+v, Nodes: %+v", offerWithReservation, nodes)
-	return nil, nodes
+	offersToUnreserve[*offerWithReservation.Id.Value] = true
+
+	log.Warnf("Found an offer with a reservation, but no nodes were compatible with it. Unreserving. Offer: %+v, Nodes: %+v", offerWithReservation, nodes)
+	return nil, nodes, offersToUnreserve
 }
 
 func FindNodeForOfferCompatibilityMode(offer *mesos.Offer, nodes []*FrameworkRiakNode) (*FrameworkRiakNode, []*FrameworkRiakNode) {
@@ -247,6 +254,7 @@ func (sc *SchedulerCore) ResourceOffers(driver sched.SchedulerDriver, offers []*
 	launchTasks := make(map[string][]*mesos.TaskInfo)
 	nodesWithAcceptedOffers := make(map[string][]*FrameworkRiakNode)
 	toBeScheduled := []*FrameworkRiakNode{}
+	offersToUnreserve := make(map[string]bool)
 
 	// Find nodes which need to be scheduled
 	for _, cluster := range sc.schedulerState.Clusters {
@@ -276,10 +284,10 @@ func (sc *SchedulerCore) ResourceOffers(driver sched.SchedulerDriver, offers []*
 			}
 			continue
 		}
-		// Someone has claimed this offer
+		// Someone has claimed part of this offer, deal with that first
 		if common.ResourcesHaveReservations(offer.Resources) {
 			var riakNode *FrameworkRiakNode
-			riakNode, toBeScheduled = FindNodeForReservation(offer, toBeScheduled)
+			riakNode, toBeScheduled, offersToUnreserve = FindNodeForReservation(offer, toBeScheduled, offersToUnreserve)
 			if riakNode != nil {
 				// Assign the updated offer and make sure we still fit
 				var applySuccess bool
@@ -308,46 +316,58 @@ func (sc *SchedulerCore) ResourceOffers(driver sched.SchedulerDriver, offers []*
 
 	// Attempt to reserve resources and/or launch nodes
 	for _, offer := range offers {
-		tasks := launchTasks[*offer.Id.Value]
 		nodesToReserve := nodesWithAcceptedOffers[*offer.Id.Value]
+		unreserveThisOffer := offersToUnreserve[*offer.Id.Value]
 
-		if nodesToReserve != nil {
-			log.Infof("Resource Offers: In reserve loop, currently on offerId: %+v, tasks for offer: %+v", *offer.Id.Value, tasks)
+		if unreserveThisOffer {
+			log.Infof("Resource Offers: In unreserve loop, currently on offerId: %+v", *offer.Id.Value)
+			mesosHttpClient := NewMesosClient(sc.schedulerState.MesosMaster, sc.schedulerState.FrameworkID, OFFER_INTERVAL)
+			//Maybe target the specific persitenceID or something?
+			err := mesosHttpClient.UnreserveResourceAndDestroyVolume(offer)
+			if err != nil {
+				log.Warnf("Failed to destroy volumes / unreserve resources. Error: %+v, Offer: %+v", err, offer)
+			}
+		} else if nodesToReserve != nil {
+			log.Infof("Resource Offers: In reserve loop, currently on offerId: %+v", *offer.Id.Value)
 			// Note, there should only ever be one node or one task per offer id
 			for _, riakNode := range nodesToReserve {
 				mesosHttpClient := NewMesosClient(sc.schedulerState.MesosMaster, sc.schedulerState.FrameworkID, OFFER_INTERVAL)
-				reserveSuccess, err := mesosHttpClient.ReserveResourceAndCreateVolume(riakNode)
-				if !reserveSuccess || err != nil {
+				reserveResources := riakNode.GetCombinedResources()
+				createResources := riakNode.GetCombinedResources()
+
+				err := mesosHttpClient.ReserveResourceAndCreateVolume(offer.Id, reserveResources, createResources)
+				if err != nil {
 					log.Warnf("Failed to reserve resources / create volumes. Error: %+v, Node: %+v, Offer: %+v", err, riakNode, offer)
 					log.Info("Reverting to compatibility mode without dynamic reservations or persistent volumes.")
 					sc.compatibilityMode = true
 				} else {
 					driver.CleanOffers([]*mesos.OfferID{offer.Id})
-					continue
 				}
 			}
-		}
+		} else {
+			tasks := launchTasks[*offer.Id.Value]
 
-		if tasks == nil {
-			tasks = []*mesos.TaskInfo{}
-		}
-
-		// This is somewhat of a hack, to avoid synchronously calling the mesos-go SDK
-		// to avoid a deadlock situation.
-		// TODO: Fix and make actually queues around driver interactions
-		// This is a massive hack
-		// -Sargun Dhillon 2015-10-01
-		go func(innerOffer *mesos.Offer, innerTasks []*mesos.TaskInfo) {
-			log.Infof("Launching tasks on offerId: %+v, tasks for offer: %+v", *innerOffer.Id.Value, innerTasks)
-			innerStatus, innerErr := driver.LaunchTasks([]*mesos.OfferID{innerOffer.Id}, innerTasks, &mesos.Filters{RefuseSeconds: proto.Float64(OFFER_INTERVAL)})
-
-			if innerStatus != mesos.Status_DRIVER_RUNNING {
-				log.Fatal("Driver not running, while trying to launch tasks")
+			if tasks == nil {
+				tasks = []*mesos.TaskInfo{}
 			}
-			if innerErr != nil {
-				log.Panic("Failed to launch tasks: ", innerErr)
-			}
-		}(offer, tasks)
+
+			// This is somewhat of a hack, to avoid synchronously calling the mesos-go SDK
+			// to avoid a deadlock situation.
+			// TODO: Fix and make actually queues around driver interactions
+			// This is a massive hack
+			// -Sargun Dhillon 2015-10-01
+			go func(innerOffer *mesos.Offer, innerTasks []*mesos.TaskInfo) {
+				log.Infof("Launching tasks on offerId: %+v, tasks for offer: %+v", *innerOffer.Id.Value, innerTasks)
+				innerStatus, innerErr := driver.LaunchTasks([]*mesos.OfferID{innerOffer.Id}, innerTasks, &mesos.Filters{RefuseSeconds: proto.Float64(OFFER_INTERVAL)})
+
+				if innerStatus != mesos.Status_DRIVER_RUNNING {
+					log.Fatal("Driver not running, while trying to launch tasks")
+				}
+				if innerErr != nil {
+					log.Panic("Failed to launch tasks: ", innerErr)
+				}
+			}(offer, tasks)
+		}
 	}
 }
 func (sc *SchedulerCore) StatusUpdate(driver sched.SchedulerDriver, status *mesos.TaskStatus) {

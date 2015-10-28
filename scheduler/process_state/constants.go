@@ -16,4 +16,5 @@ const (
 	Shutdown
 	Failed
 	ReservationRequested
+	ReservationFailed
 )

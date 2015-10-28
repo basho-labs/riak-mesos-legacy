@@ -11,7 +11,6 @@ go get golang.org/x/tools/cmd/goimports
 
 go get github.com/golang/glog
 go get golang.org/x/net/context
-go get github.com/gogo/protobuf/proto
 go get github.com/stretchr/testify/mock
 go get github.com/samuel/go-zookeeper/zk
 go get github.com/pborman/uuid
@@ -24,9 +23,16 @@ git clone https://github.com/basho-labs/riak-mesos.git $GOPATH/src/github.com/ba
 cd $GOPATH/src/github.com/basho-labs/riak-mesos && godep restore
 
 ### Mesos Go
+REAL_GOPATH=$GOPATH
+gvm use go1.4
+export GOPATH=$REAL_GOPATH
 rm -rf $GOPATH/src/github.com/mesos/mesos-go
 git clone https://github.com/mesos/mesos-go.git $GOPATH/src/github.com/mesos/mesos-go
+go get github.com/golang/protobuf/proto
+go get github.com/gogo/protobuf/proto
 go get github.com/gogo/protobuf/protoc-gen-gogo
 go get github.com/gogo/protobuf/protoc-gen-gogofast
 cd $GOPATH/src/github.com/mesos/mesos-go/mesosproto && \
   protoc --proto_path=${GOPATH}/src:${GOPATH}/src/github.com/gogo/protobuf/protobuf:. --gogofast_out=. *.proto
+gvm use go1.5
+export GOPATH=$REAL_GOPATH

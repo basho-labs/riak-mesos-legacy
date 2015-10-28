@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	CPUS_PER_EXECUTOR = 0.1
+	CPUS_PER_EXECUTOR = 0
 	MEM_PER_EXECUTOR  = 32
 	PORTS_PER_TASK    = 10
 	CONTAINER_PATH    = "data"
@@ -34,6 +34,7 @@ type FrameworkRiakNode struct {
 	TaskStatus       *mesos.TaskStatus
 	Generation       int
 	LastOfferUsed    *mesos.Offer
+	LastPortsUsed    *mesos.Resource
 	TaskData         common.TaskData
 	FrameworkName    string
 	ClusterName      string
@@ -104,6 +105,8 @@ func (frn *FrameworkRiakNode) NeedsToBeScheduled() bool {
 				return true
 			case process_state.Failed:
 				return true
+			case process_state.ReservationFailed:
+				return true
 			}
 		}
 	}
@@ -166,8 +169,14 @@ func (frn *FrameworkRiakNode) GetReservedResources(cpusValue float64, memValue f
 	}
 
 	if portsValue > 0 {
-		ports := common.CreatePortsResourceFromResources(frn.LastOfferUsed.Resources, portsValue)
+		// log.Infof("Offer before grabbing ports... %+v", frn.LastOfferUsed)
+		_, ports := common.CreatePortsResourceFromResources(frn.LastOfferUsed.Resources, portsValue)
+		// ports.Role = frn.Role
+		// ports.Reservation = reservation
+		// log.Infof("Ports after creating from offer... %+v", ports)
+		// log.Infof("Offer after grabbing ports... %+v", frn.LastOfferUsed)
 		resources = append(resources, ports)
+		// resources = append(resources, leftoverPorts)
 	}
 
 	return resources
@@ -187,6 +196,8 @@ func portIter(resources []*mesos.Resource) chan int64 {
 }
 
 func (frn *FrameworkRiakNode) ApplyOffer(mutableOffer *mesos.Offer) (bool, *mesos.Offer) {
+	//Add logic here to reuse LastPortsUsed if it exists. Use same logic when creating resources later for reservations / launches
+
 	if !common.ScalarResourcesWillFit(mutableOffer.Resources, frn.Cpus+frn.ExecCpus, frn.Mem+frn.ExecMem, frn.Disk) ||
 		!common.PortResourceWillFit(mutableOffer.Resources, frn.Ports) {
 		log.Info("Attempted to apply offer but offer does not have enough capacity")
@@ -194,6 +205,7 @@ func (frn *FrameworkRiakNode) ApplyOffer(mutableOffer *mesos.Offer) (bool, *meso
 	}
 
 	mutableOffer.Resources = common.ApplyScalarResources(mutableOffer.Resources, frn.Cpus+frn.ExecCpus, frn.Mem+frn.ExecMem, frn.Disk)
+	mutableOffer.Resources, frn.LastPortsUsed = ApplyRangesResource(mutableResources, ports)
 	frn.LastOfferUsed = mutableOffer
 	frn.CurrentState = process_state.ReservationRequested
 	return true, mutableOffer
@@ -224,7 +236,8 @@ func (frn *FrameworkRiakNode) HasReservation() bool {
 }
 
 func (frn *FrameworkRiakNode) OfferCompatible(immutableOffer *mesos.Offer) bool {
-	if immutableOffer.SlaveId != frn.LastOfferUsed.SlaveId {
+	log.Infof("Checking if offer is compatible for reservation. Offer's SlaveId: %+v, Node's last SlaveId: %+v", immutableOffer.SlaveId.GetValue(), frn.LastOfferUsed.SlaveId.GetValue())
+	if immutableOffer.SlaveId.GetValue() != frn.LastOfferUsed.SlaveId.GetValue() {
 		return false
 	}
 	return true
@@ -232,7 +245,11 @@ func (frn *FrameworkRiakNode) OfferCompatible(immutableOffer *mesos.Offer) bool 
 
 func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(sc *SchedulerCore) *mesos.TaskInfo {
 	// THIS IS A MUTATING CALL
-	if frn.CurrentState != process_state.Shutdown && frn.CurrentState != process_state.Failed && frn.CurrentState != process_state.Unknown && frn.CurrentState != process_state.ReservationRequested {
+	if frn.CurrentState != process_state.Shutdown &&
+		frn.CurrentState != process_state.Failed &&
+		frn.CurrentState != process_state.Unknown &&
+		frn.CurrentState != process_state.ReservationRequested &&
+		frn.CurrentState != process_state.ReservationFailed {
 		log.Panicf("Trying to generate Task Info while node is up. ZK FRN State: %v", frn.CurrentState)
 	}
 	frn.Generation = frn.Generation + 1
@@ -405,7 +422,11 @@ func (frn *FrameworkRiakNode) handleStatusUpdate(sc *SchedulerCore, frc *Framewo
 			if frn.CurrentState == process_state.Started {
 				frn.handleUpToDownTransition(sc, frc)
 			}
-			frn.CurrentState = process_state.Failed
+			if frn.CurrentState == process_state.ReservationRequested {
+				frn.CurrentState = process_state.ReservationFailed
+			} else {
+				frn.CurrentState = process_state.Failed
+			}
 		}
 
 	// Maybe? -- Not entirely sure.
@@ -419,10 +440,18 @@ func (frn *FrameworkRiakNode) handleStatusUpdate(sc *SchedulerCore, frc *Framewo
 			if frn.CurrentState == process_state.Started {
 				frn.handleUpToDownTransition(sc, frc)
 			}
-			frn.CurrentState = process_state.Failed
+			if frn.CurrentState == process_state.ReservationRequested {
+				frn.CurrentState = process_state.ReservationFailed
+			} else {
+				frn.CurrentState = process_state.Failed
+			}
 		}
 	case mesos.TaskState_TASK_ERROR:
-		frn.CurrentState = process_state.Failed
+		if frn.CurrentState == process_state.ReservationRequested {
+			frn.CurrentState = process_state.ReservationFailed
+		} else {
+			frn.CurrentState = process_state.Failed
+		}
 	default:
 		log.Fatal("Received unknown status update")
 	}
