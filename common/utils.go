@@ -3,8 +3,8 @@ package common
 import (
 	"errors"
 	"fmt"
-	mesos "github.com/mesos/mesos-go/mesosproto"
-	util "github.com/mesos/mesos-go/mesosutil"
+	mesos "github.com/basho-labs/mesos-go/mesosproto"
+	util "github.com/basho-labs/mesos-go/mesosutil"
 	"math/rand"
 	"os/exec"
 	"path/filepath"

@@ -5,8 +5,8 @@ package main
 import (
 	"fmt"
 	log "github.com/Sirupsen/logrus"
-	exec "github.com/mesos/mesos-go/executor"
-	mesos "github.com/mesos/mesos-go/mesosproto"
+	exec "github.com/basho-labs/mesos-go/executor"
+	mesos "github.com/basho-labs/mesos-go/mesosproto"
 	"os"
 	"os/signal"
 	"runtime"

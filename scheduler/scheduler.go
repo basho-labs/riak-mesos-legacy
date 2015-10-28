@@ -11,11 +11,11 @@ import (
 	"github.com/basho-labs/riak-mesos/common"
 	metamgr "github.com/basho-labs/riak-mesos/metadata_manager"
 	//rex "github.com/basho-labs/riak-mesos/riak_explorer"
+	auth "github.com/basho-labs/mesos-go/auth"
+	sasl "github.com/basho-labs/mesos-go/auth/sasl"
+	mesos "github.com/basho-labs/mesos-go/mesosproto"
+	sched "github.com/basho-labs/mesos-go/scheduler"
 	"github.com/golang/protobuf/proto"
-	auth "github.com/mesos/mesos-go/auth"
-	sasl "github.com/mesos/mesos-go/auth/sasl"
-	mesos "github.com/mesos/mesos-go/mesosproto"
-	sched "github.com/mesos/mesos-go/scheduler"
 	"time"
 )
 

@@ -2,7 +2,7 @@ package scheduler
 
 import (
 	log "github.com/Sirupsen/logrus"
-	sched "github.com/mesos/mesos-go/scheduler"
+	sched "github.com/basho-labs/mesos-go/scheduler"
 	"sync/atomic"
 	"time"
 )

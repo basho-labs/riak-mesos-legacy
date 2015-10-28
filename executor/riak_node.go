@@ -16,7 +16,7 @@ import (
 	"github.com/basho-labs/riak-mesos/common"
 	metamgr "github.com/basho-labs/riak-mesos/metadata_manager"
 	"github.com/basho-labs/riak-mesos/process_manager"
-	mesos "github.com/mesos/mesos-go/mesosproto"
+	mesos "github.com/basho-labs/mesos-go/mesosproto"
 	"net/http"
 )
 
