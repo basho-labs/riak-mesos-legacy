@@ -20,7 +20,7 @@ const (
 	CPUS_PER_EXECUTOR = 0
 	MEM_PER_EXECUTOR  = 32
 	PORTS_PER_TASK    = 10
-	CONTAINER_PATH    = "data"
+	CONTAINER_PATH    = "root"
 )
 
 type FrameworkRiakNode struct {
@@ -115,18 +115,22 @@ func (frn *FrameworkRiakNode) NeedsToBeScheduled() bool {
 }
 
 func (frn *FrameworkRiakNode) GetExecutorResources() []*mesos.Resource {
-	return frn.GetReservedResources(frn.ExecCpus, frn.ExecMem, 0, 0)
+	return frn.GetReservedResources(frn.ExecCpus, frn.ExecMem, 0, false, 0)
 }
 
 func (frn *FrameworkRiakNode) GetTaskResources() []*mesos.Resource {
-	return frn.GetReservedResources(frn.Cpus, frn.Mem, frn.Disk, frn.Ports)
+	return frn.GetReservedResources(frn.Cpus, frn.Mem, frn.Disk, true, frn.Ports)
 }
 
-func (frn *FrameworkRiakNode) GetCombinedResources() []*mesos.Resource {
-	return frn.GetReservedResources(frn.Cpus+frn.ExecCpus, frn.Mem+frn.ExecMem, frn.Disk, frn.Ports)
+func (frn *FrameworkRiakNode) GetResourcesToReserve() []*mesos.Resource {
+	return frn.GetReservedResources(frn.Cpus+frn.ExecCpus, frn.Mem+frn.ExecMem, frn.Disk, false, 0)
 }
 
-func (frn *FrameworkRiakNode) GetReservedResources(cpusValue float64, memValue float64, diskValue float64, portsValue int) []*mesos.Resource {
+func (frn *FrameworkRiakNode) GetResourcesToCreate() []*mesos.Resource {
+	return frn.GetReservedResources(0, 0, frn.Disk, true, 0)
+}
+
+func (frn *FrameworkRiakNode) GetReservedResources(cpusValue float64, memValue float64, diskValue float64, includeVolume bool, portsValue int) []*mesos.Resource {
 	resources := []*mesos.Resource{}
 
 	reservation := &mesos.Resource_ReservationInfo{}
@@ -164,19 +168,16 @@ func (frn *FrameworkRiakNode) GetReservedResources(cpusValue float64, memValue f
 		disk := util.NewScalarResource("disk", diskValue)
 		disk.Role = frn.Role
 		disk.Reservation = reservation
-		disk.Disk = info
+		if includeVolume {
+			disk.Disk = info
+		}
 		resources = append(resources, disk)
 	}
 
 	if portsValue > 0 {
-		// log.Infof("Offer before grabbing ports... %+v", frn.LastOfferUsed)
-		_, ports := common.CreatePortsResourceFromResources(frn.LastOfferUsed.Resources, portsValue)
-		// ports.Role = frn.Role
-		// ports.Reservation = reservation
-		// log.Infof("Ports after creating from offer... %+v", ports)
-		// log.Infof("Offer after grabbing ports... %+v", frn.LastOfferUsed)
+		var ports *mesos.Resource
+		frn.LastOfferUsed.Resources, ports = common.ApplyRangesResource(frn.LastOfferUsed.Resources, portsValue)
 		resources = append(resources, ports)
-		// resources = append(resources, leftoverPorts)
 	}
 
 	return resources
@@ -196,8 +197,6 @@ func portIter(resources []*mesos.Resource) chan int64 {
 }
 
 func (frn *FrameworkRiakNode) ApplyOffer(mutableOffer *mesos.Offer) (bool, *mesos.Offer) {
-	//Add logic here to reuse LastPortsUsed if it exists. Use same logic when creating resources later for reservations / launches
-
 	if !common.ScalarResourcesWillFit(mutableOffer.Resources, frn.Cpus+frn.ExecCpus, frn.Mem+frn.ExecMem, frn.Disk) ||
 		!common.PortResourceWillFit(mutableOffer.Resources, frn.Ports) {
 		log.Info("Attempted to apply offer but offer does not have enough capacity")
@@ -205,7 +204,6 @@ func (frn *FrameworkRiakNode) ApplyOffer(mutableOffer *mesos.Offer) (bool, *meso
 	}
 
 	mutableOffer.Resources = common.ApplyScalarResources(mutableOffer.Resources, frn.Cpus+frn.ExecCpus, frn.Mem+frn.ExecMem, frn.Disk)
-	mutableOffer.Resources, frn.LastPortsUsed = ApplyRangesResource(mutableResources, ports)
 	frn.LastOfferUsed = mutableOffer
 	frn.CurrentState = process_state.ReservationRequested
 	return true, mutableOffer
@@ -237,10 +235,17 @@ func (frn *FrameworkRiakNode) HasReservation() bool {
 
 func (frn *FrameworkRiakNode) OfferCompatible(immutableOffer *mesos.Offer) bool {
 	log.Infof("Checking if offer is compatible for reservation. Offer's SlaveId: %+v, Node's last SlaveId: %+v", immutableOffer.SlaveId.GetValue(), frn.LastOfferUsed.SlaveId.GetValue())
-	if immutableOffer.SlaveId.GetValue() != frn.LastOfferUsed.SlaveId.GetValue() {
+	if !immutableOffer.SlaveId.Equal(frn.LastOfferUsed.SlaveId) {
 		return false
 	}
-	return true
+
+	for _, resource := range util.FilterResources(immutableOffer.Resources, func(res *mesos.Resource) bool { return res.GetName() == "disk" && res.Reservation != nil }) {
+		if resource.Disk != nil && *resource.Disk.Persistence.Id == frn.PersistenceID {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(sc *SchedulerCore) *mesos.TaskInfo {

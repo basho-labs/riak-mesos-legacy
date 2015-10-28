@@ -57,7 +57,8 @@ func NewSchedulerCore(
 	nodeDisk string,
 	authProvider string,
 	mesosAuthPrincipal string,
-	mesosAuthSecretFile string) *SchedulerCore {
+	mesosAuthSecretFile string,
+	useReservations bool) *SchedulerCore {
 
 	mgr := metamgr.NewMetadataManager(frameworkName, zookeepers)
 	ss := GetSchedulerState(mgr)
@@ -79,10 +80,10 @@ func NewSchedulerCore(
 		NodeMem:             nodeMem,
 		NodeDisk:            nodeDisk,
 		schedulerState:      ss,
-		compatibilityMode:   false,
 		authProvider:        authProvider,
 		mesosAuthPrincipal:  mesosAuthPrincipal,
 		mesosAuthSecretFile: mesosAuthSecretFile,
+		compatibilityMode:   !useReservations,
 	}
 	scheduler.schedulerHTTPServer = ServeExecutorArtifact(scheduler, schedulerHostname)
 	return scheduler
@@ -194,74 +195,153 @@ func (sc *SchedulerCore) Disconnected(sched.SchedulerDriver) {
 	log.Error("Framework disconnected")
 }
 
-func FindNodeForOffer(offer *mesos.Offer, nodes []*FrameworkRiakNode) (*FrameworkRiakNode, []*FrameworkRiakNode) {
+func FindNodeForOffer(offer *mesos.Offer, nodes []*FrameworkRiakNode) *FrameworkRiakNode {
 	for _, riakNode := range nodes {
 		// Fresh node
 		if !riakNode.HasRequestedReservation() {
-			log.Infof("Found a new offer for a node. Offer: %+v, Node: %+v", offer, riakNode)
-			return riakNode, nodes
+			var applySuccess bool
+			applySuccess, offer = riakNode.ApplyOffer(offer)
+			if !applySuccess {
+				return nil
+			}
+			log.Infof("Found a new offer for a node. Offer: %+v, Node: %+v", *offer.Id.Value, riakNode.CurrentID())
+			return riakNode
 		}
 	}
 
-	// log.Infof("Couldn't find any nodes suitable for an unreserved offer. Offer: %+v, Nodes: %+v", offer, nodes)
-	return nil, nodes
+	return nil
 }
 
-func FindNodeForReservation(offerWithReservation *mesos.Offer, nodes []*FrameworkRiakNode, offersToUnreserve map[string]bool) (*FrameworkRiakNode, []*FrameworkRiakNode, map[string]bool) {
+func FindNodeForReservation(offerWithReservation *mesos.Offer, nodes []*FrameworkRiakNode) *FrameworkRiakNode {
 	for _, riakNode := range nodes {
 		if riakNode.HasRequestedReservation() && riakNode.OfferCompatible(offerWithReservation) {
-			log.Infof("Found an offer with a reservation for a node. Offer: %+v, Node: %+v", offerWithReservation, riakNode)
-			return riakNode, nodes, offersToUnreserve
+			var applySuccess bool
+			applySuccess, offerWithReservation = riakNode.ApplyOffer(offerWithReservation)
+			if !applySuccess {
+				return nil
+			}
+			log.Infof("Found an offer with a reservation for a node. Offer: %+v, Node: %+v", *offerWithReservation.Id.Value, riakNode.CurrentID())
+			return riakNode
 		}
 	}
 
-	offersToUnreserve[*offerWithReservation.Id.Value] = true
-
-	log.Warnf("Found an offer with a reservation, but no nodes were compatible with it. Unreserving. Offer: %+v, Nodes: %+v", offerWithReservation, nodes)
-	return nil, nodes, offersToUnreserve
+	return nil
 }
 
-func FindNodeForOfferCompatibilityMode(offer *mesos.Offer, nodes []*FrameworkRiakNode) (*FrameworkRiakNode, []*FrameworkRiakNode) {
+func FindNodeForOfferCompatibilityMode(offer *mesos.Offer, nodes []*FrameworkRiakNode) *FrameworkRiakNode {
 	for _, riakNode := range nodes {
 		if riakNode.NeedsToBeScheduled() {
-			log.Infof("Found an offer for a node (Compatibility Mode). Offer: %+v, Node: %+v", offer, riakNode)
-			return riakNode, nodes
+			var applySuccess bool
+			applySuccess, offer = riakNode.ApplyOffer(offer)
+			if !applySuccess {
+				return nil
+			}
+			log.Infof("Found an offer for a node (Compatibility Mode). OfferID: %+v, Node: %+v", *offer.Id.Value, riakNode.CurrentID())
+			return riakNode
 		}
 	}
 
-	log.Warnf("Found an offer with a reservation, but no nodes were compatible with it. Offer: %+v, Nodes: %+v", offer, nodes)
-	return nil, nodes
+	log.Warnf("Found an offer (Compatibility Mode), but no nodes were compatible with it. OfferID: %+v", *offer.Id.Value)
+	return nil
 }
 
-func (sc *SchedulerCore) AddNodeToLaunchTasks(riakNode *FrameworkRiakNode, launchTasks map[string][]*mesos.TaskInfo) map[string][]*mesos.TaskInfo {
-	taskInfo := riakNode.PrepareForLaunchAndGetNewTaskInfo(sc)
-	sc.frnDict[riakNode.CurrentID()] = riakNode
-
-	if launchTasks[*riakNode.LastOfferUsed.Id.Value] == nil {
-		launchTasks[*riakNode.LastOfferUsed.Id.Value] = []*mesos.TaskInfo{}
+func UnreserveOffer(offer *mesos.Offer, operations map[string][]*mesos.Offer_Operation) map[string][]*mesos.Offer_Operation {
+	//Make copies of resources so it isn't stupid
+	destroy := &mesos.Offer_Operation_Destroy{
+		Volumes: offer.Resources,
+	}
+	destroyType := mesos.Offer_Operation_DESTROY
+	destroyOperation := &mesos.Offer_Operation{
+		Type:    &destroyType,
+		Destroy: destroy,
+	}
+	unreserve := &mesos.Offer_Operation_Unreserve{
+		Resources: offer.Resources,
+	}
+	unreserveType := mesos.Offer_Operation_UNRESERVE
+	unreserveOperation := &mesos.Offer_Operation{
+		Type:      &unreserveType,
+		Unreserve: unreserve,
 	}
 
+	if operations[*offer.Id.Value] == nil {
+		operations[*offer.Id.Value] = []*mesos.Offer_Operation{}
+	}
+
+	operations[*offer.Id.Value] = append(operations[*offer.Id.Value], destroyOperation)
+	operations[*offer.Id.Value] = append(operations[*offer.Id.Value], unreserveOperation)
+
+	return operations
+}
+
+func ReserveOfferForNode(riakNode *FrameworkRiakNode, operations map[string][]*mesos.Offer_Operation) map[string][]*mesos.Offer_Operation {
+	reserveResources := riakNode.GetResourcesToReserve()
+	createResources := riakNode.GetResourcesToCreate()
+
+	reserve := &mesos.Offer_Operation_Reserve{
+		Resources: reserveResources,
+	}
+	reserveType := mesos.Offer_Operation_RESERVE
+	reserveOperation := &mesos.Offer_Operation{
+		Type:    &reserveType,
+		Reserve: reserve,
+	}
+	create := &mesos.Offer_Operation_Create{
+		Volumes: createResources,
+	}
+	createType := mesos.Offer_Operation_CREATE
+	createOperation := &mesos.Offer_Operation{
+		Type:   &createType,
+		Create: create,
+	}
+
+	if operations[*riakNode.LastOfferUsed.Id.Value] == nil {
+		operations[*riakNode.LastOfferUsed.Id.Value] = []*mesos.Offer_Operation{}
+	}
+
+	operations[*riakNode.LastOfferUsed.Id.Value] = append(operations[*riakNode.LastOfferUsed.Id.Value], reserveOperation)
+	operations[*riakNode.LastOfferUsed.Id.Value] = append(operations[*riakNode.LastOfferUsed.Id.Value], createOperation)
+
+	return operations
+}
+
+func (sc *SchedulerCore) AddNodeToLaunchTasks(riakNode *FrameworkRiakNode, operations map[string][]*mesos.Offer_Operation) map[string][]*mesos.Offer_Operation {
 	log.Infof("Using offerId: %+v, for riakNode.CurrentID(): %+v", *riakNode.LastOfferUsed.Id.Value, riakNode.CurrentID())
 
-	launchTasks[*riakNode.LastOfferUsed.Id.Value] = append(launchTasks[*riakNode.LastOfferUsed.Id.Value], taskInfo)
-	return launchTasks
+	taskInfos := []*mesos.TaskInfo{}
+	taskInfo := riakNode.PrepareForLaunchAndGetNewTaskInfo(sc)
+	taskInfos = append(taskInfos, taskInfo)
+	sc.frnDict[riakNode.CurrentID()] = riakNode
+
+	launch := &mesos.Offer_Operation_Launch{
+		TaskInfos: taskInfos,
+	}
+	operationType := mesos.Offer_Operation_LAUNCH
+	launchOperation := &mesos.Offer_Operation{
+		Type:   &operationType,
+		Launch: launch,
+	}
+
+	if operations[*riakNode.LastOfferUsed.Id.Value] == nil {
+		operations[*riakNode.LastOfferUsed.Id.Value] = []*mesos.Offer_Operation{}
+	}
+	operations[*riakNode.LastOfferUsed.Id.Value] = append(operations[*riakNode.LastOfferUsed.Id.Value], launchOperation)
+
+	return operations
 }
 
 func (sc *SchedulerCore) ResourceOffers(driver sched.SchedulerDriver, offers []*mesos.Offer) {
 	sc.lock.Lock()
 	defer sc.lock.Unlock()
 	log.Info("Received resource offers: ", offers)
-	launchTasks := make(map[string][]*mesos.TaskInfo)
-	nodesWithAcceptedOffers := make(map[string][]*FrameworkRiakNode)
+	operations := make(map[string][]*mesos.Offer_Operation)
 	toBeScheduled := []*FrameworkRiakNode{}
-	offersToUnreserve := make(map[string]bool)
 
 	// Find nodes which need to be scheduled
 	for _, cluster := range sc.schedulerState.Clusters {
 		for _, riakNode := range cluster.Nodes {
 			if riakNode.NeedsToBeScheduled() {
-				log.Infof("Adding Riak node for scheduling: %+v", riakNode)
-				// We need to schedule this task I guess?
+				log.Infof("Adding Riak node for scheduling: %+v", riakNode.CurrentID())
 				toBeScheduled = append(toBeScheduled, riakNode)
 			}
 		}
@@ -270,106 +350,70 @@ func (sc *SchedulerCore) ResourceOffers(driver sched.SchedulerDriver, offers []*
 	// Populate launchTasks and nodesWithAcceptedOffers
 	for _, offer := range offers {
 		if sc.compatibilityMode {
-			var riakNode *FrameworkRiakNode
-			riakNode, toBeScheduled = FindNodeForOfferCompatibilityMode(offer, toBeScheduled)
+			riakNode := FindNodeForOfferCompatibilityMode(offer, toBeScheduled)
 			if riakNode != nil {
-				// Assign the updated offer and make sure we still fit
-				var applySuccess bool
-				applySuccess, offer = riakNode.ApplyOffer(offer)
-				if applySuccess {
-					// Can Launch
-					launchTasks = sc.AddNodeToLaunchTasks(riakNode, launchTasks)
-					sc.schedulerState.Persist()
-				}
+				operations = sc.AddNodeToLaunchTasks(riakNode, operations)
+				sc.schedulerState.Persist()
 			}
-			continue
-		}
-		// Someone has claimed part of this offer, deal with that first
-		if common.ResourcesHaveReservations(offer.Resources) {
-			var riakNode *FrameworkRiakNode
-			riakNode, toBeScheduled, offersToUnreserve = FindNodeForReservation(offer, toBeScheduled, offersToUnreserve)
-			if riakNode != nil {
-				// Assign the updated offer and make sure we still fit
-				var applySuccess bool
-				applySuccess, offer = riakNode.ApplyOffer(offer)
-				if applySuccess && riakNode.HasReservation() {
-					// Can Launch
-					launchTasks = sc.AddNodeToLaunchTasks(riakNode, launchTasks)
-					sc.schedulerState.Persist()
-				}
+		} else if common.ResourcesHaveReservations(offer.Resources) {
+			riakNode := FindNodeForReservation(offer, toBeScheduled)
+			if riakNode == nil {
+				log.Warnf("Found an offer with a reservation, but no nodes were compatible with it. Unreserving. Offer: %+v", *offer.Id.Value)
+				operations = UnreserveOffer(offer, operations)
+			} else {
+				operations = sc.AddNodeToLaunchTasks(riakNode, operations)
+				sc.schedulerState.Persist()
 			}
 		} else {
-			// Resource does not have any reservations at this point, need to see if there are any nodes that still need reservations
-			var riakNode *FrameworkRiakNode
-			riakNode, toBeScheduled = FindNodeForOffer(offer, toBeScheduled)
+			riakNode := FindNodeForOffer(offer, toBeScheduled)
 			if riakNode != nil {
-				var applySuccess bool
-				applySuccess, offer = riakNode.ApplyOffer(offer)
-				if applySuccess {
-					// Can Reserve
-					nodesWithAcceptedOffers[*offer.Id.Value] = append(nodesWithAcceptedOffers[*offer.Id.Value], riakNode)
-					sc.schedulerState.Persist()
-				}
+				operations = ReserveOfferForNode(riakNode, operations)
+				sc.schedulerState.Persist()
 			}
 		}
 	}
 
 	// Attempt to reserve resources and/or launch nodes
 	for _, offer := range offers {
-		nodesToReserve := nodesWithAcceptedOffers[*offer.Id.Value]
-		unreserveThisOffer := offersToUnreserve[*offer.Id.Value]
+		offerOperations := operations[*offer.Id.Value]
 
-		if unreserveThisOffer {
-			log.Infof("Resource Offers: In unreserve loop, currently on offerId: %+v", *offer.Id.Value)
-			mesosHttpClient := NewMesosClient(sc.schedulerState.MesosMaster, sc.schedulerState.FrameworkID, OFFER_INTERVAL)
-			//Maybe target the specific persitenceID or something?
-			err := mesosHttpClient.UnreserveResourceAndDestroyVolume(offer)
-			if err != nil {
-				log.Warnf("Failed to destroy volumes / unreserve resources. Error: %+v, Offer: %+v", err, offer)
+		if offerOperations == nil {
+			offerOperations = []*mesos.Offer_Operation{}
+		}
+
+		go func(innerOffer *mesos.Offer, innerOperations []*mesos.Offer_Operation) {
+			log.Infof("Accepting offerID: %+v, operations for offer: %+v", *innerOffer.Id.Value, innerOperations)
+
+			var innerStatus mesos.Status
+			var innerErr error
+
+			if sc.compatibilityMode {
+				innerTasks := []*mesos.TaskInfo{}
+				for _, innerOperation := range innerOperations {
+					if *innerOperation.Type == mesos.Offer_Operation_LAUNCH {
+						innerTasks = innerOperation.Launch.TaskInfos
+					}
+				}
+				innerStatus, innerErr = driver.LaunchTasks([]*mesos.OfferID{innerOffer.Id}, innerTasks, &mesos.Filters{RefuseSeconds: proto.Float64(OFFER_INTERVAL)})
+			} else {
+				innerStatus, innerErr = driver.AcceptOffers([]*mesos.OfferID{innerOffer.Id}, innerOperations, &mesos.Filters{RefuseSeconds: proto.Float64(OFFER_INTERVAL)})
 			}
-		} else if nodesToReserve != nil {
-			log.Infof("Resource Offers: In reserve loop, currently on offerId: %+v", *offer.Id.Value)
-			// Note, there should only ever be one node or one task per offer id
-			for _, riakNode := range nodesToReserve {
-				mesosHttpClient := NewMesosClient(sc.schedulerState.MesosMaster, sc.schedulerState.FrameworkID, OFFER_INTERVAL)
-				reserveResources := riakNode.GetCombinedResources()
-				createResources := riakNode.GetCombinedResources()
 
-				err := mesosHttpClient.ReserveResourceAndCreateVolume(offer.Id, reserveResources, createResources)
-				if err != nil {
-					log.Warnf("Failed to reserve resources / create volumes. Error: %+v, Node: %+v, Offer: %+v", err, riakNode, offer)
-					log.Info("Reverting to compatibility mode without dynamic reservations or persistent volumes.")
+			if innerStatus != mesos.Status_DRIVER_RUNNING {
+				log.Fatal("Driver not running, while trying to accept offers")
+			}
+			if innerErr != nil {
+				if innerErr.Error() == "404 Not Found" {
+					log.Warnf("Attempted to call an endpoint that does not exist on the mesos master. Moving to compatibility mode.")
 					sc.compatibilityMode = true
 				} else {
-					driver.CleanOffers([]*mesos.OfferID{offer.Id})
-				}
-			}
-		} else {
-			tasks := launchTasks[*offer.Id.Value]
-
-			if tasks == nil {
-				tasks = []*mesos.TaskInfo{}
-			}
-
-			// This is somewhat of a hack, to avoid synchronously calling the mesos-go SDK
-			// to avoid a deadlock situation.
-			// TODO: Fix and make actually queues around driver interactions
-			// This is a massive hack
-			// -Sargun Dhillon 2015-10-01
-			go func(innerOffer *mesos.Offer, innerTasks []*mesos.TaskInfo) {
-				log.Infof("Launching tasks on offerId: %+v, tasks for offer: %+v", *innerOffer.Id.Value, innerTasks)
-				innerStatus, innerErr := driver.LaunchTasks([]*mesos.OfferID{innerOffer.Id}, innerTasks, &mesos.Filters{RefuseSeconds: proto.Float64(OFFER_INTERVAL)})
-
-				if innerStatus != mesos.Status_DRIVER_RUNNING {
-					log.Fatal("Driver not running, while trying to launch tasks")
-				}
-				if innerErr != nil {
 					log.Panic("Failed to launch tasks: ", innerErr)
 				}
-			}(offer, tasks)
-		}
+			}
+		}(offer, offerOperations)
 	}
 }
+
 func (sc *SchedulerCore) StatusUpdate(driver sched.SchedulerDriver, status *mesos.TaskStatus) {
 	sc.lock.Lock()
 	defer sc.lock.Unlock()

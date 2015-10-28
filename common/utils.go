@@ -16,8 +16,7 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-func ApplyScalarResources(mutableResources []*mesos.Resource, cpus float64, mem float64, disk float64, ports int) []*mesos.Resource) {
-	var extractedPorts *mesos.Resource
+func ApplyScalarResources(mutableResources []*mesos.Resource, cpus float64, mem float64, disk float64) []*mesos.Resource {
 	mutableResources = ApplyScalarResource(mutableResources, "cpus", cpus)
 	mutableResources = ApplyScalarResource(mutableResources, "mem", mem)
 	mutableResources = ApplyScalarResource(mutableResources, "disk", disk)
