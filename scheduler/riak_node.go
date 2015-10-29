@@ -378,7 +378,7 @@ func (frn *FrameworkRiakNode) handleUpToDownTransition(sc *SchedulerCore, frc *F
 	for _, riakNode := range sc.schedulerState.Clusters[frc.Name].Nodes {
 		if riakNode.CurrentState == process_state.Started && riakNode != frn {
 
-			leaveSuccess := frn.attemptJoin(riakNode, 0, 5)
+			leaveSuccess := frn.attemptLeave(riakNode, 0, 5)
 
 			if leaveSuccess {
 				break // We're done here
@@ -389,15 +389,15 @@ func (frn *FrameworkRiakNode) handleUpToDownTransition(sc *SchedulerCore, frc *F
 
 func (frn *FrameworkRiakNode) attemptJoin(riakNode *FrameworkRiakNode, retry int, maxRetry int) bool {
 	if retry > maxRetry {
-		log.Infof("Attempted joining %+v to %+v %+v times and failed.", riakNode.TaskData.FullyQualifiedNodeName, frn.TaskData.FullyQualifiedNodeName, maxRetry)
+		log.Infof("Attempted joining %+v to %+v %+v times and failed.", frn.TaskData.FullyQualifiedNodeName, riakNode.TaskData.FullyQualifiedNodeName, maxRetry)
 		return false
 	}
 
 	rexHostname := fmt.Sprintf("%s:%d", riakNode.LastOfferUsed.GetHostname(), riakNode.TaskData.HTTPPort)
 	rexc := rexclient.NewRiakExplorerClient(rexHostname)
 	// We should try to join against this node
-	log.Infof("Joining %+v to %+v", riakNode.TaskData.FullyQualifiedNodeName, frn.TaskData.FullyQualifiedNodeName)
-	joinReply, joinErr := rexc.Join(riakNode.TaskData.FullyQualifiedNodeName, frn.TaskData.FullyQualifiedNodeName)
+	log.Infof("Joining %+v to %+v", frn.TaskData.FullyQualifiedNodeName, riakNode.TaskData.FullyQualifiedNodeName)
+	joinReply, joinErr := rexc.Join(frn.TaskData.FullyQualifiedNodeName, riakNode.TaskData.FullyQualifiedNodeName)
 	log.Infof("Triggered join: %+v, %+v", joinReply, joinErr)
 	if joinReply.Join.Success == "ok" {
 		log.Info("Join successful")
