@@ -171,7 +171,8 @@ func (schttp *SchedulerHTTPServer) createNode(w http.ResponseWriter, r *http.Req
 		w.WriteHeader(404)
 		fmt.Fprintf(w, "Cluster %s not found", clusterName)
 	} else {
-		node := NewFrameworkRiakNode(schttp.sc, cluster.Name)
+		simpleId := len(cluster.Nodes) + 1
+		node := NewFrameworkRiakNode(schttp.sc, cluster.Name, simpleId)
 		cluster.Nodes[node.UUID.String()] = node
 		schttp.sc.schedulerState.Persist()
 		w.WriteHeader(200)

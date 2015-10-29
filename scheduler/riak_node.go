@@ -29,6 +29,7 @@ type FrameworkRiakNode struct {
 	lastAskedToReconcile time.Time `json:"-"`
 
 	UUID             uuid.UUID
+	SimpleId         int
 	DestinationState process_state.ProcessState
 	CurrentState     process_state.ProcessState
 	TaskStatus       *mesos.TaskStatus
@@ -50,7 +51,7 @@ type FrameworkRiakNode struct {
 	ContainerPath    string
 }
 
-func NewFrameworkRiakNode(sc *SchedulerCore, clusterName string) *FrameworkRiakNode {
+func NewFrameworkRiakNode(sc *SchedulerCore, clusterName string, simpleId int) *FrameworkRiakNode {
 	nodeCpusFloat, err := strconv.ParseFloat(sc.NodeCpus, 64)
 	if err != nil {
 		log.Panicf("Unable to determine node_cpus: %+v", err)
@@ -73,6 +74,7 @@ func NewFrameworkRiakNode(sc *SchedulerCore, clusterName string) *FrameworkRiakN
 		Role:             &sc.frameworkRole,
 		Principal:        &sc.mesosAuthPrincipal,
 		UUID:             uuid.NewV4(),
+		SimpleId:         simpleId,
 		ClusterName:      clusterName,
 		Cpus:             nodeCpusFloat,
 		Mem:              nodeMemFloat,
@@ -340,7 +342,8 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(sc *SchedulerCor
 }
 
 func (frn *FrameworkRiakNode) CurrentID() string {
-	return fmt.Sprintf("%s-%s-%s-%d", frn.FrameworkName, frn.ClusterName, frn.UUID.String(), frn.Generation)
+	// return fmt.Sprintf("%s-%s-%s-%d", frn.FrameworkName, frn.ClusterName, frn.UUID.String(), frn.Generation)
+	return fmt.Sprintf("%s-%s-%d", frn.FrameworkName, frn.ClusterName, frn.SimpleId)
 }
 
 func (frn *FrameworkRiakNode) ExecutorID() string {
