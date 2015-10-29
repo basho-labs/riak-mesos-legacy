@@ -7,8 +7,8 @@ import (
 )
 
 func (sc *SchedulerCore) createOperationsForOffers(offers []*mesos.Offer) map[string][]*mesos.Offer_Operation {
-	operations := make(map[string][]*mesos.Offer_Operation)
 	var applySuccess bool
+	operations := make(map[string][]*mesos.Offer_Operation)
 	nodesToLaunch, nodesToReserve := sc.getNodesToBeScheduled()
 
 	// All nodes are elligible for launch in compatibilityMode
@@ -19,9 +19,12 @@ func (sc *SchedulerCore) createOperationsForOffers(offers []*mesos.Offer) map[st
 
 	// Populate operations
 	for _, offer := range offers {
-		if operations[*offer.Id.Value] == nil {
-			operations[*offer.Id.Value] = []*mesos.Offer_Operation{}
-		}
+		operations[*offer.Id.Value] = []*mesos.Offer_Operation{}
+		launchTasks := []*mesos.TaskInfo{}
+		createResources := []*mesos.Resource{}
+		destroyResources := []*mesos.Resource{}
+		reserveResources := []*mesos.Resource{}
+		unreserveResources := []*mesos.Resource{}
 
 		// Launch all elligible nodes
 		for _, riakNode := range nodesToLaunch {
@@ -30,19 +33,23 @@ func (sc *SchedulerCore) createOperationsForOffers(offers []*mesos.Offer) map[st
 				applySuccess, offer = riakNode.ApplyOffer(offer)
 				if applySuccess {
 					log.Infof("Found an offer for a launchable node. OfferID: %+v, NodeID: %+v", *offer.Id.Value, riakNode.CurrentID())
-					launchOperation := sc.createLaunchNodeOperation(riakNode)
-					operations[*offer.Id.Value] = append(operations[*offer.Id.Value], launchOperation)
+					taskInfo := riakNode.PrepareForLaunchAndGetNewTaskInfo(sc)
+					sc.frnDict[riakNode.CurrentID()] = riakNode
+					launchTasks = append(launchTasks, taskInfo)
 					sc.schedulerState.Persist()
 				}
 			}
 		}
 
 		// The offer has reservations, but no node can use them, unreserve
-		reservedResources := common.FilterReservedResources(offer.Resources)
-		if len(reservedResources) > 0 && len(operations[*offer.Id.Value]) == 0 {
-			log.Warnf("An offer has reservations, but no nodes can use it. Destroying any volumes and unreserving resources for OfferID: %+v", *offer.Id.Value)
-			unreserveOperations := createUnreserveOfferOperations(offer)
-			operations[*offer.Id.Value] = append(operations[*offer.Id.Value], unreserveOperations...)
+		if len(common.FilterReservedResources(offer.Resources)) > 0 && len(launchTasks) == 0 {
+			log.Warnf("An offer has reservations, but no nodes can use it. Unreserving resources for OfferID: %+v", *offer.Id.Value)
+			unreserveResources = append(unreserveResources, common.CopyReservedResources(offer.Resources)...)
+		}
+		if len(common.FilterReservedVolumes(offer.Resources)) > 0 && len(launchTasks) == 0 {
+			log.Warnf("An offer has reservations, but no nodes can use it. Destroying volumes for OfferID: %+v", *offer.Id.Value)
+			destroyResources = append(destroyResources, common.CopyReservedVolumes(offer.Resources)...)
+
 		}
 
 		// Reserve all elligible nodes
@@ -52,12 +59,18 @@ func (sc *SchedulerCore) createOperationsForOffers(offers []*mesos.Offer) map[st
 				applySuccess, offer = riakNode.ApplyOffer(offer)
 				if applySuccess {
 					log.Infof("Found a new offer for a node. OfferID: %+v, NodeID: %+v", *offer.Id.Value, riakNode.CurrentID())
-					reserveOperations := createReserveNodeOperations(riakNode)
-					operations[*offer.Id.Value] = append(operations[*offer.Id.Value], reserveOperations...)
+					createResources = append(createResources, riakNode.GetResourcesToCreate()...)
+					reserveResources = append(reserveResources, riakNode.GetResourcesToReserve()...)
 					sc.schedulerState.Persist()
 				}
 			}
 		}
+
+		operations[*offer.Id.Value] = append(operations[*offer.Id.Value], buildLaunchOperation(launchTasks)...)
+		operations[*offer.Id.Value] = append(operations[*offer.Id.Value], buildDestroyOperation(destroyResources)...)
+		operations[*offer.Id.Value] = append(operations[*offer.Id.Value], buildUnreserveOperation(unreserveResources)...)
+		operations[*offer.Id.Value] = append(operations[*offer.Id.Value], buildReserveOperation(reserveResources)...)
+		operations[*offer.Id.Value] = append(operations[*offer.Id.Value], buildCreateOperation(createResources)...)
 	}
 
 	return operations
@@ -82,17 +95,22 @@ func (sc *SchedulerCore) getNodesToBeScheduled() ([]*FrameworkRiakNode, []*Frame
 	return nodesWithReservations, nodesWithoutReservations
 }
 
-func createUnreserveOfferOperations(offer *mesos.Offer) []*mesos.Offer_Operation {
+func buildDestroyOperation(resources []*mesos.Resource) []*mesos.Offer_Operation {
 	destroy := &mesos.Offer_Operation_Destroy{
-		Volumes: offer.Resources,
+		Volumes: resources,
 	}
 	destroyType := mesos.Offer_Operation_DESTROY
 	destroyOperation := &mesos.Offer_Operation{
 		Type:    &destroyType,
 		Destroy: destroy,
 	}
+
+	return []*mesos.Offer_Operation{destroyOperation}
+}
+
+func buildUnreserveOperation(resources []*mesos.Resource) []*mesos.Offer_Operation {
 	unreserve := &mesos.Offer_Operation_Unreserve{
-		Resources: offer.Resources,
+		Resources: resources,
 	}
 	unreserveType := mesos.Offer_Operation_UNRESERVE
 	unreserveOperation := &mesos.Offer_Operation{
@@ -100,23 +118,16 @@ func createUnreserveOfferOperations(offer *mesos.Offer) []*mesos.Offer_Operation
 		Unreserve: unreserve,
 	}
 
-	return []*mesos.Offer_Operation{destroyOperation, unreserveOperation}
+	return []*mesos.Offer_Operation{unreserveOperation}
 }
 
-func createReserveNodeOperations(riakNode *FrameworkRiakNode) []*mesos.Offer_Operation {
-	reserveResources := riakNode.GetResourcesToReserve()
-	createResources := riakNode.GetResourcesToCreate()
+func buildCreateOperation(resources []*mesos.Resource) []*mesos.Offer_Operation {
+	if len(resources) == 0 {
+		return []*mesos.Offer_Operation{}
+	}
 
-	reserve := &mesos.Offer_Operation_Reserve{
-		Resources: reserveResources,
-	}
-	reserveType := mesos.Offer_Operation_RESERVE
-	reserveOperation := &mesos.Offer_Operation{
-		Type:    &reserveType,
-		Reserve: reserve,
-	}
 	create := &mesos.Offer_Operation_Create{
-		Volumes: createResources,
+		Volumes: resources,
 	}
 	createType := mesos.Offer_Operation_CREATE
 	createOperation := &mesos.Offer_Operation{
@@ -124,19 +135,33 @@ func createReserveNodeOperations(riakNode *FrameworkRiakNode) []*mesos.Offer_Ope
 		Create: create,
 	}
 
-	return []*mesos.Offer_Operation{reserveOperation, createOperation}
+	return []*mesos.Offer_Operation{createOperation}
 }
 
-func (sc *SchedulerCore) createLaunchNodeOperation(riakNode *FrameworkRiakNode) *mesos.Offer_Operation {
-	log.Infof("Using offerId: %+v, for riakNode.CurrentID(): %+v", *riakNode.LastOfferUsed.Id.Value, riakNode.CurrentID())
+func buildReserveOperation(resources []*mesos.Resource) []*mesos.Offer_Operation {
+	if len(resources) == 0 {
+		return []*mesos.Offer_Operation{}
+	}
 
-	taskInfos := []*mesos.TaskInfo{}
-	taskInfo := riakNode.PrepareForLaunchAndGetNewTaskInfo(sc)
-	taskInfos = append(taskInfos, taskInfo)
-	sc.frnDict[riakNode.CurrentID()] = riakNode
+	reserve := &mesos.Offer_Operation_Reserve{
+		Resources: resources,
+	}
+	reserveType := mesos.Offer_Operation_RESERVE
+	reserveOperation := &mesos.Offer_Operation{
+		Type:    &reserveType,
+		Reserve: reserve,
+	}
+
+	return []*mesos.Offer_Operation{reserveOperation}
+}
+
+func buildLaunchOperation(tasks []*mesos.TaskInfo) []*mesos.Offer_Operation {
+	if len(tasks) == 0 {
+		return []*mesos.Offer_Operation{}
+	}
 
 	launch := &mesos.Offer_Operation_Launch{
-		TaskInfos: taskInfos,
+		TaskInfos: tasks,
 	}
 	operationType := mesos.Offer_Operation_LAUNCH
 	launchOperation := &mesos.Offer_Operation{
@@ -144,5 +169,5 @@ func (sc *SchedulerCore) createLaunchNodeOperation(riakNode *FrameworkRiakNode) 
 		Launch: launch,
 	}
 
-	return launchOperation
+	return []*mesos.Offer_Operation{launchOperation}
 }

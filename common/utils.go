@@ -16,20 +16,83 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-func FilterReservedResources(immutableResources []*mesos.Resource) []*mesos.Resource {
+func NewReservedScalarResource(name string, value float64, principal *string, role *string) *mesos.Resource {
+	reservation := &mesos.Resource_ReservationInfo{}
+	if principal != nil {
+		reservation.Principal = principal
+	}
+
+	resource := util.NewScalarResource(name, value)
+	resource.Role = role
+	resource.Reservation = reservation
+	return resource
+}
+
+func NewReservedVolume(value float64, containerPath *string, persistenceID *string, principal *string, role *string) *mesos.Resource {
+	resource := NewReservedScalarResource("disk", value, principal, role)
+
+	mode := mesos.Volume_RW
+	volume := &mesos.Volume{
+		ContainerPath: containerPath,
+		Mode:          &mode,
+	}
+	persistence := &mesos.Resource_DiskInfo_Persistence{
+		Id: persistenceID,
+	}
+	info := &mesos.Resource_DiskInfo{
+		Persistence: persistence,
+		Volume:      volume,
+	}
+	resource.Disk = info
+
+	return resource
+}
+
+func CopyReservedVolumes(immutableResources []*mesos.Resource) []*mesos.Resource {
 	reserved := []*mesos.Resource{}
-	for _, resource := range util.FilterResources(immutableResources, func(res *mesos.Resource) bool { return res.Reservation != nil }) {
-		reserved = append(reserved, resource)
+	for _, resource := range FilterReservedVolumes(immutableResources) {
+		containerPath := resource.Disk.Volume.GetContainerPath()
+		persistenceID := resource.Disk.Persistence.GetId()
+		principal := resource.Reservation.GetPrincipal()
+		role := resource.GetRole()
+		newVolume := NewReservedVolume(resource.Scalar.GetValue(), &containerPath, &persistenceID, &principal, &role)
+		reserved = append(reserved, newVolume)
 	}
 	return reserved
 }
 
-func FilterUnreservedResources(immutableResources []*mesos.Resource) []*mesos.Resource {
-	unreserved := []*mesos.Resource{}
-	for _, resource := range util.FilterResources(immutableResources, func(res *mesos.Resource) bool { return res.Reservation == nil }) {
-		unreserved = append(unreserved, resource)
+func CopyReservedResources(immutableResources []*mesos.Resource) []*mesos.Resource {
+	reserved := []*mesos.Resource{}
+	for _, resource := range FilterReservedResources(immutableResources) {
+		principal := resource.Reservation.GetPrincipal()
+		role := resource.GetRole()
+		newResource := NewReservedScalarResource(resource.GetName(), resource.Scalar.GetValue(), &principal, &role)
+		reserved = append(reserved, newResource)
 	}
-	return unreserved
+	return reserved
+}
+
+func FilterReservedVolumes(immutableResources []*mesos.Resource) []*mesos.Resource {
+	return util.FilterResources(immutableResources, func(res *mesos.Resource) bool {
+		if res.Reservation != nil &&
+			res.Disk != nil &&
+			res.GetName() == "disk" {
+			return true
+		}
+		return false
+	})
+}
+
+func FilterReservedResources(immutableResources []*mesos.Resource) []*mesos.Resource {
+	return util.FilterResources(immutableResources, func(res *mesos.Resource) bool {
+		return res.Reservation != nil && res.GetRole() != ""
+	})
+}
+
+func FilterUnreservedResources(immutableResources []*mesos.Resource) []*mesos.Resource {
+	return util.FilterResources(immutableResources, func(res *mesos.Resource) bool {
+		return res.Reservation == nil
+	})
 }
 
 func ApplyScalarResources(mutableResources []*mesos.Resource, cpus float64, mem float64, disk float64) []*mesos.Resource {
