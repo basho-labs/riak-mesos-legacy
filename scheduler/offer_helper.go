@@ -9,7 +9,7 @@ import (
 func (sc *SchedulerCore) createOperationsForOffers(offers []*mesos.Offer) map[string][]*mesos.Offer_Operation {
 	operations := make(map[string][]*mesos.Offer_Operation)
 	var applySuccess bool
-	nodesToReserve, nodesToLaunch := sc.getNodesToBeScheduled()
+	nodesToLaunch, nodesToReserve := sc.getNodesToBeScheduled()
 
 	// All nodes are elligible for launch in compatibilityMode
 	if sc.compatibilityMode {
