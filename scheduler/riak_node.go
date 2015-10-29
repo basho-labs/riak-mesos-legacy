@@ -52,15 +52,15 @@ type FrameworkRiakNode struct {
 }
 
 func NewFrameworkRiakNode(sc *SchedulerCore, clusterName string, simpleId int) *FrameworkRiakNode {
-	nodeCpusFloat, err := strconv.ParseFloat(sc.NodeCpus, 64)
+	nodeCpusFloat, err := strconv.ParseFloat(sc.nodeCpus, 64)
 	if err != nil {
 		log.Panicf("Unable to determine node_cpus: %+v", err)
 	}
-	nodeMemFloat, err := strconv.ParseFloat(sc.NodeMem, 64)
+	nodeMemFloat, err := strconv.ParseFloat(sc.nodeMem, 64)
 	if err != nil {
 		log.Panicf("Unable to determine node_mem: %+v", err)
 	}
-	nodeDiskFloat, err := strconv.ParseFloat(sc.NodeDisk, 64)
+	nodeDiskFloat, err := strconv.ParseFloat(sc.nodeDisk, 64)
 	if err != nil {
 		log.Panicf("Unable to determine node_disk: %+v", err)
 	}
@@ -199,8 +199,15 @@ func portIter(resources []*mesos.Resource) chan int64 {
 }
 
 func (frn *FrameworkRiakNode) ApplyOffer(mutableOffer *mesos.Offer) (bool, *mesos.Offer) {
-	if !common.ScalarResourcesWillFit(mutableOffer.Resources, frn.Cpus+frn.ExecCpus, frn.Mem+frn.ExecMem, frn.Disk) ||
-		!common.PortResourceWillFit(mutableOffer.Resources, frn.Ports) {
+	resources := []*mesos.Resource{}
+	if frn.HasRequestedReservation() {
+		resources = common.FilterReservedResources(mutableOffer.Resources)
+	} else {
+		resources = common.FilterUnreservedResources(mutableOffer.Resources)
+	}
+
+	if !common.ScalarResourcesWillFit(resources, frn.Cpus+frn.ExecCpus, frn.Mem+frn.ExecMem, frn.Disk) ||
+		!common.PortResourceWillFit(resources, frn.Ports) {
 		log.Info("Attempted to apply offer but offer does not have enough capacity")
 		return false, mutableOffer
 	}
@@ -217,18 +224,6 @@ func (frn *FrameworkRiakNode) HasRequestedReservation() bool {
 	}
 
 	if frn.CurrentState == process_state.ReservationRequested {
-		return true
-	}
-
-	return false
-}
-
-func (frn *FrameworkRiakNode) HasReservation() bool {
-	if frn.LastOfferUsed == nil {
-		return false
-	}
-
-	if common.ResourcesHaveReservations(frn.LastOfferUsed.Resources) {
 		return true
 	}
 

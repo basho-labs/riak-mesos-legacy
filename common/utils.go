@@ -16,6 +16,22 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
+func FilterReservedResources(immutableResources []*mesos.Resource) []*mesos.Resource {
+	reserved := []*mesos.Resource{}
+	for _, resource := range util.FilterResources(immutableResources, func(res *mesos.Resource) bool { return res.Reservation != nil }) {
+		reserved = append(reserved, resource)
+	}
+	return reserved
+}
+
+func FilterUnreservedResources(immutableResources []*mesos.Resource) []*mesos.Resource {
+	unreserved := []*mesos.Resource{}
+	for _, resource := range util.FilterResources(immutableResources, func(res *mesos.Resource) bool { return res.Reservation == nil }) {
+		unreserved = append(unreserved, resource)
+	}
+	return unreserved
+}
+
 func ApplyScalarResources(mutableResources []*mesos.Resource, cpus float64, mem float64, disk float64) []*mesos.Resource {
 	mutableResources = ApplyScalarResource(mutableResources, "cpus", cpus)
 	mutableResources = ApplyScalarResource(mutableResources, "mem", mem)
@@ -71,29 +87,6 @@ func ScalarResourceWillFit(immutableResources []*mesos.Resource, name string, va
 		}
 	}
 	return true
-}
-
-func ResourcesHaveReservations(immutableResources []*mesos.Resource) bool {
-	if ResourceHasReservation(immutableResources, "cpus") &&
-		ResourceHasReservation(immutableResources, "mem") &&
-		ResourceHasReservation(immutableResources, "disk") {
-		return true
-	}
-
-	return false
-}
-
-func ResourceHasReservation(immutableResources []*mesos.Resource, name string) bool {
-	for _, resource := range util.FilterResources(immutableResources, func(res *mesos.Resource) bool { return res.GetName() == name }) {
-		if name == "disk" {
-			if resource.Disk != nil && resource.Reservation != nil {
-				return true
-			}
-		} else if resource.Reservation != nil {
-			return true
-		}
-	}
-	return false
 }
 
 func CreatePortsResourceFromResources(immutableResources []*mesos.Resource, portCount int) (*mesos.Resource, *mesos.Resource) {
