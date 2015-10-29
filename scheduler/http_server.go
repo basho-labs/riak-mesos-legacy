@@ -161,6 +161,29 @@ func (schttp *SchedulerHTTPServer) getCluster(w http.ResponseWriter, r *http.Req
 
 }
 
+func (schttp *SchedulerHTTPServer) removeNode(w http.ResponseWriter, r *http.Request) {
+	schttp.sc.lock.Lock()
+	defer schttp.sc.lock.Unlock()
+	vars := mux.Vars(r)
+	clusterName := vars["cluster"]
+	nodeUUID := vars["node"]
+	cluster, assigned := schttp.sc.schedulerState.Clusters[clusterName]
+	if !assigned {
+		w.WriteHeader(404)
+		fmt.Fprintf(w, "Cluster %s not found", clusterName)
+	} else {
+		node, assigned := cluster.Nodes[nodeUUID]
+		if !assigned {
+			w.WriteHeader(404)
+			fmt.Fprintf(w, "Node %s not found", nodeUUID)
+		} else {
+			node.Kill()
+			schttp.sc.schedulerState.Persist()
+			w.WriteHeader(202)
+		}
+	}
+}
+
 func (schttp *SchedulerHTTPServer) createNode(w http.ResponseWriter, r *http.Request) {
 	schttp.sc.lock.Lock()
 	defer schttp.sc.lock.Unlock()
@@ -172,6 +195,11 @@ func (schttp *SchedulerHTTPServer) createNode(w http.ResponseWriter, r *http.Req
 		fmt.Fprintf(w, "Cluster %s not found", clusterName)
 	} else {
 		simpleId := len(cluster.Nodes) + 1
+		for _, frn := range cluster.Nodes {
+			if frn.SimpleId > simpleId {
+				simpleId = frn.SimpleId + 1
+			}
+		}
 		node := NewFrameworkRiakNode(schttp.sc, cluster.Name, simpleId)
 		cluster.Nodes[node.UUID.String()] = node
 		schttp.sc.schedulerState.Persist()
@@ -280,6 +308,7 @@ func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *Schedul
 	router.Methods("POST", "PUT").Path("/api/v1/clusters/{cluster}").HandlerFunc(schttp.createCluster)
 	router.Methods("GET").Path("/api/v1/clusters/{cluster}").HandlerFunc(schttp.getCluster)
 	router.Methods("GET").Path("/api/v1/clusters/{cluster}/nodes").HandlerFunc(schttp.serveNodes)
+	router.Methods("DELETE").Path("/api/v1/clusters/{cluster}/nodes/{node}").HandlerFunc(schttp.removeNode)
 
 	router.Methods("POST").Path("/api/v1/clusters/{cluster}/config").HandlerFunc(schttp.setConfig)
 	router.Methods("GET").Path("/api/v1/clusters/{cluster}/config").HandlerFunc(schttp.getConfig)

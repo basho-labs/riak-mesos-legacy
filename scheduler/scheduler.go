@@ -196,6 +196,10 @@ func (sc *SchedulerCore) Disconnected(sched.SchedulerDriver) {
 func (sc *SchedulerCore) ResourceOffers(driver sched.SchedulerDriver, offers []*mesos.Offer) {
 	sc.lock.Lock()
 	defer sc.lock.Unlock()
+
+	// I don't know where else to do this, is there a better place to store "event loop" type actions?
+	sc.maybeKillOrRemoveNodes(driver)
+
 	log.Info("Received resource offers: ", offers)
 
 	operations := sc.createOperationsForOffers(offers)
@@ -236,6 +240,34 @@ func (sc *SchedulerCore) acceptOffer(driver sched.SchedulerDriver, offer *mesos.
 	if err != nil {
 		log.Panic("Failed to launch tasks: ", err)
 	}
+}
+
+func (sc *SchedulerCore) maybeKillOrRemoveNodes(driver sched.SchedulerDriver) {
+	// Find nodes which still need to be scheduled
+	for _, cluster := range sc.schedulerState.Clusters {
+		for _, riakNode := range cluster.Nodes {
+			if riakNode.NeedsToBeKilled() {
+				log.Infof("Killing node: %+v", riakNode.CurrentID())
+				if riakNode.GetTaskStatus() != nil {
+					status, err := driver.KillTask(riakNode.GetTaskStatus().TaskId)
+
+					if status != mesos.Status_DRIVER_RUNNING {
+						log.Fatal("Driver not running, while trying to accept offers")
+					}
+					if err != nil {
+						log.Warnf("Failed to kill tasks: ", err)
+					}
+				}
+			} else if riakNode.CanBeRemoved() {
+				log.Infof("Removing node: %+v", riakNode.CurrentID())
+				delete(sc.frnDict, riakNode.CurrentID())
+				delete(sc.schedulerState.Clusters[cluster.Name].Nodes, riakNode.UUID.String())
+			}
+		}
+	}
+
+	// Save changes
+	sc.schedulerState.Persist()
 }
 
 func (sc *SchedulerCore) StatusUpdate(driver sched.SchedulerDriver, status *mesos.TaskStatus) {
@@ -293,12 +325,14 @@ func (sc *SchedulerCore) GetTasksToReconcile() []*mesos.TaskStatus {
 	tasksToReconcile := []*mesos.TaskStatus{}
 	for _, cluster := range sc.schedulerState.Clusters {
 		for _, node := range cluster.Nodes {
-			if node.reconciled == false && time.Since(node.lastAskedToReconcile).Seconds() > 5 {
-				if _, assigned := sc.frnDict[node.GetTaskStatus().TaskId.GetValue()]; !assigned {
-					sc.frnDict[node.GetTaskStatus().TaskId.GetValue()] = node
+			if node.GetTaskStatus() != nil {
+				if node.reconciled == false && time.Since(node.lastAskedToReconcile).Seconds() > 5 {
+					if _, assigned := sc.frnDict[node.GetTaskStatus().TaskId.GetValue()]; !assigned {
+						sc.frnDict[node.GetTaskStatus().TaskId.GetValue()] = node
+					}
+					node.lastAskedToReconcile = time.Now()
+					tasksToReconcile = append(tasksToReconcile, node.GetTaskStatus())
 				}
-				node.lastAskedToReconcile = time.Now()
-				tasksToReconcile = append(tasksToReconcile, node.GetTaskStatus())
 			}
 		}
 	}

@@ -87,10 +87,19 @@ func NewFrameworkRiakNode(sc *SchedulerCore, clusterName string, simpleId int) *
 	}
 }
 
-func (frn *FrameworkRiakNode) NeedsToBeScheduled() bool {
-	// Poor man's FSM:
-	// TODO: Fill out rest of possible states
+func (frn *FrameworkRiakNode) Kill() {
+	frn.DestinationState = process_state.Shutdown
+}
 
+func (frn *FrameworkRiakNode) NeedsToBeKilled() bool {
+	return frn.DestinationState == process_state.Shutdown && frn.CurrentState == process_state.Started
+}
+
+func (frn *FrameworkRiakNode) CanBeRemoved() bool {
+	return frn.DestinationState == process_state.Shutdown && frn.CurrentState == process_state.Shutdown
+}
+
+func (frn *FrameworkRiakNode) NeedsToBeScheduled() bool {
 	switch frn.DestinationState {
 	case process_state.Started:
 		{
@@ -104,7 +113,7 @@ func (frn *FrameworkRiakNode) NeedsToBeScheduled() bool {
 			case process_state.Starting:
 				return false
 			case process_state.Shutdown:
-				return true
+				return false
 			case process_state.Failed:
 				return true
 			case process_state.ReservationFailed:
@@ -112,7 +121,6 @@ func (frn *FrameworkRiakNode) NeedsToBeScheduled() bool {
 			}
 		}
 	}
-	log.Panicf("Hit unknown, Current State: (%v), Destination State: (%v)", frn.CurrentState, frn.DestinationState)
 	return false
 }
 
@@ -345,19 +353,34 @@ func (frn *FrameworkRiakNode) ExecutorID() string {
 	return frn.CurrentID()
 }
 
+func (frn *FrameworkRiakNode) attemptLeave(riakNode *FrameworkRiakNode, retry int, maxRetry int) bool {
+	if retry > maxRetry {
+		log.Infof("Attempted removing %+v to %+v's cluster %+v times and failed.", frn.TaskData.FullyQualifiedNodeName, riakNode.TaskData.FullyQualifiedNodeName, maxRetry)
+		return false
+	}
+
+	rexHostname := fmt.Sprintf("%s:%d", riakNode.LastOfferUsed.GetHostname(), riakNode.TaskData.HTTPPort)
+	rexc := rexclient.NewRiakExplorerClient(rexHostname)
+	// We should try to join against this node
+	log.Infof("Removing %+v from %+v's cluster", frn.TaskData.FullyQualifiedNodeName, riakNode.TaskData.FullyQualifiedNodeName)
+	leaveReply, leaveErr := rexc.ForceRemove(riakNode.TaskData.FullyQualifiedNodeName, frn.TaskData.FullyQualifiedNodeName)
+	log.Infof("Triggered force remove: %+v, %+v", leaveReply, leaveErr)
+	if leaveReply.ForceRemove.Success == "ok" {
+		log.Info("Leave successful")
+		return true
+	}
+
+	time.Sleep(5 * time.Second)
+	return frn.attemptLeave(riakNode, retry+1, maxRetry)
+}
+
 func (frn *FrameworkRiakNode) handleUpToDownTransition(sc *SchedulerCore, frc *FrameworkRiakCluster) {
 	for _, riakNode := range sc.schedulerState.Clusters[frc.Name].Nodes {
 		if riakNode.CurrentState == process_state.Started && riakNode != frn {
 
-			// rexc := rexclient.NewRiakExplorerClient(fmt.Sprintf("%s:%d", riakNode.LastOfferUsed.GetHostname(), riakNode.TaskData.RexPort))
-			rexc := rexclient.NewRiakExplorerClient(fmt.Sprintf("%s:%d", riakNode.LastOfferUsed.GetHostname(), riakNode.TaskData.HTTPPort))
+			leaveSuccess := frn.attemptJoin(riakNode, 0, 5)
 
-			// We should try to join against this node
-			log.Infof("Making leave: %+v to %+v", frn.TaskData.FullyQualifiedNodeName, riakNode.TaskData.FullyQualifiedNodeName)
-			leaveReply, leaveErr := rexc.ForceRemove(riakNode.TaskData.FullyQualifiedNodeName, frn.TaskData.FullyQualifiedNodeName)
-			log.Infof("Triggered leave: %+v, %+v", leaveReply, leaveErr)
-			if leaveErr == nil {
-				log.Info("Leave successful")
+			if leaveSuccess {
 				break // We're done here
 			}
 		}
@@ -366,17 +389,18 @@ func (frn *FrameworkRiakNode) handleUpToDownTransition(sc *SchedulerCore, frc *F
 
 func (frn *FrameworkRiakNode) attemptJoin(riakNode *FrameworkRiakNode, retry int, maxRetry int) bool {
 	if retry > maxRetry {
-		log.Infof("Attempted joining %+v to %+v %+v times and failed.", frn.TaskData.FullyQualifiedNodeName, riakNode.TaskData.FullyQualifiedNodeName, maxRetry)
+		log.Infof("Attempted joining %+v to %+v %+v times and failed.", riakNode.TaskData.FullyQualifiedNodeName, frn.TaskData.FullyQualifiedNodeName, maxRetry)
 		return false
 	}
 
 	rexHostname := fmt.Sprintf("%s:%d", riakNode.LastOfferUsed.GetHostname(), riakNode.TaskData.HTTPPort)
 	rexc := rexclient.NewRiakExplorerClient(rexHostname)
 	// We should try to join against this node
-	log.Infof("Joining %+v to %+v", frn.TaskData.FullyQualifiedNodeName, riakNode.TaskData.FullyQualifiedNodeName)
-	joinReply, joinErr := rexc.Join(frn.TaskData.FullyQualifiedNodeName, riakNode.TaskData.FullyQualifiedNodeName)
+	log.Infof("Joining %+v to %+v", riakNode.TaskData.FullyQualifiedNodeName, frn.TaskData.FullyQualifiedNodeName)
+	joinReply, joinErr := rexc.Join(riakNode.TaskData.FullyQualifiedNodeName, frn.TaskData.FullyQualifiedNodeName)
 	log.Infof("Triggered join: %+v, %+v", joinReply, joinErr)
 	if joinReply.Join.Success == "ok" {
+		log.Info("Join successful")
 		return true
 	}
 
@@ -417,7 +441,7 @@ func (frn *FrameworkRiakNode) handleStatusUpdate(sc *SchedulerCore, frc *Framewo
 		}
 	case mesos.TaskState_TASK_FINISHED:
 		{
-			log.Info("We should never get to this state")
+			log.Info("Task marked as finished")
 			frn.CurrentState = process_state.Shutdown
 		}
 	case mesos.TaskState_TASK_FAILED:
@@ -431,13 +455,13 @@ func (frn *FrameworkRiakNode) handleStatusUpdate(sc *SchedulerCore, frc *Framewo
 				frn.CurrentState = process_state.Failed
 			}
 		}
-
-	// Maybe? -- Not entirely sure.
 	case mesos.TaskState_TASK_KILLED:
-		frn.CurrentState = process_state.Shutdown
-
-	// These two could actually appear if the task is running -- we should better handle
-	// status updates in these two scenarios
+		{
+			if frn.CurrentState == process_state.Started {
+				frn.handleUpToDownTransition(sc, frc)
+			}
+			frn.CurrentState = process_state.Shutdown
+		}
 	case mesos.TaskState_TASK_LOST:
 		{
 			if frn.CurrentState == process_state.Started {
@@ -465,10 +489,12 @@ func (frn *FrameworkRiakNode) GetTaskStatus() *mesos.TaskStatus {
 		return frn.TaskStatus
 	}
 
-	ts := mesos.TaskState_TASK_ERROR
-	return &mesos.TaskStatus{
-		TaskId:  &mesos.TaskID{Value: proto.String(frn.CurrentID())},
-		State:   &ts,
-		SlaveId: &mesos.SlaveID{Value: proto.String("")}, // Slave ID isn't required
-	}
+	// A nil task status doesn't mean there's an error, it could mean the node hasn't started yet.
+	return nil
+	// ts := mesos.TaskState_TASK_ERROR
+	// return &mesos.TaskStatus{
+	// 	TaskId:  &mesos.TaskID{Value: proto.String(frn.CurrentID())},
+	// 	State:   &ts,
+	// 	SlaveId: &mesos.SlaveID{Value: proto.String("")}, // Slave ID isn't required
+	// }
 }
