@@ -96,6 +96,10 @@ func (sc *SchedulerCore) getNodesToBeScheduled() ([]*FrameworkRiakNode, []*Frame
 }
 
 func buildDestroyOperation(resources []*mesos.Resource) []*mesos.Offer_Operation {
+	if len(resources) == 0 {
+		return []*mesos.Offer_Operation{}
+	}
+
 	destroy := &mesos.Offer_Operation_Destroy{
 		Volumes: resources,
 	}
@@ -109,6 +113,10 @@ func buildDestroyOperation(resources []*mesos.Resource) []*mesos.Offer_Operation
 }
 
 func buildUnreserveOperation(resources []*mesos.Resource) []*mesos.Offer_Operation {
+	if len(resources) == 0 {
+		return []*mesos.Offer_Operation{}
+	}
+
 	unreserve := &mesos.Offer_Operation_Unreserve{
 		Resources: resources,
 	}
