@@ -40,7 +40,8 @@ func (frn *FrameworkRiakNode) CanBeRemoved() bool {
 			frn.CurrentState == process_state.Failed)
 }
 func (frn *FrameworkRiakNode) CanJoinCluster() bool {
-	return frn.DestinationState == process_state.Started
+	return frn.CurrentState == process_state.Starting &&
+		frn.DestinationState == process_state.Started
 }
 func (frn *FrameworkRiakNode) CanBeJoined() bool {
 	return frn.CurrentState == process_state.Started &&

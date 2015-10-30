@@ -167,7 +167,7 @@ func doJoin(oldNode *FrameworkRiakNode, newNode *FrameworkRiakNode, retry int, m
 func (frc *FrameworkRiakCluster) Join(newNode *FrameworkRiakNode) {
 	if !newNode.CanJoinCluster() {
 		// The node doesn't want to be part of a cluster?
-		log.Warnf("Node is now running, but had a destination state other than Started Node: %+v", newNode)
+		log.Infof("Node is now running, but doesn't need to join a cluster right now: %+v", newNode)
 		newNode.Run()
 		return
 	}
