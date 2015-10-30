@@ -64,14 +64,14 @@ func NewRiakNode(taskInfo *mesos.TaskInfo, executor *ExecutorCore) *RiakNode {
 
 func (riakNode *RiakNode) runLoop(child *metamgr.ZkNode) {
 
-	runStatus := &mesos.TaskStatus{
-		TaskId: riakNode.taskInfo.GetTaskId(),
-		State:  mesos.TaskState_TASK_RUNNING.Enum(),
-	}
-	_, err := riakNode.executor.Driver.SendStatusUpdate(runStatus)
-	if err != nil {
-		log.Panic("Got error", err)
-	}
+	// runStatus := &mesos.TaskStatus{
+	// 	TaskId: riakNode.taskInfo.GetTaskId(),
+	// 	State:  mesos.TaskState_TASK_RUNNING.Enum(),
+	// }
+	// _, err := riakNode.executor.Driver.SendStatusUpdate(runStatus)
+	// if err != nil {
+	// 	log.Panic("Got error", err)
+	// }
 
 	waitChan := riakNode.pm.Listen()
 	select {
@@ -311,16 +311,16 @@ func (riakNode *RiakNode) Run() {
 		if err != nil {
 			log.Panic("Could not serialize Riak Explorer data", err)
 		}
-		// We send the running update in run loop, don't send twice please
-		// runStatus := &mesos.TaskStatus{
-		// 	TaskId: riakNode.taskInfo.GetTaskId(),
-		// 	State:  mesos.TaskState_TASK_RUNNING.Enum(),
-		// 	Data:   tsdBytes,
-		// }
-		// _, err = riakNode.executor.Driver.SendStatusUpdate(runStatus)
-		// if err != nil {
-		// 	log.Panic("Got error", err)
-		// }
+
+		runStatus := &mesos.TaskStatus{
+			TaskId: riakNode.taskInfo.GetTaskId(),
+			State:  mesos.TaskState_TASK_RUNNING.Enum(),
+			Data:   tsdBytes,
+		}
+		_, err = riakNode.executor.Driver.SendStatusUpdate(runStatus)
+		if err != nil {
+			log.Panic("Got error", err)
+		}
 		riakNode.running = true
 		go riakNode.runLoop(child)
 	}
