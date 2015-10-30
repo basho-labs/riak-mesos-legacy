@@ -64,6 +64,9 @@ func NewRiakNode(taskInfo *mesos.TaskInfo, executor *ExecutorCore) *RiakNode {
 
 func (riakNode *RiakNode) runLoop(child *metamgr.ZkNode) {
 
+	var runStatus mesos.TaskStatus
+	var err error
+
 	// runStatus := &mesos.TaskStatus{
 	// 	TaskId: riakNode.taskInfo.GetTaskId(),
 	// 	State:  mesos.TaskState_TASK_RUNNING.Enum(),
