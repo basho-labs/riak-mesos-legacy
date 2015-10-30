@@ -116,6 +116,7 @@ func ApplyScalarResource(mutableResources []*mesos.Resource, name string, value 
 	for _, resource := range util.FilterResources(mutableResources, func(res *mesos.Resource) bool { return res.GetName() == name }) {
 		newValue := *resource.Scalar.Value - value
 		resource.Scalar.Value = &newValue
+		return mutableResources
 	}
 	return mutableResources
 }
@@ -123,11 +124,11 @@ func ApplyScalarResource(mutableResources []*mesos.Resource, name string, value 
 func PortResourceWillFit(immutableResources []*mesos.Resource, portCount int) bool {
 	for _, resource := range util.FilterResources(immutableResources, func(res *mesos.Resource) bool { return res.GetName() == "ports" }) {
 		ports := RangesToArray(resource.GetRanges().GetRange())
-		if len(ports) < portCount {
-			return false
+		if len(ports) >= portCount {
+			return true
 		}
 	}
-	return true
+	return false
 }
 
 func ScalarResourcesWillFit(immutableResources []*mesos.Resource, cpus float64, mem float64, disk float64) bool {
@@ -165,11 +166,11 @@ func PrettyStringForScalarResources(resources []*mesos.Resource) string {
 
 func ScalarResourceWillFit(immutableResources []*mesos.Resource, name string, value float64) bool {
 	for _, resource := range util.FilterResources(immutableResources, func(res *mesos.Resource) bool { return res.GetName() == name }) {
-		if resource.GetScalar().GetValue() < (value) {
-			return false
+		if resource.GetScalar().GetValue() >= (value) {
+			return true
 		}
 	}
-	return true
+	return false
 }
 
 func CreatePortsResourceFromResources(immutableResources []*mesos.Resource, portCount int) (*mesos.Resource, *mesos.Resource) {
