@@ -29,12 +29,11 @@ func (sc *SchedulerCore) createOperationsForOffers(offers []*mesos.Offer) map[st
 		// Launch all elligible nodes
 		for _, riakNode := range nodesToLaunch {
 			// Need to check again because we don't want to double book a node
-			if riakNode.NeedsToBeScheduled() && (sc.compatibilityMode || riakNode.OfferCompatible(offer)) {
+			if riakNode.CanBeScheduled() && (sc.compatibilityMode || riakNode.OfferCompatible(offer)) {
 				applySuccess, offer = riakNode.ApplyOffer(offer)
 				if applySuccess {
 					log.Infof("Found an offer for a launchable node. OfferID: %+v, NodeID: %+v", *offer.Id.Value, riakNode.CurrentID())
 					taskInfo := riakNode.PrepareForLaunchAndGetNewTaskInfo(sc)
-					sc.frnDict[riakNode.CurrentID()] = riakNode
 					launchTasks = append(launchTasks, taskInfo)
 					sc.schedulerState.Persist()
 				}
@@ -43,11 +42,11 @@ func (sc *SchedulerCore) createOperationsForOffers(offers []*mesos.Offer) map[st
 
 		// The offer has reservations, but no node can use them, unreserve
 		if len(common.FilterReservedResources(offer.Resources)) > 0 && len(launchTasks) == 0 {
-			log.Warnf("An offer has reservations, but no nodes can use it. Unreserving resources for OfferID: %+v", *offer.Id.Value)
+			log.Warnf("An offer has reserved resources, but no nodes can use it. Unreserving resources for OfferID: %+v", *offer.Id.Value)
 			unreserveResources = append(unreserveResources, common.CopyReservedResources(offer.Resources)...)
 		}
 		if len(common.FilterReservedVolumes(offer.Resources)) > 0 && len(launchTasks) == 0 {
-			log.Warnf("An offer has reservations, but no nodes can use it. Destroying volumes for OfferID: %+v", *offer.Id.Value)
+			log.Warnf("An offer has persisted volumes, but no nodes can use it. Destroying volumes for OfferID: %+v", *offer.Id.Value)
 			destroyResources = append(destroyResources, common.CopyReservedVolumes(offer.Resources)...)
 
 		}
@@ -82,10 +81,10 @@ func (sc *SchedulerCore) getNodesToBeScheduled() ([]*FrameworkRiakNode, []*Frame
 	nodesWithoutReservations := []*FrameworkRiakNode{}
 	for _, cluster := range sc.schedulerState.Clusters {
 		for _, riakNode := range cluster.Nodes {
-			if riakNode.NeedsToBeScheduled() && riakNode.HasRequestedReservation() {
+			if riakNode.CanBeScheduled() && riakNode.HasRequestedReservation() {
 				log.Infof("Adding Riak node for scheduling (has reservations): %+v", riakNode.CurrentID())
 				nodesWithReservations = append(nodesWithReservations, riakNode)
-			} else if riakNode.NeedsToBeScheduled() && !riakNode.HasRequestedReservation() {
+			} else if riakNode.CanBeScheduled() && !riakNode.HasRequestedReservation() {
 				log.Infof("Adding Riak node for scheduling (no reservations): %+v", riakNode.CurrentID())
 				nodesWithoutReservations = append(nodesWithoutReservations, riakNode)
 			}

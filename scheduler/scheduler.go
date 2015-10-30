@@ -14,7 +14,6 @@ import (
 	"github.com/basho-labs/riak-mesos/cepmd/cepm"
 	metamgr "github.com/basho-labs/riak-mesos/metadata_manager"
 	"github.com/golang/protobuf/proto"
-	"time"
 )
 
 const (
@@ -26,7 +25,6 @@ type SchedulerCore struct {
 	schedulerHTTPServer *SchedulerHTTPServer
 	mgr                 *metamgr.MetadataManager
 	schedulerIPAddr     string
-	frnDict             map[string]*FrameworkRiakNode
 	rServer             *ReconcilationServer
 	user                string
 	zookeepers          []string
@@ -68,7 +66,6 @@ func NewSchedulerCore(
 		lock:                &sync.Mutex{},
 		schedulerIPAddr:     schedulerIPAddr,
 		mgr:                 mgr,
-		frnDict:             make(map[string]*FrameworkRiakNode),
 		user:                user,
 		zookeepers:          zookeepers,
 		cepm:                c,
@@ -181,8 +178,6 @@ func (sc *SchedulerCore) Registered(driver sched.SchedulerDriver, frameworkId *m
 func (sc *SchedulerCore) Reregistered(driver sched.SchedulerDriver, masterInfo *mesos.MasterInfo) {
 	sc.lock.Lock()
 	defer sc.lock.Unlock()
-	//go NewTargetTask(*sched).Loop()
-	// We don't actually handle this correctly
 	log.Error("Framework reregistered")
 	log.Info("Master Info: ", masterInfo)
 	sc.rServer.enable()
@@ -196,9 +191,6 @@ func (sc *SchedulerCore) Disconnected(sched.SchedulerDriver) {
 func (sc *SchedulerCore) ResourceOffers(driver sched.SchedulerDriver, offers []*mesos.Offer) {
 	sc.lock.Lock()
 	defer sc.lock.Unlock()
-
-	// I don't know where else to do this, is there a better place to store "event loop" type actions?
-	sc.maybeKillOrRemoveNodes(driver)
 
 	log.Info("Received resource offers: ", offers)
 
@@ -242,47 +234,25 @@ func (sc *SchedulerCore) acceptOffer(driver sched.SchedulerDriver, offer *mesos.
 	}
 }
 
-func (sc *SchedulerCore) maybeKillOrRemoveNodes(driver sched.SchedulerDriver) {
-	// Find nodes which still need to be scheduled
-	for _, cluster := range sc.schedulerState.Clusters {
-		for _, riakNode := range cluster.Nodes {
-			if riakNode.NeedsToBeKilled() {
-				log.Infof("Killing node: %+v", riakNode.CurrentID())
-				if riakNode.GetTaskStatus() != nil {
-					status, err := driver.KillTask(riakNode.GetTaskStatus().TaskId)
-
-					if status != mesos.Status_DRIVER_RUNNING {
-						log.Fatal("Driver not running, while trying to accept offers")
-					}
-					if err != nil {
-						log.Warnf("Failed to kill tasks: ", err)
-					}
-				}
-			} else if riakNode.CanBeRemoved() {
-				log.Infof("Removing node: %+v", riakNode.CurrentID())
-				delete(sc.frnDict, riakNode.CurrentID())
-				delete(sc.schedulerState.Clusters[cluster.Name].Nodes, riakNode.UUID.String())
-			}
-		}
-	}
-
-	// Save changes
-	sc.schedulerState.Persist()
-}
-
 func (sc *SchedulerCore) StatusUpdate(driver sched.SchedulerDriver, status *mesos.TaskStatus) {
 	sc.lock.Lock()
 	defer sc.lock.Unlock()
-	riak_node, assigned := sc.frnDict[status.TaskId.GetValue()]
-	if assigned {
-		log.Info("Received status updates: ", status)
-		log.Info("Riak Node: ", riak_node)
-		riak_node.handleStatusUpdate(sc, sc.schedulerState.Clusters[riak_node.ClusterName], status)
-		sc.schedulerState.Persist()
-	} else {
-		log.Error("Received status update for unknown job: ", status)
+
+	log.Info("Received status updates: ", status)
+	foundNode := false
+
+	for _, cluster := range sc.schedulerState.Clusters {
+		if cluster.HasNode(status.TaskId.GetValue()) {
+			foundNode = true
+			cluster.HandleNodeStatusUpdate(status)
+			sc.schedulerState.Persist()
+			break
+		}
 	}
 
+	if !foundNode {
+		log.Error("Received status update for unknown job: ", status)
+	}
 }
 
 func (sc *SchedulerCore) OfferRescinded(driver sched.SchedulerDriver, offerID *mesos.OfferID) {
@@ -315,26 +285,4 @@ func (sc *SchedulerCore) Error(driver sched.SchedulerDriver, err string) {
 	sc.lock.Lock()
 	defer sc.lock.Unlock()
 	log.Info("Scheduler received error:", err)
-}
-
-// Callback from reconciliation server
-// This is a massive hack that was because I didn't want to make the scheduler async
-func (sc *SchedulerCore) GetTasksToReconcile() []*mesos.TaskStatus {
-	sc.lock.Lock()
-	defer sc.lock.Unlock()
-	tasksToReconcile := []*mesos.TaskStatus{}
-	for _, cluster := range sc.schedulerState.Clusters {
-		for _, node := range cluster.Nodes {
-			if node.GetTaskStatus() != nil {
-				if node.reconciled == false && time.Since(node.lastAskedToReconcile).Seconds() > 5 {
-					if _, assigned := sc.frnDict[node.GetTaskStatus().TaskId.GetValue()]; !assigned {
-						sc.frnDict[node.GetTaskStatus().TaskId.GetValue()] = node
-					}
-					node.lastAskedToReconcile = time.Now()
-					tasksToReconcile = append(tasksToReconcile, node.GetTaskStatus())
-				}
-			}
-		}
-	}
-	return tasksToReconcile
 }

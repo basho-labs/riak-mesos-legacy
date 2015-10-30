@@ -6,7 +6,6 @@ import (
 	mesos "github.com/basho-labs/mesos-go/mesosproto"
 	util "github.com/basho-labs/mesos-go/mesosutil"
 	"github.com/basho-labs/riak-mesos/common"
-	rexclient "github.com/basho-labs/riak-mesos/riak_explorer/client"
 	"github.com/basho-labs/riak-mesos/scheduler/process_state"
 	"github.com/golang/protobuf/proto"
 	"github.com/satori/go.uuid"
@@ -85,43 +84,6 @@ func NewFrameworkRiakNode(sc *SchedulerCore, clusterName string, simpleId int) *
 		PersistenceID:    uuid.NewV4().String(),
 		ContainerPath:    CONTAINER_PATH,
 	}
-}
-
-func (frn *FrameworkRiakNode) Kill() {
-	frn.DestinationState = process_state.Shutdown
-}
-
-func (frn *FrameworkRiakNode) NeedsToBeKilled() bool {
-	return frn.DestinationState == process_state.Shutdown && frn.CurrentState == process_state.Started
-}
-
-func (frn *FrameworkRiakNode) CanBeRemoved() bool {
-	return frn.DestinationState == process_state.Shutdown && frn.CurrentState != process_state.Started
-}
-
-func (frn *FrameworkRiakNode) NeedsToBeScheduled() bool {
-	switch frn.DestinationState {
-	case process_state.Started:
-		{
-			switch frn.CurrentState {
-			case process_state.Started:
-				return false
-			case process_state.Unknown:
-				return true
-			case process_state.ReservationRequested:
-				return true
-			case process_state.Starting:
-				return false
-			case process_state.Shutdown:
-				return false
-			case process_state.Failed:
-				return true
-			case process_state.ReservationFailed:
-				return true
-			}
-		}
-	}
-	return false
 }
 
 func (frn *FrameworkRiakNode) GetExecutorResources() []*mesos.Resource {
@@ -351,137 +313,6 @@ func (frn *FrameworkRiakNode) CurrentID() string {
 
 func (frn *FrameworkRiakNode) ExecutorID() string {
 	return frn.CurrentID()
-}
-
-func (frn *FrameworkRiakNode) attemptLeave(riakNode *FrameworkRiakNode, retry int, maxRetry int) bool {
-	if retry > maxRetry {
-		log.Infof("Attempted removing %+v to %+v's cluster %+v times and failed.", frn.TaskData.FullyQualifiedNodeName, riakNode.TaskData.FullyQualifiedNodeName, maxRetry)
-		return false
-	}
-
-	rexHostname := fmt.Sprintf("%s:%d", riakNode.LastOfferUsed.GetHostname(), riakNode.TaskData.HTTPPort)
-	rexc := rexclient.NewRiakExplorerClient(rexHostname)
-	// We should try to join against this node
-	log.Infof("Removing %+v from %+v's cluster", frn.TaskData.FullyQualifiedNodeName, riakNode.TaskData.FullyQualifiedNodeName)
-	leaveReply, leaveErr := rexc.ForceRemove(riakNode.TaskData.FullyQualifiedNodeName, frn.TaskData.FullyQualifiedNodeName)
-	log.Infof("Triggered force remove: %+v, %+v", leaveReply, leaveErr)
-	if leaveReply.ForceRemove.Success == "ok" {
-		log.Info("Leave successful")
-		return true
-	}
-
-	time.Sleep(5 * time.Second)
-	return frn.attemptLeave(riakNode, retry+1, maxRetry)
-}
-
-func (frn *FrameworkRiakNode) handleUpToDownTransition(sc *SchedulerCore, frc *FrameworkRiakCluster) {
-	for _, riakNode := range sc.schedulerState.Clusters[frc.Name].Nodes {
-		if riakNode.CurrentState == process_state.Started && riakNode != frn {
-
-			leaveSuccess := frn.attemptLeave(riakNode, 0, 5)
-
-			if leaveSuccess {
-				break // We're done here
-			}
-		}
-	}
-}
-
-func (frn *FrameworkRiakNode) attemptJoin(riakNode *FrameworkRiakNode, retry int, maxRetry int) bool {
-	if retry > maxRetry {
-		log.Infof("Attempted joining %+v to %+v %+v times and failed.", frn.TaskData.FullyQualifiedNodeName, riakNode.TaskData.FullyQualifiedNodeName, maxRetry)
-		return false
-	}
-
-	rexHostname := fmt.Sprintf("%s:%d", riakNode.LastOfferUsed.GetHostname(), riakNode.TaskData.HTTPPort)
-	rexc := rexclient.NewRiakExplorerClient(rexHostname)
-	// We should try to join against this node
-	log.Infof("Joining %+v to %+v", frn.TaskData.FullyQualifiedNodeName, riakNode.TaskData.FullyQualifiedNodeName)
-	joinReply, joinErr := rexc.Join(frn.TaskData.FullyQualifiedNodeName, riakNode.TaskData.FullyQualifiedNodeName)
-	log.Infof("Triggered join: %+v, %+v", joinReply, joinErr)
-	if joinReply.Join.Success == "ok" {
-		log.Info("Join successful")
-		return true
-	}
-
-	time.Sleep(5 * time.Second)
-	return frn.attemptJoin(riakNode, retry+1, maxRetry)
-}
-
-func (frn *FrameworkRiakNode) handleStartingToRunningTransition(sc *SchedulerCore, frc *FrameworkRiakCluster) {
-	for _, riakNode := range sc.schedulerState.Clusters[frc.Name].Nodes {
-		if riakNode.CurrentState == process_state.Started {
-
-			joinSuccess := frn.attemptJoin(riakNode, 0, 5)
-
-			if joinSuccess {
-				break // We're done here
-			}
-		}
-	}
-}
-func (frn *FrameworkRiakNode) handleStatusUpdate(sc *SchedulerCore, frc *FrameworkRiakCluster, statusUpdate *mesos.TaskStatus) {
-	frn.reconciled = true
-
-	// Poor man's FSM event handler
-	frn.TaskStatus = statusUpdate
-	switch *statusUpdate.State.Enum() {
-	case mesos.TaskState_TASK_STAGING:
-		frn.CurrentState = process_state.Starting
-	case mesos.TaskState_TASK_STARTING:
-		{
-			frn.CurrentState = process_state.Starting
-		}
-	case mesos.TaskState_TASK_RUNNING:
-		{
-			if frn.CurrentState == process_state.Starting {
-				frn.handleStartingToRunningTransition(sc, frc)
-			}
-			frn.CurrentState = process_state.Started
-		}
-	case mesos.TaskState_TASK_FINISHED:
-		{
-			log.Info("Task marked as finished")
-			frn.CurrentState = process_state.Shutdown
-		}
-	case mesos.TaskState_TASK_FAILED:
-		{
-			if frn.CurrentState == process_state.Started {
-				frn.handleUpToDownTransition(sc, frc)
-			}
-			if frn.CurrentState == process_state.ReservationRequested {
-				frn.CurrentState = process_state.ReservationFailed
-			} else {
-				frn.CurrentState = process_state.Failed
-			}
-		}
-	case mesos.TaskState_TASK_KILLED:
-		{
-			if frn.CurrentState == process_state.Started {
-				frn.handleUpToDownTransition(sc, frc)
-			}
-			frn.CurrentState = process_state.Shutdown
-		}
-	case mesos.TaskState_TASK_LOST:
-		{
-			if frn.CurrentState == process_state.Started {
-				frn.handleUpToDownTransition(sc, frc)
-			}
-			if frn.CurrentState == process_state.ReservationRequested {
-				frn.CurrentState = process_state.ReservationFailed
-			} else {
-				frn.CurrentState = process_state.Failed
-			}
-		}
-	case mesos.TaskState_TASK_ERROR:
-		if frn.CurrentState == process_state.ReservationRequested {
-			frn.CurrentState = process_state.ReservationFailed
-		} else {
-			frn.CurrentState = process_state.Failed
-		}
-	default:
-		log.Fatal("Received unknown status update")
-	}
 }
 
 func (frn *FrameworkRiakNode) GetTaskStatus() *mesos.TaskStatus {
