@@ -7,7 +7,6 @@ import (
 type TaskData struct {
 	FullyQualifiedNodeName string
 	Zookeepers             []string
-	NodeID                 string
 	FrameworkName          string
 	ClusterName            string
 	URI                    string

@@ -27,7 +27,6 @@ type FrameworkRiakNode struct {
 	reconciled           bool      `json:"-"`
 	lastAskedToReconcile time.Time `json:"-"`
 
-	UUID             uuid.UUID
 	SimpleId         int
 	DestinationState process_state.ProcessState
 	CurrentState     process_state.ProcessState
@@ -72,7 +71,6 @@ func NewFrameworkRiakNode(sc *SchedulerCore, clusterName string, simpleId int) *
 		FrameworkName:    sc.frameworkName,
 		Role:             &sc.frameworkRole,
 		Principal:        &sc.mesosAuthPrincipal,
-		UUID:             uuid.NewV4(),
 		SimpleId:         simpleId,
 		ClusterName:      clusterName,
 		Cpus:             nodeCpusFloat,
@@ -277,7 +275,6 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(sc *SchedulerCor
 		FullyQualifiedNodeName: nodename,
 		Host:           offer.GetHostname(),
 		Zookeepers:     sc.zookeepers,
-		NodeID:         frn.UUID.String(),
 		FrameworkName:  sc.frameworkName,
 		URI:            sc.schedulerHTTPServer.GetURI(),
 		ClusterName:    frn.ClusterName,

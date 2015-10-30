@@ -55,7 +55,7 @@ func (frc *FrameworkRiakCluster) GetNextSimpleId() int {
 	return simpleId
 }
 
-func (frc *FrameworkRiakCluster) CreateNode(sc *SchedulerCore) *FrameworkRiakNode{
+func (frc *FrameworkRiakCluster) CreateNode(sc *SchedulerCore) *FrameworkRiakNode {
 	simpleId := frc.GetNextSimpleId()
 	riakNode := NewFrameworkRiakNode(sc, frc.Name, simpleId)
 	frc.Nodes[riakNode.CurrentID()] = riakNode
@@ -71,7 +71,7 @@ func (frc *FrameworkRiakCluster) HasNode(riakNodeID string) bool {
 func (frc *FrameworkRiakCluster) RemoveNode(riakNode *FrameworkRiakNode) {
 	log.Infof("Removing node: %+v", riakNode.CurrentID())
 	frc.Graveyard[riakNode.CurrentID()] = riakNode
-	delete(frc.Nodes, riakNode.UUID.String())
+	delete(frc.Nodes, riakNode.CurrentID())
 }
 
 func (frc *FrameworkRiakCluster) GetNodesToKillOrRemove() (map[string]*FrameworkRiakNode, map[string]*FrameworkRiakNode) {
@@ -103,6 +103,44 @@ func (frc *FrameworkRiakCluster) GetNodeTasksToReconcile() []*mesos.TaskStatus {
 	}
 
 	return tasksToReconcile
+}
+
+func (frc *FrameworkRiakCluster) HandleNodeStatusUpdate(status *mesos.TaskStatus) {
+	deadNode, updateForDeadNode := frc.Graveyard[status.TaskId.GetValue()]
+
+	if updateForDeadNode {
+		log.Warnf("Status update is for a node that's already been killed, ignoring. Node: ", deadNode)
+		return
+	}
+
+	riakNode, _ := frc.Nodes[status.TaskId.GetValue()]
+	riakNode.reconciled = true
+	riakNode.TaskStatus = status
+
+	switch *status.State.Enum() {
+	case mesos.TaskState_TASK_STAGING:
+		riakNode.Stage()
+	case mesos.TaskState_TASK_STARTING:
+		riakNode.Start()
+	case mesos.TaskState_TASK_RUNNING:
+		frc.Join(riakNode)
+	case mesos.TaskState_TASK_FINISHED:
+		riakNode.Finish()
+	case mesos.TaskState_TASK_FAILED:
+		frc.Leave(riakNode)
+		riakNode.Fail()
+	case mesos.TaskState_TASK_KILLED:
+		frc.Leave(riakNode)
+		riakNode.Kill()
+	case mesos.TaskState_TASK_LOST:
+		frc.Leave(riakNode)
+		riakNode.Lost()
+	case mesos.TaskState_TASK_ERROR:
+		frc.Leave(riakNode)
+		riakNode.Error()
+	default:
+		log.Warn("Received unknown status update: %+v", status)
+	}
 }
 
 func doJoin(oldNode *FrameworkRiakNode, newNode *FrameworkRiakNode, retry int, maxRetry int) bool {
@@ -201,38 +239,3 @@ func (frc *FrameworkRiakCluster) Leave(leavingNode *FrameworkRiakNode) {
 		log.Warnf("Attempted to remove node from cluster, but was unable to. Cluster Nodes: %+v", frc.Nodes)
 	}
 }
-
-func (frc *FrameworkRiakCluster) HandleNodeStatusUpdate(status *mesos.TaskStatus) {
-	riakNode, _ := frc.Nodes[status.TaskId.GetValue()]
-	riakNode.reconciled = true
-	riakNode.TaskStatus = status
-
-	switch *status.State.Enum() {
-	case mesos.TaskState_TASK_STAGING:
-		riakNode.Stage()
-	case mesos.TaskState_TASK_STARTING:
-		riakNode.Start()
-	case mesos.TaskState_TASK_RUNNING:
-		frc.Join(riakNode)
-	case mesos.TaskState_TASK_FINISHED:
-		riakNode.Finish()
-	case mesos.TaskState_TASK_FAILED:
-		frc.Leave(riakNode)
-		riakNode.Fail()
-	case mesos.TaskState_TASK_KILLED:
-		frc.Leave(riakNode)
-		riakNode.Kill()
-	case mesos.TaskState_TASK_LOST:
-		frc.Leave(riakNode)
-		riakNode.Lost()
-	case mesos.TaskState_TASK_ERROR:
-		frc.Leave(riakNode)
-		riakNode.Error()
-	default:
-		log.Warn("Received unknown status update: %+v", status)
-	}
-}
-
-// func (frn *FrameworkRiakNode) KillNode() {
-// 	frn.DestinationState = process_state.Shutdown
-// }
