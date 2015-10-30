@@ -103,6 +103,11 @@ func (exec *ExecutorCore) KillTask(driver exec.ExecutorDriver, taskId *mesos.Tas
 	if err != nil {
 		log.Panic("Got error", err)
 	}
+
+	// We should really just call it quits here, someone killed us,
+	// so no reason to keep the driver around
+	driver.Stop()
+	os.Exit(0)
 }
 
 func (exec *ExecutorCore) FrameworkMessage(driver exec.ExecutorDriver, msg string) {

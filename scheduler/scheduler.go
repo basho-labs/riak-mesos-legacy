@@ -192,7 +192,7 @@ func (sc *SchedulerCore) ResourceOffers(driver sched.SchedulerDriver, offers []*
 	sc.lock.Lock()
 	defer sc.lock.Unlock()
 
-	log.Info("Received resource offers: ", offers)
+	// log.Info("Received resource offers: ", offers)
 
 	operations := sc.createOperationsForOffers(offers)
 

@@ -19,6 +19,7 @@ func (sc *SchedulerCore) createOperationsForOffers(offers []*mesos.Offer) map[st
 
 	// Populate operations
 	for _, offer := range offers {
+		log.Infof("Got offer with these resources: %s", common.PrettyStringForScalarResources(offer.Resources))
 		operations[*offer.Id.Value] = []*mesos.Offer_Operation{}
 		launchTasks := []*mesos.TaskInfo{}
 		createResources := []*mesos.Resource{}

@@ -3,6 +3,7 @@ package common
 import (
 	"errors"
 	"fmt"
+	log "github.com/Sirupsen/logrus"
 	mesos "github.com/basho-labs/mesos-go/mesosproto"
 	util "github.com/basho-labs/mesos-go/mesosutil"
 	"math/rand"
@@ -130,6 +131,9 @@ func PortResourceWillFit(immutableResources []*mesos.Resource, portCount int) bo
 }
 
 func ScalarResourcesWillFit(immutableResources []*mesos.Resource, cpus float64, mem float64, disk float64) bool {
+	log.Infof("Requested: cpus:%v, mem:%v, disk:%v", cpus, mem, disk)
+	log.Infof("Checking to see if these resources fit: %s", PrettyStringForScalarResources(immutableResources))
+
 	if !ScalarResourceWillFit(immutableResources, "cpus", cpus) {
 		return false
 	}
@@ -141,6 +145,22 @@ func ScalarResourcesWillFit(immutableResources []*mesos.Resource, cpus float64, 
 	}
 
 	return true
+}
+
+func PrettyStringForScalarResources(resources []*mesos.Resource) string {
+	output := "["
+	for _, resource := range resources {
+		if resource.Scalar != nil {
+			if resource.Reservation != nil {
+				output += "R( "
+			} else {
+				output += "U( "
+			}
+			output += fmt.Sprintf("%s:%v), ", resource.GetName(), resource.Scalar.GetValue())
+		}
+	}
+	output += "]"
+	return output
 }
 
 func ScalarResourceWillFit(immutableResources []*mesos.Resource, name string, value float64) bool {

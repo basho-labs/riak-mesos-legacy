@@ -192,8 +192,7 @@ func (frc *FrameworkRiakCluster) Join(newNode *FrameworkRiakNode) {
 
 	if !joinSuccess {
 		// We're running now, but we can't join the cluster for some reason
-		log.Warnf("Node is now running, but cannot find a node to join. Killing task. Cluster Nodes: %+v", frc.Nodes)
-		newNode.KillNext()
+		log.Info("Node is now running, but cannot find a node to join.")
 	}
 }
 

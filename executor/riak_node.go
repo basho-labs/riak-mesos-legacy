@@ -12,11 +12,11 @@ import (
 	"bytes"
 	"errors"
 	log "github.com/Sirupsen/logrus"
+	mesos "github.com/basho-labs/mesos-go/mesosproto"
 	"github.com/basho-labs/riak-mesos/cepmd/cepm"
 	"github.com/basho-labs/riak-mesos/common"
 	metamgr "github.com/basho-labs/riak-mesos/metadata_manager"
 	"github.com/basho-labs/riak-mesos/process_manager"
-	mesos "github.com/basho-labs/mesos-go/mesosproto"
 	"net/http"
 )
 
@@ -311,15 +311,16 @@ func (riakNode *RiakNode) Run() {
 		if err != nil {
 			log.Panic("Could not serialize Riak Explorer data", err)
 		}
-		runStatus := &mesos.TaskStatus{
-			TaskId: riakNode.taskInfo.GetTaskId(),
-			State:  mesos.TaskState_TASK_RUNNING.Enum(),
-			Data:   tsdBytes,
-		}
-		_, err = riakNode.executor.Driver.SendStatusUpdate(runStatus)
-		if err != nil {
-			log.Panic("Got error", err)
-		}
+		// We send the running update in run loop, don't send twice please
+		// runStatus := &mesos.TaskStatus{
+		// 	TaskId: riakNode.taskInfo.GetTaskId(),
+		// 	State:  mesos.TaskState_TASK_RUNNING.Enum(),
+		// 	Data:   tsdBytes,
+		// }
+		// _, err = riakNode.executor.Driver.SendStatusUpdate(runStatus)
+		// if err != nil {
+		// 	log.Panic("Got error", err)
+		// }
 		riakNode.running = true
 		go riakNode.runLoop(child)
 	}
