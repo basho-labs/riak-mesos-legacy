@@ -127,16 +127,16 @@ func (frc *FrameworkRiakCluster) HandleNodeStatusUpdate(status *mesos.TaskStatus
 		frc.Leave(riakNode)
 		riakNode.Finish()
 	case mesos.TaskState_TASK_FAILED:
-		frc.Leave(riakNode)
+		// frc.Leave(riakNode)
 		riakNode.Fail()
 	case mesos.TaskState_TASK_KILLED:
 		frc.Leave(riakNode)
 		riakNode.Kill()
 	case mesos.TaskState_TASK_LOST:
-		frc.Leave(riakNode)
+		// frc.Leave(riakNode)
 		riakNode.Lost()
 	case mesos.TaskState_TASK_ERROR:
-		frc.Leave(riakNode)
+		// frc.Leave(riakNode)
 		riakNode.Error()
 	default:
 		log.Warn("Received unknown status update: %+v", status)
