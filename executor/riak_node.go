@@ -205,7 +205,6 @@ func (riakNode *RiakNode) setCoordinatedData(child *metamgr.ZkNode, config templ
 		log.Panic("Could not serialize coordinated data	", err)
 	}
 	child.SetData(cdBytes)
-	return child
 }
 
 func (riakNode *RiakNode) getCoordinatedChild() *metamgr.ZkNode {
@@ -363,11 +362,11 @@ func (riakNode *RiakNode) finish() {
 func (riakNode *RiakNode) ForceFinish() {
 	log.Info("Finish channel says to shut down Riak")
 	riakNode.pm.TearDown()
-	runStatus = &mesos.TaskStatus{
+	runStatus := &mesos.TaskStatus{
 		TaskId: riakNode.taskInfo.GetTaskId(),
 		State:  mesos.TaskState_TASK_FINISHED.Enum(),
 	}
-	_, err = riakNode.executor.Driver.SendStatusUpdate(runStatus)
+	_, err := riakNode.executor.Driver.SendStatusUpdate(runStatus)
 	if err != nil {
 		log.Panic("Got error", err)
 	}

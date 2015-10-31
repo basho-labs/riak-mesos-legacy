@@ -116,6 +116,7 @@ func (exec *ExecutorCore) FrameworkMessage(driver exec.ExecutorDriver, msg strin
 		{
 			log.Info("Force finishing riak node")
 			exec.riakNode.ForceFinish()
+			os.Exit(0)
 		}
 	}
 }
