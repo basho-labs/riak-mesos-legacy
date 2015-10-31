@@ -212,6 +212,10 @@ func doLeave(stayingNode *FrameworkRiakNode, leavingNode *FrameworkRiakNode, ret
 		log.Info("Leave successful")
 		return true
 	}
+	if leaveReply.ForceRemove.Error == "not_member" {
+		log.Info("Node already removed")
+		return true
+	}
 
 	time.Sleep(5 * time.Second)
 	return doLeave(stayingNode, leavingNode, retry+1, maxRetry)

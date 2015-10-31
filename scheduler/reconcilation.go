@@ -39,8 +39,8 @@ func (rServer *ReconcilationServer) reconcile() {
 	if rServer.enabled.Load().(bool) == true {
 		rServer.sc.lock.Lock()
 		defer rServer.sc.lock.Unlock()
-		rServer.killTasks()
 		rServer.reconcileTasks()
+		rServer.killTasks()
 	}
 }
 func (rServer *ReconcilationServer) loop() {
@@ -67,7 +67,7 @@ func (rServer *ReconcilationServer) killTasks() {
 		}
 
 		if len(nodesToRemove) > 0 {
-			for _, riakNode := range nodesToKill {
+			for _, riakNode := range nodesToRemove {
 				cluster.RemoveNode(riakNode)
 			}
 			rServer.sc.schedulerState.Persist()
