@@ -72,6 +72,12 @@ func (rServer *ReconcilationServer) killTasks() {
 			}
 			rServer.sc.schedulerState.Persist()
 		}
+
+		if cluster.CanBeRemoved() {
+			rServer.sc.schedulerState.Graveyard[cluster.Name] = cluster
+			delete(rServer.sc.schedulerState.Clusters, cluster.Name)
+			rServer.sc.schedulerState.Persist()
+		}
 	}
 }
 

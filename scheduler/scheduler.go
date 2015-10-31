@@ -251,6 +251,16 @@ func (sc *SchedulerCore) StatusUpdate(driver sched.SchedulerDriver, status *meso
 	}
 
 	if !foundNode {
+		for _, cluster := range sc.schedulerState.Graveyard {
+			if cluster.HasNode(status.TaskId.GetValue()) {
+				foundNode = true
+				log.Warn("Received status update for node in killed cluster: ", status)
+				break
+			}
+		}
+	}
+
+	if !foundNode {
 		log.Error("Received status update for unknown job: ", status)
 	}
 }

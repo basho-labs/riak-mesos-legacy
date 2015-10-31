@@ -17,6 +17,7 @@ type SchedulerState struct {
 	MesosMaster string
 	FrameworkID *string
 	Clusters    map[string]*FrameworkRiakCluster
+	Graveyard   map[string]*FrameworkRiakCluster
 }
 
 func emptySchedulerState() *SchedulerState {

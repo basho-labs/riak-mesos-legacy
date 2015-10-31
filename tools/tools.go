@@ -17,6 +17,7 @@ var (
 	zookeeperAddr string
 	nodes         int
 	clusterName   string
+	nodeName      string
 	frameworkName string
 	cmd           string
 	client        *SchedulerHTTPClient
@@ -26,7 +27,8 @@ var (
 func init() {
 	flag.StringVar(&zookeeperAddr, "zk", "33.33.33.2:2181", "Zookeeper")
 	flag.IntVar(&nodes, "nodes", 1, "Nodes in new cluster")
-	flag.StringVar(&clusterName, "cluster-name", "", "Name of new cluster")
+	flag.StringVar(&clusterName, "cluster-name", "", "Name of cluster")
+	flag.StringVar(&nodeName, "node-name", "", "Name of node")
 	flag.StringVar(&config, "config", "", "filename of new config")
 
 	flag.StringVar(&frameworkName, "name", "riakMesosFramework", "Framework Instance ID")
@@ -80,6 +82,11 @@ func main() {
 		client = NewSchedulerHTTPClient(getURL())
 		requireClusterName()
 		respond(client.GetNodeHosts(clusterName))
+	case "delete-node":
+		client = NewSchedulerHTTPClient(getURL())
+		requireClusterName()
+		requireNodeName()
+		respond(client.DeleteNode(clusterName, nodeName))
 	case "add-node":
 		client = NewSchedulerHTTPClient(getURL())
 		requireClusterName()
@@ -203,7 +210,14 @@ func getConfigData() io.Reader {
 
 func requireClusterName() {
 	if clusterName == "" {
-		fmt.Println("Please specify value for cluster name")
+		fmt.Println("Please specify value for cluster-name")
+		os.Exit(1)
+	}
+}
+
+func requireNodeName() {
+	if nodeName == "" {
+		fmt.Println("Please specify value for node-name")
 		os.Exit(1)
 	}
 }

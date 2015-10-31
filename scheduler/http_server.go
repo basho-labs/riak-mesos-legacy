@@ -53,6 +53,25 @@ func (schttp *SchedulerHTTPServer) createCluster(w http.ResponseWriter, r *http.
 	}
 }
 
+func (schttp *SchedulerHTTPServer) removeCluster(w http.ResponseWriter, r *http.Request) {
+	schttp.sc.lock.Lock()
+	defer schttp.sc.lock.Unlock()
+	vars := mux.Vars(r)
+	clusterName := vars["cluster"]
+	cluster, assigned := schttp.sc.schedulerState.Clusters[clusterName]
+	if !assigned {
+		w.WriteHeader(404)
+		fmt.Fprintf(w, "Cluster %s not found", clusterName)
+	} else {
+		for _, node := range cluster.Nodes {
+			node.KillNext()
+		}
+		cluster.KillNext()
+		schttp.sc.schedulerState.Persist()
+		w.WriteHeader(202)
+	}
+}
+
 func (schttp *SchedulerHTTPServer) setConfig(w http.ResponseWriter, r *http.Request) {
 	schttp.sc.lock.Lock()
 	defer schttp.sc.lock.Unlock()

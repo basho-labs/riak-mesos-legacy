@@ -14,6 +14,7 @@ type FrameworkRiakCluster struct {
 	Graveyard      map[string]*FrameworkRiakNode
 	RiakConfig     string
 	AdvancedConfig string
+	IsKilled       bool
 }
 
 func NewFrameworkRiakCluster(name string) *FrameworkRiakCluster {
@@ -33,7 +34,16 @@ func NewFrameworkRiakCluster(name string) *FrameworkRiakCluster {
 		Name:           name,
 		AdvancedConfig: string(advancedConfig),
 		RiakConfig:     string(riakConfig),
+		IsKilled:       false,
 	}
+}
+
+func (frc *FrameworkRiakCluster) KillNext() {
+	frc.IsKilled = true
+}
+
+func (frc *FrameworkRiakCluster) CanBeRemoved() bool {
+	return frc.IsKilled && len(frc.Nodes) == 0
 }
 
 func (frc *FrameworkRiakCluster) GetNodes() map[string]*FrameworkRiakNode {
