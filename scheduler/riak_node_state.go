@@ -56,6 +56,9 @@ func (frn *FrameworkRiakNode) KillNext() {
 	frn.DestinationState = process_state.Shutdown
 }
 
+func (frn *FrameworkRiakNode) Unreserve() {
+	frn.CurrentState = process_state.Unknown
+}
 func (frn *FrameworkRiakNode) Stage() {
 	frn.Start()
 }

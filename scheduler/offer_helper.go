@@ -66,6 +66,14 @@ func (sc *SchedulerCore) createOperationsForOffers(offers []*mesos.Offer) map[st
 			}
 		}
 
+		if len(nodesToLaunch) > 0 && len(launchTasks) == 0 {
+			for _, riakNode := range nodesToLaunch {
+				log.Infof("Unable to launch node that had reserved resources, unreserving. NodeID: %+v", riakNode.CurrentID())
+				riakNode.Unreserve()
+			}
+			sc.schedulerState.Persist()
+		}
+
 		operations[*offer.Id.Value] = append(operations[*offer.Id.Value], buildLaunchOperation(launchTasks)...)
 		operations[*offer.Id.Value] = append(operations[*offer.Id.Value], buildDestroyOperation(destroyResources)...)
 		operations[*offer.Id.Value] = append(operations[*offer.Id.Value], buildUnreserveOperation(unreserveResources)...)
