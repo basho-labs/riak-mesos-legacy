@@ -308,7 +308,7 @@ func (frn *FrameworkRiakNode) ExecutorID() string {
 	return frn.CurrentID()
 }
 
-func (frn *FrameworkRiakNode) CreateTaskID() *mesos.TaskId {
+func (frn *FrameworkRiakNode) CreateTaskID() *mesos.TaskID {
 	return &mesos.TaskID{Value: proto.String(frn.CurrentID())}
 }
 
