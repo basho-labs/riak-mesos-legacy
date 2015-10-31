@@ -128,6 +128,7 @@ func PortResourceWillFit(immutableResources []*mesos.Resource, portCount int) bo
 			return true
 		}
 	}
+	log.Info("Ports didn't fit")
 	return false
 }
 
@@ -136,12 +137,15 @@ func ScalarResourcesWillFit(immutableResources []*mesos.Resource, cpus float64, 
 	log.Infof("Checking to see if these resources fit: %s", PrettyStringForScalarResources(immutableResources))
 
 	if !ScalarResourceWillFit(immutableResources, "cpus", cpus) {
+		log.Info("CPU didn't fit")
 		return false
 	}
 	if !ScalarResourceWillFit(immutableResources, "mem", mem) {
+		log.Info("Mem didn't fit")
 		return false
 	}
 	if !ScalarResourceWillFit(immutableResources, "disk", disk) {
+		log.Info("Disk didn't fit")
 		return false
 	}
 
