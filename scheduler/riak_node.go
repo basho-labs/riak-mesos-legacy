@@ -250,7 +250,7 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(sc *SchedulerCor
 
 	execName := fmt.Sprintf("%s Executor", frn.CurrentID())
 	exec := &mesos.ExecutorInfo{
-		ExecutorId: util.NewExecutorID(frn.ExecutorID()),
+		ExecutorId: frn.CreateExecutorID(),
 		Name:       proto.String(execName),
 		Source:     proto.String(frn.FrameworkName),
 		Command: &mesos.CommandInfo{
@@ -314,6 +314,10 @@ func (frn *FrameworkRiakNode) PersistenceID() string {
 
 func (frn *FrameworkRiakNode) CreateTaskID() *mesos.TaskID {
 	return &mesos.TaskID{Value: proto.String(frn.CurrentID())}
+}
+
+func (frn *FrameworkRiakNode) CreateExecutorID() *mesos.ExecutorID {
+	return util.NewExecutorID(frn.ExecutorID())
 }
 
 func (frn *FrameworkRiakNode) GetTaskStatus() *mesos.TaskStatus {

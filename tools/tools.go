@@ -195,6 +195,27 @@ func zkDelete() error {
 	return nil
 }
 
+func zkDeleteChildren(conn *zk.Conn, path string) {
+	children, _, _ := conn.Children(path)
+
+	// Leaf
+	if len(children) == 0 {
+		fmt.Println("Deleting ", path)
+		err := conn.Delete(path, -1)
+		if err != nil {
+			log.Panic(err)
+		}
+		return
+	}
+
+	// Branches
+	for _, name := range children {
+		zkDeleteChildren(conn, path+"/"+name)
+	}
+
+	return
+}
+
 func getConfigData() io.Reader {
 	if config == "" {
 		fmt.Println("Please specify value for configuration file name")
@@ -220,27 +241,6 @@ func requireNodeName() {
 		fmt.Println("Please specify value for node-name")
 		os.Exit(1)
 	}
-}
-
-func zkDeleteChildren(conn *zk.Conn, path string) {
-	children, _, _ := conn.Children(path)
-
-	// Leaf
-	if len(children) == 0 {
-		fmt.Println("Deleting ", path)
-		err := conn.Delete(path, -1)
-		if err != nil {
-			log.Panic(err)
-		}
-		return
-	}
-
-	// Branches
-	for _, name := range children {
-		zkDeleteChildren(conn, path+"/"+name)
-	}
-
-	return
 }
 
 func getState() {

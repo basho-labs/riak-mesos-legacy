@@ -51,18 +51,39 @@ func (rServer *ReconcilationServer) loop() {
 	}
 }
 
+func (rServer *ReconcilationServer) finishRiakNode(riakNode *FrameworkRiakNode) bool {
+	log.Infof("Finishing node: %+v", riakNode.CurrentID())
+	status, err := rServer.driver.SendFrameworkMessage(riakNode.CreateExecutorID(), riakNode.LastOfferUsed.SlaveId, "finish")
+	if status != mesos.Status_DRIVER_RUNNING {
+		log.Fatal("Driver not running, while trying to send framework message")
+	}
+	if err != nil {
+		log.Warnf("Failed to send framework message: ", err)
+		return false
+	}
+	return true
+}
+
+func (rServer *ReconcilationServer) killRiakNode(riakNode *FrameworkRiakNode) bool {
+	log.Infof("Killing node: %+v", riakNode.CurrentID())
+	status, err := rServer.driver.KillTask(riakNode.CreateTaskID())
+	if status != mesos.Status_DRIVER_RUNNING {
+		log.Fatal("Driver not running, while trying to kill tasks")
+	}
+	if err != nil {
+		log.Warnf("Failed to kill tasks: ", err)
+		return false
+	}
+	return true
+}
+
 func (rServer *ReconcilationServer) killTasks() {
 	// Get Tasks to Kill
 	for _, cluster := range rServer.sc.schedulerState.Clusters {
 		nodesToKill, nodesToRemove := cluster.GetNodesToKillOrRemove()
 		for _, riakNode := range nodesToKill {
-			log.Infof("Killing node: %+v", riakNode.CurrentID())
-			status, err := rServer.driver.KillTask(riakNode.CreateTaskID())
-			if status != mesos.Status_DRIVER_RUNNING {
-				log.Fatal("Driver not running, while trying to kill tasks")
-			}
-			if err != nil {
-				log.Warnf("Failed to kill tasks: ", err)
+			if !rServer.finishRiakNode(riakNode) {
+				rServer.killRiakNode(riakNode)
 			}
 		}
 

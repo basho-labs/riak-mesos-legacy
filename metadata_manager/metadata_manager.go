@@ -21,8 +21,7 @@ type ZkNode struct {
 }
 
 func (node *ZkNode) Delete() {
-	node.mgr.zkConn.Delete(node.ns.GetZKPath(), node.stat.Version)
-
+	node.mgr.DeleteChildren(node.ns.GetZKPath())
 }
 func (node *ZkNode) String() string {
 	return fmt.Sprintf("<%s> -> %v", node.ns.GetZKPath(), node.data)
@@ -174,6 +173,28 @@ func NewMetadataManager(frameworkID string, zookeepers []string) *MetadataManage
 	manager.setup()
 	return manager
 }
+
+func (mgr *MetadataManager) DeleteChildren(path string) {
+	children, _, _ := mgr.zkConn.Children(path)
+
+	// Leaf
+	if len(children) == 0 {
+		fmt.Println("Deleting ", path)
+		err := mgr.zkConn.Delete(path, -1)
+		if err != nil {
+			log.Panic(err)
+		}
+		return
+	}
+
+	// Branches
+	for _, name := range children {
+		mgr.DeleteChildren(path + "/" + name)
+	}
+
+	return
+}
+
 func (mgr *MetadataManager) createPathIfNotExists(path string, ephemeral bool) {
 	splitString := strings.Split(path, "/")
 	for idx := range splitString {

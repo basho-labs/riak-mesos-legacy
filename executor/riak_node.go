@@ -81,6 +81,7 @@ func (riakNode *RiakNode) runLoop(child *metamgr.ZkNode) {
 	case <-waitChan:
 		{
 			log.Info("Riak Died, failing")
+			riakNode.deleteCoordinatedData()
 			// Just in case, cleanup
 			// This means the node died :(
 			runStatus = &mesos.TaskStatus{
@@ -95,6 +96,7 @@ func (riakNode *RiakNode) runLoop(child *metamgr.ZkNode) {
 	case <-riakNode.finishChan:
 		{
 			log.Info("Finish channel says to shut down Riak")
+			riakNode.deleteCoordinatedData()
 			riakNode.pm.TearDown()
 			runStatus = &mesos.TaskStatus{
 				TaskId: riakNode.taskInfo.GetTaskId(),
@@ -190,6 +192,60 @@ func (riakNode *RiakNode) configureAdvanced(cepmdPort int) {
 	}
 }
 
+func (riakNode *RiakNode) setCoordinatedData() {
+	rootNode := riakNode.metadataManager.GetRootNode()
+
+	rootNode.CreateChildIfNotExists("coordinator")
+	coordinator, err := rootNode.GetChild("coordinator")
+	if err != nil {
+		log.Panic(err)
+	}
+	coordinator.CreateChildIfNotExists("coordinatedNodes")
+	coordinatedNodes, err := coordinator.GetChild("coordinatedNodes")
+	if err != nil {
+		log.Panic(err)
+	}
+
+	child, err := coordinatedNodes.MakeChild(riakNode.taskInfo.GetTaskId().GetValue(), true)
+	if err != nil {
+		log.Panic(err)
+	}
+	coordinatedData := common.CoordinatedData{
+		NodeName:      riakNode.taskData.FullyQualifiedNodeName,
+		DisterlPort:   int(config.DisterlPort),
+		PBPort:        int(config.PBPort),
+		HTTPPort:      int(config.HTTPPort),
+		Hostname:      riakNode.taskData.Host,
+		ClusterName:   riakNode.taskData.ClusterName,
+		FrameworkName: riakNode.taskData.FrameworkName,
+	}
+	cdBytes, err := coordinatedData.Serialize()
+	if err != nil {
+		log.Panic("Could not serialize coordinated data	", err)
+	}
+	child.SetData(cdBytes)
+}
+
+func (riakNode *RiakNode) deleteCoordinatedData() {
+	rootNode := riakNode.metadataManager.GetRootNode()
+	rootNode.CreateChildIfNotExists("coordinator")
+	coordinator, err := rootNode.GetChild("coordinator")
+	if err != nil {
+		log.Panic(err)
+	}
+	coordinator.CreateChildIfNotExists("coordinatedNodes")
+	coordinatedNodes, err := coordinator.GetChild("coordinatedNodes")
+	if err != nil {
+		log.Panic(err)
+	}
+	child, err := coordinatedNodes.MakeChild(riakNode.taskInfo.GetTaskId().GetValue(), true)
+	if err != nil {
+		log.Panic(err)
+	}
+	log.Warn("Removing Coordinated ZK data")
+	child.Delete()
+}
+
 func (riakNode *RiakNode) Run() {
 	var err error
 	var fetchURI string
@@ -273,39 +329,9 @@ func (riakNode *RiakNode) Run() {
 		log.Info("Shutting down due to GC, after failing to bring up Riak node")
 		riakNode.executor.Driver.Stop()
 	} else {
+		riakNode.setCoordinatedData()
+
 		rexPort := riakNode.taskData.HTTPPort
-		rootNode := riakNode.metadataManager.GetRootNode()
-
-		rootNode.CreateChildIfNotExists("coordinator")
-		coordinator, err := rootNode.GetChild("coordinator")
-		if err != nil {
-			log.Panic(err)
-		}
-		coordinator.CreateChildIfNotExists("coordinatedNodes")
-		coordinatedNodes, err := coordinator.GetChild("coordinatedNodes")
-		if err != nil {
-			log.Panic(err)
-		}
-
-		child, err := coordinatedNodes.MakeChild(riakNode.taskInfo.GetTaskId().GetValue(), true)
-		if err != nil {
-			log.Panic(err)
-		}
-		coordinatedData := common.CoordinatedData{
-			NodeName:      riakNode.taskData.FullyQualifiedNodeName,
-			DisterlPort:   int(config.DisterlPort),
-			PBPort:        int(config.PBPort),
-			HTTPPort:      int(config.HTTPPort),
-			Hostname:      riakNode.taskData.Host,
-			ClusterName:   riakNode.taskData.ClusterName,
-			FrameworkName: riakNode.taskData.FrameworkName,
-		}
-		cdBytes, err := coordinatedData.Serialize()
-		if err != nil {
-			log.Panic("Could not serialize coordinated data	", err)
-		}
-		child.SetData(cdBytes)
-		// lock.Unlock()
 		tsd := common.TaskStatusData{
 			RexPort: rexPort,
 		}

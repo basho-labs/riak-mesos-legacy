@@ -111,6 +111,13 @@ func (exec *ExecutorCore) FrameworkMessage(driver exec.ExecutorDriver, msg strin
 	exec.lock.Lock()
 	defer exec.lock.Unlock()
 	fmt.Println("Got framework message: ", msg)
+	switch msg {
+	case "finish":
+		{
+			log.Info("Marking task as finished")
+			exec.riakNode.finish()
+		}
+	}
 }
 
 func (exec *ExecutorCore) Shutdown(driver exec.ExecutorDriver) {
