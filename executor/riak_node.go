@@ -29,6 +29,7 @@ type RiakNode struct {
 	metadataManager *metamgr.MetadataManager
 	taskData        common.TaskData
 	pm              *process_manager.ProcessManager
+	killStatus      *mesos.TaskStatus
 }
 
 type templateData struct {
@@ -52,13 +53,18 @@ func NewRiakNode(taskInfo *mesos.TaskInfo, executor *ExecutorCore) *RiakNode {
 	log.Infof("Deserialized task data: %+v", taskData)
 	mgr := metamgr.NewMetadataManager(taskData.FrameworkName, taskData.Zookeepers)
 
-	return &RiakNode{
+	killStatus := &mesos.TaskStatus{
+		TaskId: taskInfo.GetTaskId(),
+		State:  mesos.TaskState_TASK_FAILED.Enum(),
+	}
 
+	return &RiakNode{
 		executor:        executor,
 		taskInfo:        taskInfo,
 		running:         false,
 		metadataManager: mgr,
 		taskData:        taskData,
+		killStatus:      killStatus,
 	}
 }
 
@@ -80,14 +86,8 @@ func (riakNode *RiakNode) runLoop(child *metamgr.ZkNode) {
 	select {
 	case <-waitChan:
 		{
-			log.Info("Riak Died, failing")
-			// Just in case, cleanup
-			// This means the node died :(
-			runStatus = &mesos.TaskStatus{
-				TaskId: riakNode.taskInfo.GetTaskId(),
-				State:  mesos.TaskState_TASK_FAILED.Enum(),
-			}
-			_, err = riakNode.executor.Driver.SendStatusUpdate(runStatus)
+			log.Infof("Riak Died, finishing with status: %+v", riakNode.killStatus)
+			_, err = riakNode.executor.Driver.SendStatusUpdate(riakNode.killStatus)
 			if err != nil {
 				log.Panic("Got error", err)
 			}
@@ -100,7 +100,8 @@ func (riakNode *RiakNode) runLoop(child *metamgr.ZkNode) {
 				TaskId: riakNode.taskInfo.GetTaskId(),
 				State:  mesos.TaskState_TASK_FINISHED.Enum(),
 			}
-			_, err = riakNode.executor.Driver.SendStatusUpdate(runStatus)
+			riakNode.killStatus = runStatus
+			_, err = riakNode.executor.Driver.SendStatusUpdate(riakNode.killStatus)
 			if err != nil {
 				log.Panic("Got error", err)
 			}
@@ -360,20 +361,11 @@ func (riakNode *RiakNode) finish() {
 }
 
 func (riakNode *RiakNode) ForceFinish() {
-	log.Info("Finish channel says to shut down Riak")
+	log.Info("Force finishing Riak")
 	riakNode.pm.TearDown()
 	runStatus := &mesos.TaskStatus{
 		TaskId: riakNode.taskInfo.GetTaskId(),
 		State:  mesos.TaskState_TASK_FINISHED.Enum(),
 	}
-	_, err := riakNode.executor.Driver.SendStatusUpdate(runStatus)
-	if err != nil {
-		log.Panic("Got error", err)
-	}
-
-	child := riakNode.getCoordinatedChild()
-	child.Delete()
-	time.Sleep(15 * time.Second)
-	log.Info("Shutting down")
-	riakNode.executor.Driver.Stop()
+	riakNode.killStatus = runStatus
 }
