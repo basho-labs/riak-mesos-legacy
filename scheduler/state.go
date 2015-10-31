@@ -22,7 +22,8 @@ type SchedulerState struct {
 
 func emptySchedulerState() *SchedulerState {
 	return &SchedulerState{
-		Clusters: make(map[string]*FrameworkRiakCluster),
+		Clusters:  make(map[string]*FrameworkRiakCluster),
+		Graveyard: make(map[string]*FrameworkRiakCluster),
 	}
 }
 func GetSchedulerState(mm *metadata_manager.MetadataManager) *SchedulerState {
