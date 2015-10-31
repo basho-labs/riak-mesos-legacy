@@ -318,6 +318,7 @@ func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *Schedul
 
 	router.HandleFunc("/api/v1/clusters", schttp.serveClusters)
 	router.Methods("POST", "PUT").Path("/api/v1/clusters/{cluster}").HandlerFunc(schttp.createCluster)
+	router.Methods("DELETE").Path("/api/v1/clusters/{cluster}").HandlerFunc(schttp.removeCluster)
 	router.Methods("GET").Path("/api/v1/clusters/{cluster}").HandlerFunc(schttp.getCluster)
 	router.Methods("GET").Path("/api/v1/clusters/{cluster}/nodes").HandlerFunc(schttp.serveNodes)
 	router.Methods("DELETE").Path("/api/v1/clusters/{cluster}/nodes/{node}").HandlerFunc(schttp.removeNode)
