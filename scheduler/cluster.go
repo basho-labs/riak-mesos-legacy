@@ -159,6 +159,10 @@ func doJoin(oldNode *FrameworkRiakNode, newNode *FrameworkRiakNode, retry int, m
 		log.Info("Join successful")
 		return true
 	}
+	if joinReply.Join.Error == "not_single_node" {
+		log.Info("Node already joined")
+		return true
+	}
 
 	time.Sleep(5 * time.Second)
 	return doJoin(oldNode, newNode, retry+1, maxRetry)
