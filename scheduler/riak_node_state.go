@@ -31,8 +31,8 @@ func (frn *FrameworkRiakNode) CanBeScheduled() bool {
 }
 func (frn *FrameworkRiakNode) CanBeKilled() bool {
 	return frn.DestinationState == process_state.Shutdown &&
-		frn.CurrentState == process_state.Started &&
-		frn.GetTaskStatus() != nil
+		(frn.CurrentState == process_state.Starting ||
+			frn.CurrentState == process_state.Started)
 }
 func (frn *FrameworkRiakNode) CanBeRemoved() bool {
 	return frn.DestinationState == process_state.Shutdown &&
