@@ -192,7 +192,7 @@ func (riakNode *RiakNode) configureAdvanced(cepmdPort int) {
 	}
 }
 
-func (riakNode *RiakNode) setCoordinatedData(config templateData) {
+func (riakNode *RiakNode) setCoordinatedData(config templateData) *metamgr.ZkNode {
 	rootNode := riakNode.metadataManager.GetRootNode()
 
 	rootNode.CreateChildIfNotExists("coordinator")
