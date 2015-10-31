@@ -45,7 +45,7 @@ type FrameworkRiakNode struct {
 	Ports            int
 	ExecCpus         float64
 	ExecMem          float64
-	PersistenceID    string
+	UUID             string
 	ContainerPath    string
 }
 
@@ -79,7 +79,7 @@ func NewFrameworkRiakNode(sc *SchedulerCore, clusterName string, simpleId int) *
 		Ports:            PORTS_PER_TASK,
 		ExecCpus:         CPUS_PER_EXECUTOR,
 		ExecMem:          MEM_PER_EXECUTOR,
-		PersistenceID:    uuid.NewV4().String(),
+		UUID:             uuid.NewV4().String(),
 		ContainerPath:    CONTAINER_PATH,
 	}
 }
@@ -129,7 +129,7 @@ func (frn *FrameworkRiakNode) GetReservedResources(cpusValue float64, memValue f
 			Mode:          &mode,
 		}
 		persistence := &mesos.Resource_DiskInfo_Persistence{
-			Id: &frn.PersistenceID,
+			Id: &frn.PersistenceID(),
 		}
 		info := &mesos.Resource_DiskInfo{
 			Persistence: persistence,
@@ -247,11 +247,11 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(sc *SchedulerCor
 		superChrootValue = false
 	}
 
+	execName := fmt.Sprintf("%s Executor", frn.CurrentID())
 	exec := &mesos.ExecutorInfo{
-		//No idea is this is the "right" way to do it, but I think so?
 		ExecutorId: util.NewExecutorID(frn.ExecutorID()),
-		Name:       proto.String("Executor (Go)"),
-		Source:     proto.String("Riak Mesos Framework (Go)"),
+		Name:       proto.String(execName),
+		Source:     proto.String(frn.FrameworkName),
 		Command: &mesos.CommandInfo{
 			Value:     proto.String(sc.schedulerHTTPServer.executorName),
 			Uris:      executorUris,
@@ -300,12 +300,15 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(sc *SchedulerCor
 }
 
 func (frn *FrameworkRiakNode) CurrentID() string {
-	// return fmt.Sprintf("%s-%s-%s-%d", frn.FrameworkName, frn.ClusterName, frn.UUID.String(), frn.Generation)
 	return fmt.Sprintf("%s-%s-%d", frn.FrameworkName, frn.ClusterName, frn.SimpleId)
 }
 
 func (frn *FrameworkRiakNode) ExecutorID() string {
-	return frn.CurrentID()
+	return fmt.Sprintf("%s-%s-%s-%d", frn.FrameworkName, frn.ClusterName, frn.UUID, frn.Generation)
+}
+
+func (frn *FrameworkRiakNode) PersistenceID() string {
+	return frn.UUID
 }
 
 func (frn *FrameworkRiakNode) CreateTaskID() *mesos.TaskID {
