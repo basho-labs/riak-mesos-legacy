@@ -192,6 +192,12 @@ func (frn *FrameworkRiakNode) HasRequestedReservation() bool {
 		return false
 	}
 
+	for _, resource := range util.FilterResources(frn.LastOfferUsed.Resources, func(res *mesos.Resource) bool { return res.GetName() == "disk" && res.Reservation != nil }) {
+		if resource.Disk != nil && *resource.Disk.Persistence.Id == frn.PersistenceID() {
+			return true
+		}
+	}
+
 	if frn.CurrentState == process_state.ReservationRequested {
 		return true
 	}
