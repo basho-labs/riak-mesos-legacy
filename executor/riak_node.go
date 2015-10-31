@@ -352,8 +352,9 @@ func (riakNode *RiakNode) next() {
 }
 
 func (riakNode *RiakNode) finish() {
-	replyChan := make(chan interface{})
-	riakNode.finishChan <- replyChan
-	<-replyChan
-	return
+	riakNode.finishChan <- nil
+}
+
+func (riakNode *RiakNode) ForceFinish() {
+
 }

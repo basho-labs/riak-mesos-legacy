@@ -114,8 +114,8 @@ func (exec *ExecutorCore) FrameworkMessage(driver exec.ExecutorDriver, msg strin
 	switch msg {
 	case "finish":
 		{
-			log.Info("Marking task as finished")
-			exec.riakNode.finish()
+			log.Info("Force finishing riak node")
+			exec.riakNode.ForceFinish()
 		}
 	}
 }
