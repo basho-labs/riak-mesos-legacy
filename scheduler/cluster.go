@@ -51,18 +51,7 @@ func (frc *FrameworkRiakCluster) GetNodes() map[string]*FrameworkRiakNode {
 }
 
 func (frc *FrameworkRiakCluster) GetNextSimpleId() int {
-	simpleId := len(frc.Nodes) + 1
-	for _, riakNode := range frc.Nodes {
-		if riakNode.SimpleId > simpleId {
-			simpleId = riakNode.SimpleId + 1
-		}
-	}
-	for _, riakNode := range frc.Graveyard {
-		if riakNode.SimpleId > simpleId {
-			simpleId = riakNode.SimpleId + 1
-		}
-	}
-	return simpleId
+	return len(frc.Nodes) + len(frc.Graveyard) + 1
 }
 
 func (frc *FrameworkRiakCluster) CreateNode(sc *SchedulerCore) *FrameworkRiakNode {
