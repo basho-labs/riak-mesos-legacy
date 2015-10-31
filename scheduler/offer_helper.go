@@ -41,15 +41,22 @@ func (sc *SchedulerCore) createOperationsForOffers(offers []*mesos.Offer) map[st
 			}
 		}
 
-		// The offer has reservations, but no node can use them, unreserve
-		if len(common.FilterReservedResources(offer.Resources)) > 0 && len(launchTasks) == 0 {
+		// The offer has reservations, but noone can use them
+		if len(common.FilterReservedResources(offer.Resources)) > 0 && len(launchTasks) == 0 && len(nodesToLaunch) == 0 {
 			log.Warnf("An offer has reserved resources, but no nodes can use it. Unreserving resources for OfferID: %+v", *offer.Id.Value)
 			unreserveResources = append(unreserveResources, common.CopyReservedResources(offer.Resources)...)
 		}
-		if len(common.FilterReservedVolumes(offer.Resources)) > 0 && len(launchTasks) == 0 {
+		if len(common.FilterReservedVolumes(offer.Resources)) > 0 && len(launchTasks) == 0 && len(nodesToLaunch) == 0 {
 			log.Warnf("An offer has persisted volumes, but no nodes can use it. Destroying volumes for OfferID: %+v", *offer.Id.Value)
 			destroyResources = append(destroyResources, common.CopyReservedVolumes(offer.Resources)...)
 
+		}
+		if len(common.FilterReservedResources(offer.Resources)) == 0 && len(common.FilterReservedVolumes(offer.Resources)) == 0 && len(nodesToLaunch) > 0 && len(launchTasks) == 0 {
+			for _, riakNode := range nodesToLaunch {
+				log.Infof("Unable to launch node that had reserved resources, unreserving. NodeID: %+v", riakNode.CurrentID())
+				riakNode.Unreserve()
+			}
+			sc.schedulerState.Persist()
 		}
 
 		// Reserve all elligible nodes
@@ -64,14 +71,6 @@ func (sc *SchedulerCore) createOperationsForOffers(offers []*mesos.Offer) map[st
 					sc.schedulerState.Persist()
 				}
 			}
-		}
-
-		if len(nodesToLaunch) > 0 && len(launchTasks) == 0 {
-			for _, riakNode := range nodesToLaunch {
-				log.Infof("Unable to launch node that had reserved resources, unreserving. NodeID: %+v", riakNode.CurrentID())
-				riakNode.Unreserve()
-			}
-			sc.schedulerState.Persist()
 		}
 
 		operations[*offer.Id.Value] = append(operations[*offer.Id.Value], buildLaunchOperation(launchTasks)...)
