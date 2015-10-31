@@ -175,7 +175,7 @@ func (frn *FrameworkRiakNode) ApplyOffer(mutableOffer *mesos.Offer) (bool, *meso
 	}
 
 	if !common.ScalarResourcesWillFit(resources, frn.Cpus+frn.ExecCpus, frn.Mem+frn.ExecMem, frn.Disk) ||
-		!common.PortResourceWillFit(resources, frn.Ports) {
+		!common.PortResourceWillFit(mutableOffer.Resources, frn.Ports) {
 		log.Info("Attempted to apply offer but offer does not have enough capacity")
 		return false, mutableOffer
 	}
