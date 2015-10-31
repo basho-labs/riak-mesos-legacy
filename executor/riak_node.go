@@ -362,10 +362,10 @@ func (riakNode *RiakNode) finish() {
 
 func (riakNode *RiakNode) ForceFinish() {
 	log.Info("Force finishing Riak")
-	riakNode.pm.TearDown()
 	runStatus := &mesos.TaskStatus{
 		TaskId: riakNode.taskInfo.GetTaskId(),
 		State:  mesos.TaskState_TASK_FINISHED.Enum(),
 	}
 	riakNode.killStatus = runStatus
+	riakNode.pm.TearDown()
 }
