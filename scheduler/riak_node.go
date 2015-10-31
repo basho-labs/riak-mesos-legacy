@@ -128,8 +128,9 @@ func (frn *FrameworkRiakNode) GetReservedResources(cpusValue float64, memValue f
 			ContainerPath: &frn.ContainerPath,
 			Mode:          &mode,
 		}
+		persistenceId := frn.PersistenceID()
 		persistence := &mesos.Resource_DiskInfo_Persistence{
-			Id: &frn.PersistenceID(),
+			Id: &persistenceId,
 		}
 		info := &mesos.Resource_DiskInfo{
 			Persistence: persistence,
@@ -205,7 +206,7 @@ func (frn *FrameworkRiakNode) OfferCompatible(immutableOffer *mesos.Offer) bool 
 	}
 
 	for _, resource := range util.FilterResources(immutableOffer.Resources, func(res *mesos.Resource) bool { return res.GetName() == "disk" && res.Reservation != nil }) {
-		if resource.Disk != nil && *resource.Disk.Persistence.Id == frn.PersistenceID {
+		if resource.Disk != nil && *resource.Disk.Persistence.Id == frn.PersistenceID() {
 			return true
 		}
 	}
