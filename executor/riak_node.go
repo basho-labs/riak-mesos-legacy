@@ -190,7 +190,25 @@ func (riakNode *RiakNode) configureAdvanced(cepmdPort int) {
 	}
 }
 
-func (riakNode *RiakNode) setCoordinatedData(config templateData) *metamgr.ZkNode {
+func (riakNode *RiakNode) setCoordinatedData(child *metamgr.ZkNode, config templateData) {
+	coordinatedData := common.CoordinatedData{
+		NodeName:      riakNode.taskData.FullyQualifiedNodeName,
+		DisterlPort:   int(config.DisterlPort),
+		PBPort:        int(config.PBPort),
+		HTTPPort:      int(config.HTTPPort),
+		Hostname:      riakNode.taskData.Host,
+		ClusterName:   riakNode.taskData.ClusterName,
+		FrameworkName: riakNode.taskData.FrameworkName,
+	}
+	cdBytes, err := coordinatedData.Serialize()
+	if err != nil {
+		log.Panic("Could not serialize coordinated data	", err)
+	}
+	child.SetData(cdBytes)
+	return child
+}
+
+func (riakNode *RiakNode) getCoordinatedChild() *metamgr.ZkNode {
 	rootNode := riakNode.metadataManager.GetRootNode()
 
 	rootNode.CreateChildIfNotExists("coordinator")
@@ -208,20 +226,6 @@ func (riakNode *RiakNode) setCoordinatedData(config templateData) *metamgr.ZkNod
 	if err != nil {
 		log.Panic(err)
 	}
-	coordinatedData := common.CoordinatedData{
-		NodeName:      riakNode.taskData.FullyQualifiedNodeName,
-		DisterlPort:   int(config.DisterlPort),
-		PBPort:        int(config.PBPort),
-		HTTPPort:      int(config.HTTPPort),
-		Hostname:      riakNode.taskData.Host,
-		ClusterName:   riakNode.taskData.ClusterName,
-		FrameworkName: riakNode.taskData.FrameworkName,
-	}
-	cdBytes, err := coordinatedData.Serialize()
-	if err != nil {
-		log.Panic("Could not serialize coordinated data	", err)
-	}
-	child.SetData(cdBytes)
 	return child
 }
 
@@ -308,7 +312,8 @@ func (riakNode *RiakNode) Run() {
 		log.Info("Shutting down due to GC, after failing to bring up Riak node")
 		riakNode.executor.Driver.Stop()
 	} else {
-		child := riakNode.setCoordinatedData(config)
+		child := riakNode.getCoordinatedChild()
+		riakNode.setCoordinatedData(child, config)
 
 		rexPort := riakNode.taskData.HTTPPort
 		tsd := common.TaskStatusData{
@@ -356,5 +361,20 @@ func (riakNode *RiakNode) finish() {
 }
 
 func (riakNode *RiakNode) ForceFinish() {
+	log.Info("Finish channel says to shut down Riak")
+	riakNode.pm.TearDown()
+	runStatus = &mesos.TaskStatus{
+		TaskId: riakNode.taskInfo.GetTaskId(),
+		State:  mesos.TaskState_TASK_FINISHED.Enum(),
+	}
+	_, err = riakNode.executor.Driver.SendStatusUpdate(runStatus)
+	if err != nil {
+		log.Panic("Got error", err)
+	}
 
+	child := riakNode.getCoordinatedChild()
+	child.Delete()
+	time.Sleep(15 * time.Second)
+	log.Info("Shutting down")
+	riakNode.executor.Driver.Stop()
 }
