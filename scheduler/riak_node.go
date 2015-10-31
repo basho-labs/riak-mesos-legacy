@@ -260,12 +260,8 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(sc *SchedulerCor
 		},
 		Resources: executorAsk,
 	}
-	taskId := &mesos.TaskID{
-		Value: proto.String(frn.CurrentID()),
-	}
-
+	taskId := frn.CreateTaskID()
 	nodename := frn.CurrentID() + "@" + offer.GetHostname()
-
 	if !strings.Contains(offer.GetHostname(), ".") {
 		nodename = nodename + "."
 	}
@@ -310,6 +306,10 @@ func (frn *FrameworkRiakNode) CurrentID() string {
 
 func (frn *FrameworkRiakNode) ExecutorID() string {
 	return frn.CurrentID()
+}
+
+func (frn *FrameworkRiakNode) CreateTaskID() *mesos.TaskId {
+	return &mesos.TaskID{Value: proto.String(frn.CurrentID())}
 }
 
 func (frn *FrameworkRiakNode) GetTaskStatus() *mesos.TaskStatus {

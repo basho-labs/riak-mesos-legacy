@@ -57,7 +57,7 @@ func (rServer *ReconcilationServer) killTasks() {
 		nodesToKill, nodesToRemove := cluster.GetNodesToKillOrRemove()
 		for _, riakNode := range nodesToKill {
 			log.Infof("Killing node: %+v", riakNode.CurrentID())
-			status, err := rServer.driver.KillTask(riakNode.GetTaskStatus().TaskId)
+			status, err := rServer.driver.KillTask(riakNode.CreateTaskID())
 			if status != mesos.Status_DRIVER_RUNNING {
 				log.Fatal("Driver not running, while trying to kill tasks")
 			}
