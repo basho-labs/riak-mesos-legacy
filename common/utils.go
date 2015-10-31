@@ -114,9 +114,11 @@ func ApplyRangesResource(mutableResources []*mesos.Resource, portCount int) ([]*
 
 func ApplyScalarResource(mutableResources []*mesos.Resource, name string, value float64) []*mesos.Resource {
 	for _, resource := range util.FilterResources(mutableResources, func(res *mesos.Resource) bool { return res.GetName() == name }) {
-		newValue := *resource.Scalar.Value - value
-		resource.Scalar.Value = &newValue
-		return mutableResources
+		if resource.GetScalar().GetValue() >= (value) {
+			newValue := *resource.Scalar.Value - value
+			resource.Scalar.Value = &newValue
+			break
+		}
 	}
 	return mutableResources
 }
@@ -152,22 +154,6 @@ func ScalarResourcesWillFit(immutableResources []*mesos.Resource, cpus float64, 
 	return true
 }
 
-func PrettyStringForScalarResources(resources []*mesos.Resource) string {
-	output := "["
-	for _, resource := range resources {
-		if resource.Scalar != nil {
-			if resource.Reservation != nil {
-				output += "R( "
-			} else {
-				output += "U( "
-			}
-			output += fmt.Sprintf("%s:%v), ", resource.GetName(), resource.Scalar.GetValue())
-		}
-	}
-	output += "]"
-	return output
-}
-
 func ScalarResourceWillFit(immutableResources []*mesos.Resource, name string, value float64) bool {
 	for _, resource := range util.FilterResources(immutableResources, func(res *mesos.Resource) bool { return res.GetName() == name }) {
 		if resource.GetScalar().GetValue() >= (value) {
@@ -175,6 +161,22 @@ func ScalarResourceWillFit(immutableResources []*mesos.Resource, name string, va
 		}
 	}
 	return false
+}
+
+func PrettyStringForScalarResources(resources []*mesos.Resource) string {
+	output := "["
+	for _, resource := range resources {
+		if resource.Scalar != nil {
+			if resource.Reservation != nil {
+				output += "R("
+			} else {
+				output += "U("
+			}
+			output += fmt.Sprintf("%s:%v), ", resource.GetName(), resource.Scalar.GetValue())
+		}
+	}
+	output += "]"
+	return output
 }
 
 func CreatePortsResourceFromResources(immutableResources []*mesos.Resource, portCount int) (*mesos.Resource, *mesos.Resource) {
