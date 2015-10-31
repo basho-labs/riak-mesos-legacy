@@ -192,7 +192,7 @@ func (riakNode *RiakNode) configureAdvanced(cepmdPort int) {
 	}
 }
 
-func (riakNode *RiakNode) setCoordinatedData() {
+func (riakNode *RiakNode) setCoordinatedData(config templateData) {
 	rootNode := riakNode.metadataManager.GetRootNode()
 
 	rootNode.CreateChildIfNotExists("coordinator")
@@ -224,6 +224,7 @@ func (riakNode *RiakNode) setCoordinatedData() {
 		log.Panic("Could not serialize coordinated data	", err)
 	}
 	child.SetData(cdBytes)
+	return child
 }
 
 func (riakNode *RiakNode) deleteCoordinatedData() {
@@ -329,7 +330,7 @@ func (riakNode *RiakNode) Run() {
 		log.Info("Shutting down due to GC, after failing to bring up Riak node")
 		riakNode.executor.Driver.Stop()
 	} else {
-		riakNode.setCoordinatedData()
+		child := riakNode.setCoordinatedData(config)
 
 		rexPort := riakNode.taskData.HTTPPort
 		tsd := common.TaskStatusData{
