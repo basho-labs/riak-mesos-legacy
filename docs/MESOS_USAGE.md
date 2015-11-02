@@ -90,7 +90,7 @@ Download and extract the Riak Mesos Framework (`riak_mesos_linux_amd64_0.1.1.tar
 
 #### Additional HTTP Endpoints
 
-Get the base URL for the Riak Mesos Framework [HTTP API](docs/HTTP-API.md) endpoints for more ways to interact with the framework.
+Get the base URL for the Riak Mesos Framework [HTTP API](HTTP-API.md) endpoints for more ways to interact with the framework.
 
 ```
 ./tools_linux_amd64 -name=$NAME -zk=$ZK -command="get-url"
