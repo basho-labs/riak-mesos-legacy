@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 	log "github.com/Sirupsen/logrus"
-	mesos "github.com/basho-labs/mesos-go/mesosproto"
-	util "github.com/basho-labs/mesos-go/mesosutil"
+	mesos "github.com/mesos/mesos-go/mesosproto"
+	util "github.com/mesos/mesos-go/mesosutil"
 	"math/rand"
 	"os/exec"
 	"path/filepath"
@@ -177,6 +177,19 @@ func PrettyStringForScalarResources(resources []*mesos.Resource) string {
 	}
 	output += "]"
 	return output
+}
+
+func PortIterator(resources []*mesos.Resource) chan int64 {
+	ports := make(chan int64)
+	go func() {
+		defer close(ports)
+		for _, resource := range util.FilterResources(resources, func(res *mesos.Resource) bool { return res.GetName() == "ports" }) {
+			for _, port := range RangesToArray(resource.GetRanges().GetRange()) {
+				ports <- port
+			}
+		}
+	}()
+	return ports
 }
 
 func CreatePortsResourceFromResources(immutableResources []*mesos.Resource, portCount int) (*mesos.Resource, *mesos.Resource) {

@@ -3,11 +3,11 @@ package scheduler
 import (
 	"fmt"
 	log "github.com/Sirupsen/logrus"
-	mesos "github.com/basho-labs/mesos-go/mesosproto"
-	util "github.com/basho-labs/mesos-go/mesosutil"
 	"github.com/basho-labs/riak-mesos/common"
 	"github.com/basho-labs/riak-mesos/scheduler/process_state"
 	"github.com/golang/protobuf/proto"
+	mesos "github.com/mesos/mesos-go/mesosproto"
+	util "github.com/mesos/mesos-go/mesosutil"
 	"github.com/satori/go.uuid"
 	"os"
 	"strconv"
@@ -154,19 +154,6 @@ func (frn *FrameworkRiakNode) GetReservedResources(cpusValue float64, memValue f
 	return resources
 }
 
-func portIter(resources []*mesos.Resource) chan int64 {
-	ports := make(chan int64)
-	go func() {
-		defer close(ports)
-		for _, resource := range util.FilterResources(resources, func(res *mesos.Resource) bool { return res.GetName() == "ports" }) {
-			for _, port := range common.RangesToArray(resource.GetRanges().GetRange()) {
-				ports <- port
-			}
-		}
-	}()
-	return ports
-}
-
 func (frn *FrameworkRiakNode) ApplyOffer(mutableOffer *mesos.Offer) (bool, *mesos.Offer) {
 	resources := []*mesos.Resource{}
 	if frn.HasRequestedReservation() {
@@ -185,24 +172,6 @@ func (frn *FrameworkRiakNode) ApplyOffer(mutableOffer *mesos.Offer) (bool, *meso
 	frn.LastOfferUsed = mutableOffer
 	frn.CurrentState = process_state.ReservationRequested
 	return true, mutableOffer
-}
-
-func (frn *FrameworkRiakNode) HasRequestedReservation() bool {
-	if frn.LastOfferUsed == nil {
-		return false
-	}
-
-	for _, resource := range util.FilterResources(frn.LastOfferUsed.Resources, func(res *mesos.Resource) bool { return res.GetName() == "disk" && res.Reservation != nil }) {
-		if resource.Disk != nil && *resource.Disk.Persistence.Id == frn.PersistenceID() {
-			return true
-		}
-	}
-
-	if frn.CurrentState == process_state.ReservationRequested {
-		return true
-	}
-
-	return false
 }
 
 func (frn *FrameworkRiakNode) OfferCompatible(immutableOffer *mesos.Offer) bool {
@@ -272,7 +241,7 @@ func (frn *FrameworkRiakNode) PrepareForLaunchAndGetNewTaskInfo(sc *SchedulerCor
 	if !strings.Contains(offer.GetHostname(), ".") {
 		nodename = nodename + "."
 	}
-	ports := portIter(taskAsk)
+	ports := common.PortIterator(taskAsk)
 
 	taskData := common.TaskData{
 		FullyQualifiedNodeName: nodename,

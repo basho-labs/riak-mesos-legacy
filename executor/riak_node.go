@@ -12,7 +12,7 @@ import (
 	"bytes"
 	"errors"
 	log "github.com/Sirupsen/logrus"
-	mesos "github.com/basho-labs/mesos-go/mesosproto"
+	mesos "github.com/mesos/mesos-go/mesosproto"
 	"github.com/basho-labs/riak-mesos/cepmd/cepm"
 	"github.com/basho-labs/riak-mesos/common"
 	metamgr "github.com/basho-labs/riak-mesos/metadata_manager"

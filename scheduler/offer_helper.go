@@ -2,7 +2,7 @@ package scheduler
 
 import (
 	log "github.com/Sirupsen/logrus"
-	mesos "github.com/basho-labs/mesos-go/mesosproto"
+	mesos "github.com/mesos/mesos-go/mesosproto"
 	"github.com/basho-labs/riak-mesos/common"
 )
 

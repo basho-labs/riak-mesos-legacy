@@ -8,8 +8,8 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/basho-labs/riak-mesos/scheduler"
-	"github.com/basho-labs/mesos-go/auth/sasl"
-	"github.com/basho-labs/mesos-go/auth/sasl/mech"
+	"github.com/mesos/mesos-go/auth/sasl"
+	"github.com/mesos/mesos-go/auth/sasl/mech"
 	"runtime"
 )
 

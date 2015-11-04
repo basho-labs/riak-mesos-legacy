@@ -1,8 +1,8 @@
 package common
 
 import (
-	mesos "github.com/basho-labs/mesos-go/mesosproto"
-	util "github.com/basho-labs/mesos-go/mesosutil"
+	mesos "github.com/mesos/mesos-go/mesosproto"
+	util "github.com/mesos/mesos-go/mesosutil"
 	"github.com/stretchr/testify/assert"
 	"math/rand"
 	"testing"

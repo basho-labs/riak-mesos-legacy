@@ -15,8 +15,8 @@ install:
   - go get -u github.com/golang/protobuf/proto
   - go get -u github.com/golang/protobuf/protoc-gen-go
   - go get github.com/gogo/protobuf/protoc-gen-gogo
-  - mkdir -p $GOPATH/src/github.com/mesos && git clone https://github.com/basho-labs/mesos-go.git $GOPATH/src/github.com/basho-labs/mesos-go
-  - cd $GOPATH/src/github.com/basho-labs/mesos-go/mesosproto && make
+  - mkdir -p $GOPATH/src/github.com/mesos && git clone https://github.com/mesos/mesos-go.git $GOPATH/src/github.com/mesos/mesos-go
+  - cd $GOPATH/src/github.com/mesos/mesos-go/mesosproto && make
 before_script:
   - sudo /etc/init.d/zookeeper start
 script:

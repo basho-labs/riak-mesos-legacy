@@ -3,8 +3,8 @@ package scheduler
 import (
 	"fmt"
 	log "github.com/Sirupsen/logrus"
-	mesos "github.com/basho-labs/mesos-go/mesosproto"
 	rexclient "github.com/basho-labs/riak-mesos/riak_explorer/client"
+	mesos "github.com/mesos/mesos-go/mesosproto"
 	"time"
 )
 
