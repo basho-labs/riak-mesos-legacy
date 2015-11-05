@@ -103,12 +103,21 @@ func (exec *ExecutorCore) KillTask(driver exec.ExecutorDriver, taskId *mesos.Tas
 	if err != nil {
 		log.Panic("Got error", err)
 	}
+
+	exec.riakNode.finish()
 }
 
 func (exec *ExecutorCore) FrameworkMessage(driver exec.ExecutorDriver, msg string) {
 	exec.lock.Lock()
 	defer exec.lock.Unlock()
 	fmt.Println("Got framework message: ", msg)
+	switch msg {
+	case "finish":
+		{
+			log.Info("Force finishing riak node")
+			exec.riakNode.ForceFinish()
+		}
+	}
 }
 
 func (exec *ExecutorCore) Shutdown(driver exec.ExecutorDriver) {

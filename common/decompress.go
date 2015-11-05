@@ -49,12 +49,18 @@ func Extract(directory string, reader io.Reader) error {
 			}
 		} else if hdr.Typeflag == tar.TypeSymlink {
 			if err := os.Symlink(hdr.Linkname, filename); err != nil {
+				if os.IsExist(err) {
+					continue
+				}
 				return err
 			}
 			// Hard link
 		} else if hdr.Typeflag == tar.TypeLink {
 			linkdest := filepath.Join(directory, hdr.Linkname)
 			if err := os.Link(linkdest, filename); err != nil {
+				if os.IsExist(err) {
+					continue
+				}
 				return err
 			}
 		} else {

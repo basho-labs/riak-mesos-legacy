@@ -53,6 +53,25 @@ func (schttp *SchedulerHTTPServer) createCluster(w http.ResponseWriter, r *http.
 	}
 }
 
+func (schttp *SchedulerHTTPServer) removeCluster(w http.ResponseWriter, r *http.Request) {
+	schttp.sc.lock.Lock()
+	defer schttp.sc.lock.Unlock()
+	vars := mux.Vars(r)
+	clusterName := vars["cluster"]
+	cluster, assigned := schttp.sc.schedulerState.Clusters[clusterName]
+	if !assigned {
+		w.WriteHeader(404)
+		fmt.Fprintf(w, "Cluster %s not found", clusterName)
+	} else {
+		for _, node := range cluster.Nodes {
+			node.KillNext()
+		}
+		cluster.KillNext()
+		schttp.sc.schedulerState.Persist()
+		w.WriteHeader(202)
+	}
+}
+
 func (schttp *SchedulerHTTPServer) setConfig(w http.ResponseWriter, r *http.Request) {
 	schttp.sc.lock.Lock()
 	defer schttp.sc.lock.Unlock()
@@ -161,6 +180,29 @@ func (schttp *SchedulerHTTPServer) getCluster(w http.ResponseWriter, r *http.Req
 
 }
 
+func (schttp *SchedulerHTTPServer) removeNode(w http.ResponseWriter, r *http.Request) {
+	schttp.sc.lock.Lock()
+	defer schttp.sc.lock.Unlock()
+	vars := mux.Vars(r)
+	clusterName := vars["cluster"]
+	nodeID := vars["node"]
+	cluster, assigned := schttp.sc.schedulerState.Clusters[clusterName]
+	if !assigned {
+		w.WriteHeader(404)
+		fmt.Fprintf(w, "Cluster %s not found", clusterName)
+	} else {
+		node, assigned := cluster.Nodes[nodeID]
+		if !assigned {
+			w.WriteHeader(404)
+			fmt.Fprintf(w, "Node %s not found", nodeID)
+		} else {
+			node.KillNext()
+			schttp.sc.schedulerState.Persist()
+			w.WriteHeader(202)
+		}
+	}
+}
+
 func (schttp *SchedulerHTTPServer) createNode(w http.ResponseWriter, r *http.Request) {
 	schttp.sc.lock.Lock()
 	defer schttp.sc.lock.Unlock()
@@ -171,8 +213,7 @@ func (schttp *SchedulerHTTPServer) createNode(w http.ResponseWriter, r *http.Req
 		w.WriteHeader(404)
 		fmt.Fprintf(w, "Cluster %s not found", clusterName)
 	} else {
-		node := NewFrameworkRiakNode(schttp.sc.frameworkName, cluster.Name)
-		cluster.Nodes[node.UUID.String()] = node
+		node := cluster.CreateNode(schttp.sc)
 		schttp.sc.schedulerState.Persist()
 		w.WriteHeader(200)
 		json.NewEncoder(w).Encode(node)
@@ -198,31 +239,6 @@ type simpleNode struct {
 	host     string
 	httpPort int64
 	pbPort   int64
-}
-
-func (schttp *SchedulerHTTPServer) serveNodeHosts(w http.ResponseWriter, r *http.Request) {
-	schttp.sc.lock.Lock()
-	defer schttp.sc.lock.Unlock()
-	vars := mux.Vars(r)
-	clusterName := vars["cluster"]
-	cluster, assigned := schttp.sc.schedulerState.Clusters[clusterName]
-	simpleNodes := []simpleNode{}
-
-	if !assigned {
-		w.WriteHeader(404)
-		fmt.Fprintf(w, "Cluster %s not found", clusterName)
-	} else {
-		for _, riakNode := range cluster.Nodes {
-			sn := simpleNode{
-				host:     riakNode.LastOfferUsed.GetHostname(),
-				httpPort: riakNode.TaskData.HTTPPort,
-				pbPort:   riakNode.TaskData.PBPort,
-			}
-			simpleNodes = append(simpleNodes, sn)
-		}
-		w.WriteHeader(200)
-		json.NewEncoder(w).Encode(simpleNodes)
-	}
 }
 
 func (schttp *SchedulerHTTPServer) GetURI() string {
@@ -302,9 +318,10 @@ func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *Schedul
 
 	router.HandleFunc("/api/v1/clusters", schttp.serveClusters)
 	router.Methods("POST", "PUT").Path("/api/v1/clusters/{cluster}").HandlerFunc(schttp.createCluster)
+	router.Methods("DELETE").Path("/api/v1/clusters/{cluster}").HandlerFunc(schttp.removeCluster)
 	router.Methods("GET").Path("/api/v1/clusters/{cluster}").HandlerFunc(schttp.getCluster)
 	router.Methods("GET").Path("/api/v1/clusters/{cluster}/nodes").HandlerFunc(schttp.serveNodes)
-	router.Methods("GET").Path("/api/v1/clusters/{cluster}/nodehosts").HandlerFunc(schttp.serveNodeHosts)
+	router.Methods("DELETE").Path("/api/v1/clusters/{cluster}/nodes/{node}").HandlerFunc(schttp.removeNode)
 
 	router.Methods("POST").Path("/api/v1/clusters/{cluster}/config").HandlerFunc(schttp.setConfig)
 	router.Methods("GET").Path("/api/v1/clusters/{cluster}/config").HandlerFunc(schttp.getConfig)

@@ -12,11 +12,11 @@ import (
 	"bytes"
 	"errors"
 	log "github.com/Sirupsen/logrus"
+	mesos "github.com/mesos/mesos-go/mesosproto"
 	"github.com/basho-labs/riak-mesos/cepmd/cepm"
 	"github.com/basho-labs/riak-mesos/common"
 	metamgr "github.com/basho-labs/riak-mesos/metadata_manager"
 	"github.com/basho-labs/riak-mesos/process_manager"
-	mesos "github.com/mesos/mesos-go/mesosproto"
 	"net/http"
 )
 
@@ -29,6 +29,7 @@ type RiakNode struct {
 	metadataManager *metamgr.MetadataManager
 	taskData        common.TaskData
 	pm              *process_manager.ProcessManager
+	killStatus      *mesos.TaskStatus
 }
 
 type templateData struct {
@@ -52,39 +53,41 @@ func NewRiakNode(taskInfo *mesos.TaskInfo, executor *ExecutorCore) *RiakNode {
 	log.Infof("Deserialized task data: %+v", taskData)
 	mgr := metamgr.NewMetadataManager(taskData.FrameworkName, taskData.Zookeepers)
 
-	return &RiakNode{
+	killStatus := &mesos.TaskStatus{
+		TaskId: taskInfo.GetTaskId(),
+		State:  mesos.TaskState_TASK_FAILED.Enum(),
+	}
 
+	return &RiakNode{
 		executor:        executor,
 		taskInfo:        taskInfo,
 		running:         false,
 		metadataManager: mgr,
 		taskData:        taskData,
+		killStatus:      killStatus,
 	}
 }
 
 func (riakNode *RiakNode) runLoop(child *metamgr.ZkNode) {
 
-	runStatus := &mesos.TaskStatus{
-		TaskId: riakNode.taskInfo.GetTaskId(),
-		State:  mesos.TaskState_TASK_RUNNING.Enum(),
-	}
-	_, err := riakNode.executor.Driver.SendStatusUpdate(runStatus)
-	if err != nil {
-		log.Panic("Got error", err)
-	}
+	var runStatus *mesos.TaskStatus
+	var err error
+
+	// runStatus := &mesos.TaskStatus{
+	// 	TaskId: riakNode.taskInfo.GetTaskId(),
+	// 	State:  mesos.TaskState_TASK_RUNNING.Enum(),
+	// }
+	// _, err := riakNode.executor.Driver.SendStatusUpdate(runStatus)
+	// if err != nil {
+	// 	log.Panic("Got error", err)
+	// }
 
 	waitChan := riakNode.pm.Listen()
 	select {
 	case <-waitChan:
 		{
-			log.Info("Riak Died, failing")
-			// Just in case, cleanup
-			// This means the node died :(
-			runStatus = &mesos.TaskStatus{
-				TaskId: riakNode.taskInfo.GetTaskId(),
-				State:  mesos.TaskState_TASK_FAILED.Enum(),
-			}
-			_, err = riakNode.executor.Driver.SendStatusUpdate(runStatus)
+			log.Infof("Riak Died, finishing with status: %+v", riakNode.killStatus)
+			_, err = riakNode.executor.Driver.SendStatusUpdate(riakNode.killStatus)
 			if err != nil {
 				log.Panic("Got error", err)
 			}
@@ -97,7 +100,8 @@ func (riakNode *RiakNode) runLoop(child *metamgr.ZkNode) {
 				TaskId: riakNode.taskInfo.GetTaskId(),
 				State:  mesos.TaskState_TASK_FINISHED.Enum(),
 			}
-			_, err = riakNode.executor.Driver.SendStatusUpdate(runStatus)
+			riakNode.killStatus = runStatus
+			_, err = riakNode.executor.Driver.SendStatusUpdate(riakNode.killStatus)
 			if err != nil {
 				log.Panic("Got error", err)
 			}
@@ -187,6 +191,44 @@ func (riakNode *RiakNode) configureAdvanced(cepmdPort int) {
 	}
 }
 
+func (riakNode *RiakNode) setCoordinatedData(child *metamgr.ZkNode, config templateData) {
+	coordinatedData := common.CoordinatedData{
+		NodeName:      riakNode.taskData.FullyQualifiedNodeName,
+		DisterlPort:   int(config.DisterlPort),
+		PBPort:        int(config.PBPort),
+		HTTPPort:      int(config.HTTPPort),
+		Hostname:      riakNode.taskData.Host,
+		ClusterName:   riakNode.taskData.ClusterName,
+		FrameworkName: riakNode.taskData.FrameworkName,
+	}
+	cdBytes, err := coordinatedData.Serialize()
+	if err != nil {
+		log.Panic("Could not serialize coordinated data	", err)
+	}
+	child.SetData(cdBytes)
+}
+
+func (riakNode *RiakNode) getCoordinatedChild() *metamgr.ZkNode {
+	rootNode := riakNode.metadataManager.GetRootNode()
+
+	rootNode.CreateChildIfNotExists("coordinator")
+	coordinator, err := rootNode.GetChild("coordinator")
+	if err != nil {
+		log.Panic(err)
+	}
+	coordinator.CreateChildIfNotExists("coordinatedNodes")
+	coordinatedNodes, err := coordinator.GetChild("coordinatedNodes")
+	if err != nil {
+		log.Panic(err)
+	}
+
+	child, err := coordinatedNodes.MakeChild(riakNode.taskInfo.GetTaskId().GetValue(), true)
+	if err != nil {
+		log.Panic(err)
+	}
+	return child
+}
+
 func (riakNode *RiakNode) Run() {
 	var err error
 	var fetchURI string
@@ -270,39 +312,10 @@ func (riakNode *RiakNode) Run() {
 		log.Info("Shutting down due to GC, after failing to bring up Riak node")
 		riakNode.executor.Driver.Stop()
 	} else {
+		child := riakNode.getCoordinatedChild()
+		riakNode.setCoordinatedData(child, config)
+
 		rexPort := riakNode.taskData.HTTPPort
-		rootNode := riakNode.metadataManager.GetRootNode()
-
-		rootNode.CreateChildIfNotExists("coordinator")
-		coordinator, err := rootNode.GetChild("coordinator")
-		if err != nil {
-			log.Panic(err)
-		}
-		coordinator.CreateChildIfNotExists("coordinatedNodes")
-		coordinatedNodes, err := coordinator.GetChild("coordinatedNodes")
-		if err != nil {
-			log.Panic(err)
-		}
-
-		child, err := coordinatedNodes.MakeChild(riakNode.taskInfo.GetTaskId().GetValue(), true)
-		if err != nil {
-			log.Panic(err)
-		}
-		coordinatedData := common.CoordinatedData{
-			NodeName:      riakNode.taskData.FullyQualifiedNodeName,
-			DisterlPort:   int(config.DisterlPort),
-			PBPort:        int(config.PBPort),
-			HTTPPort:      int(config.HTTPPort),
-			Hostname:      riakNode.taskData.Host,
-			ClusterName:   riakNode.taskData.ClusterName,
-			FrameworkName: riakNode.taskData.FrameworkName,
-		}
-		cdBytes, err := coordinatedData.Serialize()
-		if err != nil {
-			log.Panic("Could not serialize coordinated data	", err)
-		}
-		child.SetData(cdBytes)
-		// lock.Unlock()
 		tsd := common.TaskStatusData{
 			RexPort: rexPort,
 		}
@@ -311,6 +324,7 @@ func (riakNode *RiakNode) Run() {
 		if err != nil {
 			log.Panic("Could not serialize Riak Explorer data", err)
 		}
+
 		runStatus := &mesos.TaskStatus{
 			TaskId: riakNode.taskInfo.GetTaskId(),
 			State:  mesos.TaskState_TASK_RUNNING.Enum(),
@@ -344,4 +358,14 @@ func (riakNode *RiakNode) next() {
 
 func (riakNode *RiakNode) finish() {
 	riakNode.finishChan <- nil
+}
+
+func (riakNode *RiakNode) ForceFinish() {
+	log.Info("Force finishing Riak")
+	runStatus := &mesos.TaskStatus{
+		TaskId: riakNode.taskInfo.GetTaskId(),
+		State:  mesos.TaskState_TASK_FINISHED.Enum(),
+	}
+	riakNode.killStatus = runStatus
+	riakNode.pm.TearDown()
 }

@@ -1,50 +1,105 @@
 package common
 
 import (
+	"errors"
+	"fmt"
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	util "github.com/mesos/mesos-go/mesosutil"
 	"math/rand"
+	"os/exec"
+	"path/filepath"
 	"sort"
 	"time"
-	"path/filepath"
-	"os/exec"
-	"errors"
-	"fmt"
 )
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-// The new value for the resource, the ask, and whether or not the ask was accomodated - the ask may be nil if it wasn't accomodated
-type ResourceAsker (func([]*mesos.Resource) (remaining []*mesos.Resource, ask *mesos.Resource, success bool))
-type CombinedResourceAsker (func([]*mesos.Resource) (remaining []*mesos.Resource, executorAsk []*mesos.Resource, taskAsk []*mesos.Resource, success bool))
+func NewReservedScalarResource(name string, value float64, principal *string, role *string) *mesos.Resource {
+	reservation := &mesos.Resource_ReservationInfo{}
+	if principal != nil {
+		reservation.Principal = principal
+	}
 
-func AskForScalar(resourceName string, askSize float64) ResourceAsker {
-	return func(resources []*mesos.Resource) ([]*mesos.Resource, *mesos.Resource, bool) {
-		newResources := make([]*mesos.Resource, len(resources))
-		copy(newResources, resources)
-		for idx, resource := range resources {
-			if resource.GetName() == resourceName && askSize <= resource.GetScalar().GetValue() {
-				newResources[idx] = util.NewScalarResource(resourceName, resource.GetScalar().GetValue()-askSize)
-				ask := util.NewScalarResource(resourceName, askSize)
-				return newResources, ask, true
+	resource := util.NewScalarResource(name, value)
+	resource.Role = role
+	resource.Reservation = reservation
+	return resource
+}
+
+func NewReservedVolume(value float64, containerPath *string, persistenceID *string, principal *string, role *string) *mesos.Resource {
+	resource := NewReservedScalarResource("disk", value, principal, role)
+
+	mode := mesos.Volume_RW
+	volume := &mesos.Volume{
+		ContainerPath: containerPath,
+		Mode:          &mode,
+	}
+	persistence := &mesos.Resource_DiskInfo_Persistence{
+		Id: persistenceID,
+	}
+	info := &mesos.Resource_DiskInfo{
+		Persistence: persistence,
+		Volume:      volume,
+	}
+	resource.Disk = info
+
+	return resource
+}
+
+func CopyReservedVolumes(immutableResources []*mesos.Resource) []*mesos.Resource {
+	reserved := []*mesos.Resource{}
+	for _, resource := range FilterReservedVolumes(immutableResources) {
+		containerPath := resource.Disk.Volume.GetContainerPath()
+		persistenceID := resource.Disk.Persistence.GetId()
+		principal := resource.Reservation.GetPrincipal()
+		role := resource.GetRole()
+		newVolume := NewReservedVolume(resource.Scalar.GetValue(), &containerPath, &persistenceID, &principal, &role)
+		reserved = append(reserved, newVolume)
+	}
+	return reserved
+}
+
+func CopyReservedResources(immutableResources []*mesos.Resource) []*mesos.Resource {
+	reserved := []*mesos.Resource{}
+	for _, resource := range FilterReservedResources(immutableResources) {
+		principal := resource.Reservation.GetPrincipal()
+		role := resource.GetRole()
+		newResource := NewReservedScalarResource(resource.GetName(), resource.Scalar.GetValue(), &principal, &role)
+		reserved = append(reserved, newResource)
+	}
+	return reserved
+}
+
+func FilterReservedVolumes(immutableResources []*mesos.Resource) []*mesos.Resource {
+	return util.FilterResources(immutableResources, func(res *mesos.Resource) bool {
+		if res.Reservation != nil &&
+			res.Disk != nil &&
+			res.GetName() == "disk" {
+			return true
+		}
+		return false
+	})
+}
+
+func FilterReservedResources(immutableResources []*mesos.Resource) []*mesos.Resource {
+	return util.FilterResources(immutableResources, func(res *mesos.Resource) bool {
+		return res.Reservation != nil && res.GetRole() != ""
+	})
+}
+
+func PortIterator(resources []*mesos.Resource) chan int64 {
+	ports := make(chan int64)
+	go func() {
+		defer close(ports)
+		for _, resource := range util.FilterResources(resources, func(res *mesos.Resource) bool { return res.GetName() == "ports" }) {
+			for _, port := range RangesToArray(resource.GetRanges().GetRange()) {
+				ports <- port
 			}
 		}
-		return newResources, nil, false
-	}
-}
-func AskForCPU(cpuAsk float64) ResourceAsker {
-	return AskForScalar("cpus", cpuAsk)
-}
-
-func AskForMemory(memory float64) ResourceAsker {
-	return AskForScalar("mem", memory)
-
-}
-
-func AskForDisk(disk float64) ResourceAsker {
-	return AskForScalar("disk", disk)
+	}()
+	return ports
 }
 
 type intarray []int64
@@ -85,39 +140,6 @@ func RangesToArray(ranges []*mesos.Value_Range) []int64 {
 		array = append(array, temp...)
 	}
 	return array
-}
-
-func AskForPorts(portCount int) ResourceAsker {
-	ret := func(resources []*mesos.Resource) ([]*mesos.Resource, *mesos.Resource, bool) {
-		newResources := make([]*mesos.Resource, len(resources))
-		copy(newResources, resources)
-		for idx, resource := range resources {
-			if resource.GetName() == "ports" {
-				ports := RangesToArray(resource.GetRanges().GetRange())
-
-				// Now we have to see if there are N ports
-				if len(ports) >= portCount {
-					var sliceLoc int
-					// Calculate the slice where I'm taking ports:
-					if len(ports)-portCount == 0 {
-						sliceLoc = 0
-					} else {
-						sliceLoc = rand.Intn(len(ports) - portCount)
-					}
-					takingPorts := make([]int64, portCount)
-					copy(takingPorts, ports[sliceLoc:(sliceLoc+portCount)])
-					leavingPorts := make([]int64, len(ports)-portCount)
-					copy(leavingPorts, ports[:sliceLoc])
-					copy(leavingPorts[sliceLoc:], ports[(sliceLoc+portCount):])
-					newResources[idx] = util.NewRangesResource("ports", ArrayToRanges(leavingPorts))
-					ask := util.NewRangesResource("ports", ArrayToRanges(takingPorts))
-					return newResources, ask, true
-				}
-			}
-		}
-		return resources, nil, false
-	}
-	return ret
 }
 
 func KillEPMD(dir string) error {

@@ -59,7 +59,14 @@ func (client *SchedulerHTTPClient) CreateCluster(clusterName string) (string, er
 
 // DeleteCluster issues a DELETE to the Scheduler HTTP Server clusters/{cluster} endpoint
 func (client *SchedulerHTTPClient) DeleteCluster(clusterName string) (string, error) {
-	return "not yet implemented", nil
+	commandURI := fmt.Sprintf("clusters/%s", clusterName)
+	return client.doDelete(commandURI)
+}
+
+// DeleteNode issues a DELETE to the Scheduler HTTP Server clusters/{cluster} endpoint
+func (client *SchedulerHTTPClient) DeleteNode(clusterName string, nodeName string) (string, error) {
+	commandURI := fmt.Sprintf("clusters/%s/nodes/%s", clusterName, nodeName)
+	return client.doDelete(commandURI)
 }
 
 // GetNodes issues a GET to the Scheduler HTTP Server clusters/{cluster}/nodes endpoint
@@ -111,6 +118,23 @@ func (client *SchedulerHTTPClient) doPostWithData(path string, data io.Reader) (
 func (client *SchedulerHTTPClient) doPost(path string) (string, error) {
 	commandURL := fmt.Sprintf("%s/api/v1/%s", client.BaseURL, path)
 	resp, err := http.Post(commandURL, "", nil)
+	if err != nil {
+		return "", err
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	defer resp.Body.Close()
+	if err != nil {
+		return "", err
+	}
+	return string(body[:]), nil
+}
+
+func (client *SchedulerHTTPClient) doDelete(path string) (string, error) {
+	commandURL := fmt.Sprintf("%s/api/v1/%s", client.BaseURL, path)
+
+	req, _ := http.NewRequest("DELETE", commandURL, nil)
+	resp, err := http.DefaultClient.Do(req)
+
 	if err != nil {
 		return "", err
 	}

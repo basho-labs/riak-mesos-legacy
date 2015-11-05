@@ -14,13 +14,16 @@ import (
 
 type SchedulerState struct {
 	zkNode      *metadata_manager.ZkNode
+	MesosMaster string
 	FrameworkID *string
 	Clusters    map[string]*FrameworkRiakCluster
+	Graveyard   map[string]*FrameworkRiakCluster
 }
 
 func emptySchedulerState() *SchedulerState {
 	return &SchedulerState{
-		Clusters: make(map[string]*FrameworkRiakCluster),
+		Clusters:  make(map[string]*FrameworkRiakCluster),
+		Graveyard: make(map[string]*FrameworkRiakCluster),
 	}
 }
 func GetSchedulerState(mm *metadata_manager.MetadataManager) *SchedulerState {

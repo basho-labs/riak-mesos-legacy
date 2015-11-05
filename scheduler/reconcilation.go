@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	log "github.com/Sirupsen/logrus"
+	mesos "github.com/mesos/mesos-go/mesosproto"
 	sched "github.com/mesos/mesos-go/scheduler"
 	"sync/atomic"
 	"time"
@@ -9,10 +10,9 @@ import (
 
 func newReconciliationServer(driver sched.SchedulerDriver, sc *SchedulerCore) *ReconcilationServer {
 	rs := &ReconcilationServer{
-		nodesToReconcile: make(chan *FrameworkRiakNode, 10),
-		enabled:          atomic.Value{},
-		driver:           driver,
-		sc:               sc,
+		enabled: atomic.Value{},
+		driver:  driver,
+		sc:      sc,
 	}
 	rs.enabled.Store(false)
 	go rs.loop()
@@ -20,10 +20,9 @@ func newReconciliationServer(driver sched.SchedulerDriver, sc *SchedulerCore) *R
 }
 
 type ReconcilationServer struct {
-	nodesToReconcile chan *FrameworkRiakNode
-	driver           sched.SchedulerDriver
-	enabled          atomic.Value
-	sc               *SchedulerCore
+	driver  sched.SchedulerDriver
+	enabled atomic.Value
+	sc      *SchedulerCore
 }
 
 func (rServer *ReconcilationServer) enable() {
@@ -36,19 +35,79 @@ func (rServer *ReconcilationServer) disable() {
 	rServer.enabled.Store(false)
 }
 func (rServer *ReconcilationServer) reconcile() {
+	// Get Tasks to Reconcile
 	if rServer.enabled.Load().(bool) == true {
-		tasksToReconcile := rServer.sc.GetTasksToReconcile()
-		if len(tasksToReconcile) != 0 {
-			log.Debug("Reconciling tasks: ", tasksToReconcile)
-			rServer.driver.ReconcileTasks(tasksToReconcile)
-		}
+		rServer.sc.lock.Lock()
+		defer rServer.sc.lock.Unlock()
+		rServer.reconcileTasks()
+		rServer.killTasks()
 	}
 }
 func (rServer *ReconcilationServer) loop() {
-	// TODO: Add exponential backoff
 	rServer.reconcile()
 	ticker := time.Tick(time.Second * 5)
 	for range ticker {
 		rServer.reconcile()
+	}
+}
+
+func (rServer *ReconcilationServer) finishRiakNode(riakNode *FrameworkRiakNode) bool {
+	log.Infof("Finishing node: %+v", riakNode.CurrentID())
+	status, err := rServer.driver.SendFrameworkMessage(riakNode.CreateExecutorID(), riakNode.SlaveID, "finish")
+	if status != mesos.Status_DRIVER_RUNNING {
+		log.Fatal("Driver not running, while trying to send framework message")
+	}
+	if err != nil {
+		log.Warnf("Failed to send framework message: ", err)
+		return false
+	}
+	return true
+}
+
+func (rServer *ReconcilationServer) killRiakNode(riakNode *FrameworkRiakNode) bool {
+	log.Infof("Killing node: %+v", riakNode.CurrentID())
+	status, err := rServer.driver.KillTask(riakNode.CreateTaskID())
+	if status != mesos.Status_DRIVER_RUNNING {
+		log.Fatal("Driver not running, while trying to kill tasks")
+	}
+	if err != nil {
+		log.Warnf("Failed to kill tasks: ", err)
+		return false
+	}
+	return true
+}
+
+func (rServer *ReconcilationServer) killTasks() {
+	// Get Tasks to Kill
+	for _, cluster := range rServer.sc.schedulerState.Clusters {
+		nodesToKill, nodesToRemove := cluster.GetNodesToKillOrRemove()
+		for _, riakNode := range nodesToKill {
+			if !rServer.finishRiakNode(riakNode) {
+				rServer.killRiakNode(riakNode)
+			}
+		}
+
+		if len(nodesToRemove) > 0 {
+			for _, riakNode := range nodesToRemove {
+				cluster.RemoveNode(riakNode)
+			}
+			rServer.sc.schedulerState.Persist()
+		}
+
+		if cluster.CanBeRemoved() {
+			rServer.sc.schedulerState.Graveyard[cluster.Name] = cluster
+			delete(rServer.sc.schedulerState.Clusters, cluster.Name)
+			rServer.sc.schedulerState.Persist()
+		}
+	}
+}
+
+func (rServer *ReconcilationServer) reconcileTasks() {
+	for _, cluster := range rServer.sc.schedulerState.Clusters {
+		tasksToReconcile := cluster.GetNodeTasksToReconcile()
+		if len(tasksToReconcile) != 0 {
+			log.Debug("Reconciling tasks: ", tasksToReconcile)
+			rServer.driver.ReconcileTasks(tasksToReconcile)
+		}
 	}
 }

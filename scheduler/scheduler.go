@@ -1,21 +1,18 @@
 package scheduler
 
 import (
-	"io/ioutil"
-	"sync"
-
-	"golang.org/x/net/context"
-
 	log "github.com/Sirupsen/logrus"
 	"github.com/basho-labs/riak-mesos/cepmd/cepm"
+	"github.com/basho-labs/riak-mesos/common"
 	metamgr "github.com/basho-labs/riak-mesos/metadata_manager"
-	//rex "github.com/basho-labs/riak-mesos/riak_explorer"
 	"github.com/golang/protobuf/proto"
 	auth "github.com/mesos/mesos-go/auth"
 	sasl "github.com/mesos/mesos-go/auth/sasl"
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	sched "github.com/mesos/mesos-go/scheduler"
-	"time"
+	"golang.org/x/net/context"
+	"io/ioutil"
+	"sync"
 )
 
 const (
@@ -27,20 +24,20 @@ type SchedulerCore struct {
 	schedulerHTTPServer *SchedulerHTTPServer
 	mgr                 *metamgr.MetadataManager
 	schedulerIPAddr     string
-	frnDict             map[string]*FrameworkRiakNode
 	rServer             *ReconcilationServer
 	user                string
 	zookeepers          []string
 	cepm                *cepm.CEPM
 	frameworkName       string
 	frameworkRole       string
-	NodeCpus            string
-	NodeMem             string
-	NodeDisk            string
+	nodeCpus            string
+	nodeMem             string
+	nodeDisk            string
 	schedulerState      *SchedulerState
 	authProvider        string
 	mesosAuthPrincipal  string
 	mesosAuthSecretFile string
+	compatibilityMode   bool
 }
 
 func NewSchedulerCore(
@@ -55,7 +52,8 @@ func NewSchedulerCore(
 	nodeDisk string,
 	authProvider string,
 	mesosAuthPrincipal string,
-	mesosAuthSecretFile string) *SchedulerCore {
+	mesosAuthSecretFile string,
+	useReservations bool) *SchedulerCore {
 
 	mgr := metamgr.NewMetadataManager(frameworkName, zookeepers)
 	ss := GetSchedulerState(mgr)
@@ -64,25 +62,29 @@ func NewSchedulerCore(
 	c.Background()
 
 	scheduler := &SchedulerCore{
-		lock:            &sync.Mutex{},
-		schedulerIPAddr: schedulerIPAddr,
-		mgr:             mgr,
-		frnDict:         make(map[string]*FrameworkRiakNode),
-		user:            user,
-		zookeepers:      zookeepers,
-		cepm:            c,
-		frameworkName:   frameworkName,
-		frameworkRole:   frameworkRole,
-		NodeCpus:        nodeCpus,
-		NodeMem:         nodeMem,
-		NodeDisk:        nodeDisk,
-		schedulerState:  ss,
+		lock:                &sync.Mutex{},
+		schedulerIPAddr:     schedulerIPAddr,
+		mgr:                 mgr,
+		user:                user,
+		zookeepers:          zookeepers,
+		cepm:                c,
+		frameworkName:       frameworkName,
+		frameworkRole:       frameworkRole,
+		nodeCpus:            nodeCpus,
+		nodeMem:             nodeMem,
+		nodeDisk:            nodeDisk,
+		schedulerState:      ss,
+		authProvider:        authProvider,
+		mesosAuthPrincipal:  mesosAuthPrincipal,
+		mesosAuthSecretFile: mesosAuthSecretFile,
+		compatibilityMode:   !useReservations,
 	}
 	scheduler.schedulerHTTPServer = ServeExecutorArtifact(scheduler, schedulerHostname)
 	return scheduler
 }
 
 func (sc *SchedulerCore) Run(mesosMaster string) {
+	sc.schedulerState.MesosMaster = mesosMaster
 	var frameworkId *mesos.FrameworkID
 	if sc.schedulerState.FrameworkID == nil {
 		frameworkId = nil
@@ -111,6 +113,8 @@ func (sc *SchedulerCore) Run(mesosMaster string) {
 	cred := (*mesos.Credential)(nil)
 	if sc.mesosAuthPrincipal != "" {
 		fwinfo.Principal = proto.String(sc.mesosAuthPrincipal)
+	}
+	if sc.mesosAuthSecretFile != "" && sc.mesosAuthPrincipal != "" {
 		secret, err := ioutil.ReadFile(sc.mesosAuthSecretFile)
 		if err != nil {
 			log.Fatal(err)
@@ -132,7 +136,7 @@ func (sc *SchedulerCore) Run(mesosMaster string) {
 		config.BindingAddress = parseIP(sc.schedulerIPAddr)
 	}
 
-	if sc.mesosAuthPrincipal != "" {
+	if sc.authProvider != "" && sc.mesosAuthPrincipal != "" {
 		config.WithAuthContext = func(ctx context.Context) context.Context {
 			ctx = auth.WithLoginProvider(ctx, sc.authProvider)
 			if sc.schedulerIPAddr != "" {
@@ -173,8 +177,6 @@ func (sc *SchedulerCore) Registered(driver sched.SchedulerDriver, frameworkId *m
 func (sc *SchedulerCore) Reregistered(driver sched.SchedulerDriver, masterInfo *mesos.MasterInfo) {
 	sc.lock.Lock()
 	defer sc.lock.Unlock()
-	//go NewTargetTask(*sched).Loop()
-	// We don't actually handle this correctly
 	log.Error("Framework reregistered")
 	log.Info("Master Info: ", masterInfo)
 	sc.rServer.enable()
@@ -185,122 +187,105 @@ func (sc *SchedulerCore) Disconnected(sched.SchedulerDriver) {
 	log.Error("Framework disconnected")
 }
 
-func (sc *SchedulerCore) spreadNodesAcrossOffers(allOffers []*mesos.Offer, allResources [][]*mesos.Resource, allNodes []*FrameworkRiakNode, currentOfferIndex int, currentRiakNodeIndex int, launchTasks map[string][]*mesos.TaskInfo) (map[string][]*mesos.TaskInfo, error) {
-	log.Infof("spreadNodesAcrossOffers: currentOfferIndex: %+v, currentRiakNodeIndex: %+v", currentOfferIndex, currentRiakNodeIndex)
-	log.Infof("spreadNodesAcrossOffers: allNodes: %+v, allResources: %+v, allOffers: %+v, launchTasks: %+v", len(allNodes), len(allResources), len(allOffers), len(launchTasks))
-
-	// Nothing to launch
-	if len(allNodes) == 0 || len(allResources) == 0 || len(allOffers) == 0 {
-		return launchTasks, nil
-	}
-
-	// No more nodes to schedule
-	if currentRiakNodeIndex >= len(allNodes) {
-		return launchTasks, nil
-	}
-
-	// No more offers, just get out now, more offers will come
-	if currentOfferIndex >= len(allOffers) {
-		return launchTasks, nil
-	}
-
-	offer := allOffers[currentOfferIndex]
-	riakNode := allNodes[currentRiakNodeIndex]
-
-	var success bool
-	var executorAsk, taskAsk []*mesos.Resource
-	allResources[currentOfferIndex], executorAsk, taskAsk, success = riakNode.GetCombinedAsk(sc)(allResources[currentOfferIndex])
-
-	if success {
-		taskInfo := riakNode.PrepareForLaunchAndGetNewTaskInfo(sc, offer, executorAsk, taskAsk)
-		sc.frnDict[riakNode.CurrentID()] = riakNode
-
-		if launchTasks[*offer.Id.Value] == nil {
-			launchTasks[*offer.Id.Value] = []*mesos.TaskInfo{}
-		}
-
-		log.Infof("spreadNodesAcrossOffers: Using offerId: %+v, for riakNode.CurrentID(): %+v", *offer.Id.Value, riakNode.CurrentID())
-
-		launchTasks[*offer.Id.Value] = append(launchTasks[*offer.Id.Value], taskInfo)
-
-		log.Infof("spreadNodesAcrossOffers: New LaunchTasks: %+v", launchTasks)
-
-		sc.schedulerState.Persist()
-
-		// Everything went well, add to the launch tasks
-		return sc.spreadNodesAcrossOffers(allOffers, allResources, allNodes, currentOfferIndex+1, currentRiakNodeIndex+1, launchTasks)
-	}
-
-	return sc.spreadNodesAcrossOffers(allOffers, allResources, allNodes, currentOfferIndex+1, currentRiakNodeIndex, launchTasks)
-}
-
 func (sc *SchedulerCore) ResourceOffers(driver sched.SchedulerDriver, offers []*mesos.Offer) {
 	sc.lock.Lock()
 	defer sc.lock.Unlock()
-	log.Info("Received resource offers: ", offers)
-	launchTasks := make(map[string][]*mesos.TaskInfo)
-	toBeScheduled := []*FrameworkRiakNode{}
-	for _, cluster := range sc.schedulerState.Clusters {
-		for _, riakNode := range cluster.Nodes {
-			if riakNode.NeedsToBeScheduled() {
-				log.Infof("Adding Riak node for scheduling: %+v", riakNode)
-				// We need to schedule this task I guess?
-				toBeScheduled = append(toBeScheduled, riakNode)
-			}
-		}
-	}
 
-	// Populate a mutable slice of offer resources
-	allResources := [][]*mesos.Resource{}
+	operations := sc.createOperationsForOffers(offers)
+
+	// Attempt to reserve resources and/or launch nodes
 	for _, offer := range offers {
-		allResources = append(allResources, offer.Resources)
-	}
+		offerOperations := operations[*offer.Id.Value]
 
-	launchTasks, err := sc.spreadNodesAcrossOffers(offers, allResources, toBeScheduled, 0, 0, launchTasks)
-	if err != nil {
-		log.Error(err)
-	}
-
-	for _, offer := range offers {
-		tasks := launchTasks[*offer.Id.Value]
-
-		if tasks == nil {
-			tasks = []*mesos.TaskInfo{}
+		if offerOperations == nil {
+			offerOperations = []*mesos.Offer_Operation{}
 		}
 
-		log.Infof("Resource Offers: In launch loop, currently on offerId: %+v, tasks for offer: %+v", *offer.Id.Value, tasks)
-
-		// This is somewhat of a hack, to avoid synchronously calling the mesos-go SDK
-		// to avoid a deadlock situation.
-		// TODO: Fix and make actually queues around driver interactions
-		// This is a massive hack
-		// -Sargun Dhillon 2015-10-01
-		go func(innerOffer *mesos.Offer, innerTasks []*mesos.TaskInfo) {
-			log.Infof("Resource Offers: In launch loop inner go func, currently on offerId: %+v, tasks for offer: %+v", *innerOffer.Id.Value, innerTasks)
-			innerStatus, innerErr := driver.LaunchTasks([]*mesos.OfferID{innerOffer.Id}, innerTasks, &mesos.Filters{RefuseSeconds: proto.Float64(OFFER_INTERVAL)})
-
-			if innerStatus != mesos.Status_DRIVER_RUNNING {
-				log.Fatal("Driver not running, while trying to launch tasks")
-			}
-			if innerErr != nil {
-				log.Panic("Failed to launch tasks: ", innerErr)
-			}
-		}(offer, tasks)
+		go sc.acceptOffer(driver, offer, offerOperations)
 	}
 }
+
+func (sc *SchedulerCore) createOperationsForOffers(offers []*mesos.Offer) map[string][]*mesos.Offer_Operation {
+	operations := make(map[string][]*mesos.Offer_Operation)
+
+	// Populate operations
+	for _, offer := range offers {
+		needsReconciliation := false
+		offerHelper := common.NewOfferHelper(offer)
+		log.Infof("Got offer with these resources: %s", offerHelper.String())
+
+		for _, cluster := range sc.schedulerState.Clusters {
+			clusterNeedsReconciliation := cluster.ApplyOffer(offerHelper, sc)
+			if clusterNeedsReconciliation {
+				needsReconciliation = true
+			}
+		}
+
+		if !needsReconciliation {
+			offerHelper.MaybeUnreserve()
+		}
+
+		operations[*offer.Id.Value] = offerHelper.Operations()
+	}
+
+	return operations
+}
+
+func (sc *SchedulerCore) acceptOffer(driver sched.SchedulerDriver, offer *mesos.Offer, operations []*mesos.Offer_Operation) {
+	log.Infof("Accepting OfferID: %+v, Operations: %+v", *offer.Id.Value, operations)
+
+	var status mesos.Status
+	var err error
+
+	if sc.compatibilityMode {
+		tasks := []*mesos.TaskInfo{}
+		for _, operation := range operations {
+			if *operation.Type == mesos.Offer_Operation_LAUNCH {
+				tasks = operation.Launch.TaskInfos
+			}
+		}
+		status, err = driver.LaunchTasks([]*mesos.OfferID{offer.Id}, tasks, &mesos.Filters{RefuseSeconds: proto.Float64(OFFER_INTERVAL)})
+	} else {
+		status, err = driver.AcceptOffers([]*mesos.OfferID{offer.Id}, operations, &mesos.Filters{RefuseSeconds: proto.Float64(OFFER_INTERVAL)})
+	}
+
+	if status != mesos.Status_DRIVER_RUNNING {
+		log.Fatal("Driver not running, while trying to accept offers")
+	}
+	if err != nil {
+		log.Panic("Failed to launch tasks: ", err)
+	}
+}
+
 func (sc *SchedulerCore) StatusUpdate(driver sched.SchedulerDriver, status *mesos.TaskStatus) {
 	sc.lock.Lock()
 	defer sc.lock.Unlock()
-	riak_node, assigned := sc.frnDict[status.TaskId.GetValue()]
-	if assigned {
-		log.Info("Received status updates: ", status)
-		log.Info("Riak Node: ", riak_node)
-		riak_node.handleStatusUpdate(sc, sc.schedulerState.Clusters[riak_node.ClusterName], status)
-		sc.schedulerState.Persist()
-	} else {
-		log.Error("Received status update for unknown job: ", status)
+
+	log.Info("Received status updates: ", status)
+	foundNode := false
+
+	for _, cluster := range sc.schedulerState.Clusters {
+		if cluster.HasNode(status.TaskId.GetValue()) {
+			foundNode = true
+			cluster.HandleNodeStatusUpdate(status)
+			sc.schedulerState.Persist()
+			break
+		}
 	}
 
+	if !foundNode {
+		for _, cluster := range sc.schedulerState.Graveyard {
+			if cluster.HasNode(status.TaskId.GetValue()) {
+				foundNode = true
+				log.Warn("Received status update for node in killed cluster: ", status)
+				break
+			}
+		}
+	}
+
+	if !foundNode {
+		log.Error("Received status update for unknown job: ", status)
+	}
 }
 
 func (sc *SchedulerCore) OfferRescinded(driver sched.SchedulerDriver, offerID *mesos.OfferID) {
@@ -333,24 +318,4 @@ func (sc *SchedulerCore) Error(driver sched.SchedulerDriver, err string) {
 	sc.lock.Lock()
 	defer sc.lock.Unlock()
 	log.Info("Scheduler received error:", err)
-}
-
-// Callback from reconciliation server
-// This is a massive hack that was because I didn't want to make the scheduler async
-func (sc *SchedulerCore) GetTasksToReconcile() []*mesos.TaskStatus {
-	sc.lock.Lock()
-	defer sc.lock.Unlock()
-	tasksToReconcile := []*mesos.TaskStatus{}
-	for _, cluster := range sc.schedulerState.Clusters {
-		for _, node := range cluster.Nodes {
-			if node.reconciled == false && time.Since(node.lastAskedToReconcile).Seconds() > 5 {
-				if _, assigned := sc.frnDict[node.GetTaskStatus().TaskId.GetValue()]; !assigned {
-					sc.frnDict[node.GetTaskStatus().TaskId.GetValue()] = node
-				}
-				node.lastAskedToReconcile = time.Now()
-				tasksToReconcile = append(tasksToReconcile, node.GetTaskStatus())
-			}
-		}
-	}
-	return tasksToReconcile
 }
