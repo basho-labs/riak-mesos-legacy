@@ -3,7 +3,8 @@ package scheduler
 import (
 	"fmt"
 	log "github.com/Sirupsen/logrus"
-	rexclient "github.com/basho-labs/riak-mesos/riak_explorer/client"
+	"github.com/basho-labs/riak-mesos/common"
+	rexclient "github.com/basho-labs/riak-mesos/riak_explorer"
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	"time"
 )
@@ -18,7 +19,6 @@ type FrameworkRiakCluster struct {
 }
 
 func NewFrameworkRiakCluster(name string) *FrameworkRiakCluster {
-
 	advancedConfig, err := Asset("advanced.config")
 	if err != nil {
 		log.Error("Unable to open up advanced.config: ", err)
@@ -38,6 +38,32 @@ func NewFrameworkRiakCluster(name string) *FrameworkRiakCluster {
 	}
 }
 
+// --- Resources ---
+
+func (frc *FrameworkRiakCluster) ApplyOffer(offerHelper *common.OfferHelper, sc *SchedulerCore) bool {
+	clusterNeedsReconciliation := false
+	for _, riakNode := range frc.Nodes {
+		if riakNode.NeedsToBeReconciled() {
+			clusterNeedsReconciliation = true
+		}
+		if riakNode.CanBeScheduled() && (riakNode.HasRequestedReservation() || sc.compatibilityMode) {
+			log.Infof("Adding Riak node for scheduling (has reservations): %+v", riakNode.CurrentID())
+			if riakNode.ApplyReservedOffer(offerHelper, sc) {
+				sc.schedulerState.Persist()
+			}
+		} else if riakNode.CanBeScheduled() && !riakNode.HasRequestedReservation() && !sc.compatibilityMode {
+			log.Infof("Adding Riak node for scheduling (no reservations): %+v", riakNode.CurrentID())
+			if riakNode.ApplyUnreservedOffer(offerHelper) {
+				sc.schedulerState.Persist()
+			}
+		}
+	}
+
+	return clusterNeedsReconciliation
+}
+
+// --- State ---
+
 func (frc *FrameworkRiakCluster) KillNext() {
 	frc.IsKilled = true
 }
@@ -50,9 +76,12 @@ func (frc *FrameworkRiakCluster) GetNodes() map[string]*FrameworkRiakNode {
 	return frc.Nodes
 }
 
+// --- Values ---
 func (frc *FrameworkRiakCluster) GetNextSimpleId() int {
 	return len(frc.Nodes) + len(frc.Graveyard) + 1
 }
+
+// --- Node Operations ---
 
 func (frc *FrameworkRiakCluster) CreateNode(sc *SchedulerCore) *FrameworkRiakNode {
 	simpleId := frc.GetNextSimpleId()
@@ -115,6 +144,7 @@ func (frc *FrameworkRiakCluster) HandleNodeStatusUpdate(status *mesos.TaskStatus
 	riakNode, _ := frc.Nodes[status.TaskId.GetValue()]
 	riakNode.reconciled = true
 	riakNode.TaskStatus = status
+	riakNode.SlaveID = status.SlaveId
 
 	switch *status.State.Enum() {
 	case mesos.TaskState_TASK_STAGING:
@@ -141,31 +171,6 @@ func (frc *FrameworkRiakCluster) HandleNodeStatusUpdate(status *mesos.TaskStatus
 	default:
 		log.Warn("Received unknown status update: %+v", status)
 	}
-}
-
-func doJoin(oldNode *FrameworkRiakNode, newNode *FrameworkRiakNode, retry int, maxRetry int) bool {
-	if retry > maxRetry {
-		log.Infof("Attempted joining %+v to %+v %+v times and failed.", newNode.TaskData.FullyQualifiedNodeName, oldNode.TaskData.FullyQualifiedNodeName, maxRetry)
-		return false
-	}
-
-	rexHostname := fmt.Sprintf("%s:%d", oldNode.LastOfferUsed.GetHostname(), oldNode.TaskData.HTTPPort)
-	rexc := rexclient.NewRiakExplorerClient(rexHostname)
-	// We should try to join against this node
-	log.Infof("Joining %+v to %+v", newNode.TaskData.FullyQualifiedNodeName, oldNode.TaskData.FullyQualifiedNodeName)
-	joinReply, joinErr := rexc.Join(newNode.TaskData.FullyQualifiedNodeName, oldNode.TaskData.FullyQualifiedNodeName)
-	log.Infof("Triggered join: %+v, %+v", joinReply, joinErr)
-	if joinReply.Join.Success == "ok" {
-		log.Info("Join successful")
-		return true
-	}
-	if joinReply.Join.Error == "not_single_node" {
-		log.Info("Node already joined")
-		return true
-	}
-
-	time.Sleep(5 * time.Second)
-	return doJoin(oldNode, newNode, retry+1, maxRetry)
 }
 
 func (frc *FrameworkRiakCluster) Join(newNode *FrameworkRiakNode) {
@@ -200,31 +205,6 @@ func (frc *FrameworkRiakCluster) Join(newNode *FrameworkRiakNode) {
 	}
 }
 
-func doLeave(stayingNode *FrameworkRiakNode, leavingNode *FrameworkRiakNode, retry int, maxRetry int) bool {
-	if retry > maxRetry {
-		log.Infof("Attempted removing %+v to %+v's cluster %+v times and failed.", leavingNode.TaskData.FullyQualifiedNodeName, stayingNode.TaskData.FullyQualifiedNodeName, maxRetry)
-		return false
-	}
-
-	rexHostname := fmt.Sprintf("%s:%d", stayingNode.LastOfferUsed.GetHostname(), stayingNode.TaskData.HTTPPort)
-	rexc := rexclient.NewRiakExplorerClient(rexHostname)
-	// We should try to join against this node
-	log.Infof("Removing %+v from %+v's cluster", leavingNode.TaskData.FullyQualifiedNodeName, stayingNode.TaskData.FullyQualifiedNodeName)
-	leaveReply, leaveErr := rexc.ForceRemove(stayingNode.TaskData.FullyQualifiedNodeName, leavingNode.TaskData.FullyQualifiedNodeName)
-	log.Infof("Triggered force remove: %+v, %+v", leaveReply, leaveErr)
-	if leaveReply.ForceRemove.Success == "ok" {
-		log.Info("Leave successful")
-		return true
-	}
-	if leaveReply.ForceRemove.Error == "not_member" {
-		log.Info("Node already removed")
-		return true
-	}
-
-	time.Sleep(5 * time.Second)
-	return doLeave(stayingNode, leavingNode, retry+1, maxRetry)
-}
-
 func (frc *FrameworkRiakCluster) Leave(leavingNode *FrameworkRiakNode) {
 	// Cluster of one
 	if len(frc.Nodes) == 1 {
@@ -245,4 +225,56 @@ func (frc *FrameworkRiakCluster) Leave(leavingNode *FrameworkRiakNode) {
 		// We're running now, but we can't join the cluster for some reason
 		log.Warnf("Attempted to remove node from cluster, but was unable to. Cluster Nodes: %+v", frc.Nodes)
 	}
+}
+
+// --- Utility ---
+
+func doJoin(oldNode *FrameworkRiakNode, newNode *FrameworkRiakNode, retry int, maxRetry int) bool {
+	if retry > maxRetry {
+		log.Infof("Attempted joining %+v to %+v %+v times and failed.", newNode.TaskData.FullyQualifiedNodeName, oldNode.TaskData.FullyQualifiedNodeName, maxRetry)
+		return false
+	}
+
+	rexHostname := fmt.Sprintf("%s:%d", oldNode.Hostname, oldNode.TaskData.HTTPPort)
+	rexc := rexclient.NewRiakExplorerClient(rexHostname)
+	// We should try to join against this node
+	log.Infof("Joining %+v to %+v", newNode.TaskData.FullyQualifiedNodeName, oldNode.TaskData.FullyQualifiedNodeName)
+	joinReply, joinErr := rexc.Join(newNode.TaskData.FullyQualifiedNodeName, oldNode.TaskData.FullyQualifiedNodeName)
+	log.Infof("Triggered join: %+v, %+v", joinReply, joinErr)
+	if joinReply.Join.Success == "ok" {
+		log.Info("Join successful")
+		return true
+	}
+	if joinReply.Join.Error == "not_single_node" {
+		log.Info("Node already joined")
+		return true
+	}
+
+	time.Sleep(5 * time.Second)
+	return doJoin(oldNode, newNode, retry+1, maxRetry)
+}
+
+func doLeave(stayingNode *FrameworkRiakNode, leavingNode *FrameworkRiakNode, retry int, maxRetry int) bool {
+	if retry > maxRetry {
+		log.Infof("Attempted removing %+v to %+v's cluster %+v times and failed.", leavingNode.TaskData.FullyQualifiedNodeName, stayingNode.TaskData.FullyQualifiedNodeName, maxRetry)
+		return false
+	}
+
+	rexHostname := fmt.Sprintf("%s:%d", stayingNode.Hostname, stayingNode.TaskData.HTTPPort)
+	rexc := rexclient.NewRiakExplorerClient(rexHostname)
+	// We should try to join against this node
+	log.Infof("Removing %+v from %+v's cluster", leavingNode.TaskData.FullyQualifiedNodeName, stayingNode.TaskData.FullyQualifiedNodeName)
+	leaveReply, leaveErr := rexc.ForceRemove(stayingNode.TaskData.FullyQualifiedNodeName, leavingNode.TaskData.FullyQualifiedNodeName)
+	log.Infof("Triggered force remove: %+v, %+v", leaveReply, leaveErr)
+	if leaveReply.ForceRemove.Success == "ok" {
+		log.Info("Leave successful")
+		return true
+	}
+	if leaveReply.ForceRemove.Error == "not_member" {
+		log.Info("Node already removed")
+		return true
+	}
+
+	time.Sleep(5 * time.Second)
+	return doLeave(stayingNode, leavingNode, retry+1, maxRetry)
 }

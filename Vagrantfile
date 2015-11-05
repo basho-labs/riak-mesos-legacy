@@ -25,6 +25,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
     override.vm.network :private_network, ip: "192.168.0.30"
     override.vm.network :forwarded_port, guest: 5050, host: 5050
+    override.vm.network :forwarded_port, guest: 5051, host: 5051
     override.vm.network :forwarded_port, guest: 8080, host: 8080
   end
 

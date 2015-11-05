@@ -53,7 +53,7 @@ func (rServer *ReconcilationServer) loop() {
 
 func (rServer *ReconcilationServer) finishRiakNode(riakNode *FrameworkRiakNode) bool {
 	log.Infof("Finishing node: %+v", riakNode.CurrentID())
-	status, err := rServer.driver.SendFrameworkMessage(riakNode.CreateExecutorID(), riakNode.LastOfferUsed.SlaveId, "finish")
+	status, err := rServer.driver.SendFrameworkMessage(riakNode.CreateExecutorID(), riakNode.SlaveID, "finish")
 	if status != mesos.Status_DRIVER_RUNNING {
 		log.Fatal("Driver not running, while trying to send framework message")
 	}

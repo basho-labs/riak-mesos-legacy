@@ -113,13 +113,18 @@ func ApplyRangesResource(mutableResources []*mesos.Resource, portCount int) ([]*
 }
 
 func ApplyScalarResource(mutableResources []*mesos.Resource, name string, value float64) []*mesos.Resource {
-	for _, resource := range util.FilterResources(mutableResources, func(res *mesos.Resource) bool { return res.GetName() == name }) {
-		if resource.GetScalar().GetValue() >= (value) {
-			newValue := *resource.Scalar.Value - value
+	found := false
+	for _, resource := range mutableResources {
+		if resource.GetName() == name && !found {
+			newValue := resource.GetScalar().GetValue() - value
 			resource.Scalar.Value = &newValue
-			break
+			found = true
 		}
 	}
+	// for _, resource := range util.FilterResources(mutableResources, func(res *mesos.Resource) bool { return res.GetName() == name }) {
+	// 	newValue := resource.GetScalar().GetValue() - value
+	// 	resource.Scalar.Value = &newValue
+	// }
 	return mutableResources
 }
 

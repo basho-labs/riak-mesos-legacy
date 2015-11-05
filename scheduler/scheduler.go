@@ -1,19 +1,18 @@
 package scheduler
 
 import (
-	"io/ioutil"
-	"sync"
-
-	"golang.org/x/net/context"
-
 	log "github.com/Sirupsen/logrus"
+	"github.com/basho-labs/riak-mesos/cepmd/cepm"
+	"github.com/basho-labs/riak-mesos/common"
+	metamgr "github.com/basho-labs/riak-mesos/metadata_manager"
+	"github.com/golang/protobuf/proto"
 	auth "github.com/mesos/mesos-go/auth"
 	sasl "github.com/mesos/mesos-go/auth/sasl"
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	sched "github.com/mesos/mesos-go/scheduler"
-	"github.com/basho-labs/riak-mesos/cepmd/cepm"
-	metamgr "github.com/basho-labs/riak-mesos/metadata_manager"
-	"github.com/golang/protobuf/proto"
+	"golang.org/x/net/context"
+	"io/ioutil"
+	"sync"
 )
 
 const (
@@ -192,8 +191,6 @@ func (sc *SchedulerCore) ResourceOffers(driver sched.SchedulerDriver, offers []*
 	sc.lock.Lock()
 	defer sc.lock.Unlock()
 
-	// log.Info("Received resource offers: ", offers)
-
 	operations := sc.createOperationsForOffers(offers)
 
 	// Attempt to reserve resources and/or launch nodes
@@ -206,6 +203,32 @@ func (sc *SchedulerCore) ResourceOffers(driver sched.SchedulerDriver, offers []*
 
 		go sc.acceptOffer(driver, offer, offerOperations)
 	}
+}
+
+func (sc *SchedulerCore) createOperationsForOffers(offers []*mesos.Offer) map[string][]*mesos.Offer_Operation {
+	operations := make(map[string][]*mesos.Offer_Operation)
+
+	// Populate operations
+	for _, offer := range offers {
+		needsReconciliation := false
+		offerHelper := common.NewOfferHelper(offer)
+		log.Infof("Got offer with these resources: %s", offerHelper.String())
+
+		for _, cluster := range sc.schedulerState.Clusters {
+			clusterNeedsReconciliation := cluster.ApplyOffer(offerHelper, sc)
+			if clusterNeedsReconciliation {
+				needsReconciliation = true
+			}
+		}
+
+		if !needsReconciliation {
+			offerHelper.MaybeUnreserve()
+		}
+
+		operations[*offer.Id.Value] = offerHelper.Operations()
+	}
+
+	return operations
 }
 
 func (sc *SchedulerCore) acceptOffer(driver sched.SchedulerDriver, offer *mesos.Offer, operations []*mesos.Offer_Operation) {
