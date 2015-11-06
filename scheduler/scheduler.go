@@ -12,6 +12,7 @@ import (
 	sched "github.com/mesos/mesos-go/scheduler"
 	"golang.org/x/net/context"
 	"io/ioutil"
+	"os"
 	"sync"
 )
 
@@ -125,11 +126,17 @@ func (sc *SchedulerCore) Run(mesosMaster string) {
 		}
 	}
 
+	hostname, err := os.Hostname()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	config := sched.DriverConfig{
-		Scheduler:  sc,
-		Framework:  fwinfo,
-		Master:     mesosMaster,
-		Credential: cred,
+		Scheduler:        sc,
+		Framework:        fwinfo,
+		Master:           mesosMaster,
+		Credential:       cred,
+		HostnameOverride: hostname,
 	}
 
 	if sc.schedulerIPAddr != "" {

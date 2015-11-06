@@ -295,6 +295,10 @@ func (frn *FrameworkRiakNode) CanBeLeft() bool {
 }
 
 // Setters
+func (frn *FrameworkRiakNode) Unreserve() {
+	frn.CurrentState = process_state.Unknown
+	frn.SlaveID = nil
+}
 func (frn *FrameworkRiakNode) KillNext() {
 	frn.DestinationState = process_state.Shutdown
 }
