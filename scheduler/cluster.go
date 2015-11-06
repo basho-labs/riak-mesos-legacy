@@ -62,9 +62,9 @@ func (frc *FrameworkRiakCluster) ApplyOffer(offerHelper *common.OfferHelper, sc 
 	return clusterNeedsReconciliation
 }
 
-func (frc *FrameworkRiakCluster) MaybeUnreserve(offerHelper *common.OfferHelper, sc *SchedulerCore) {
+func (frc *FrameworkRiakCluster) UnreserveNodes(sc *SchedulerCore) {
 	for _, riakNode := range frc.Nodes {
-		if riakNode.CanBeScheduled() && riakNode.HasRequestedReservation() && offerHelper.HasNoActions() {
+		if riakNode.CanBeScheduled() && riakNode.HasRequestedReservation() {
 			log.Infof("Riak node has reservation, but there are no actions for the offer, unreserving node: %+v", riakNode.CurrentID())
 			riakNode.Unreserve()
 			sc.schedulerState.Persist()
