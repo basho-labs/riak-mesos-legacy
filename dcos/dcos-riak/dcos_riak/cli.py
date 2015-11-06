@@ -142,7 +142,7 @@ def install_director(framework, cluster, zookeeper, op_sys, disable_super_chroot
 
 def generate_director_config(framework, cluster, zookeeper, op_sys, disable_super_chroot_flag):
     try:
-        return '{"id": "/' + framework + '-director","cmd": "./riak_mesos_director/director_linux_amd64","cpus": 0.5,"mem": 1024.0,"ports": [0, 0, 0, 0],"instances": 1,"constraints": [["hostname", "UNIQUE"]],"acceptedResourceRoles": ["slave_public"],"env": {"USE_SUPER_CHROOT": "'+ str(not disable_super_chroot_flag).lower() + '","DIRECTOR_ZK": "' + zookeeper + '","DIRECTOR_FRAMEWORK": "' + framework + '","DIRECTOR_CLUSTER": "' + cluster + '"},"uris": ["http://riak-tools.s3.amazonaws.com/riak-mesos/' + op_sys + '/riak_mesos_director_linux_amd64_0.1.1.tar.gz"],"healthChecks": [{"protocol": "HTTP","path": "/health","gracePeriodSeconds": 3,"intervalSeconds": 10,"portIndex": 2,"timeoutSeconds": 10,"maxConsecutiveFailures": 3}]}'
+        return '{"id": "/' + framework + '-director","cmd": "./riak_mesos_director/director_linux_amd64","cpus": 0.5,"mem": 1024.0,"ports": [0, 0, 0, 0],"instances": 1,"constraints": [["hostname", "UNIQUE"]],"acceptedResourceRoles": ["slave_public"],"env": {"USE_SUPER_CHROOT": "'+ str(not disable_super_chroot_flag).lower() + '","DIRECTOR_ZK": "' + zookeeper + '","DIRECTOR_FRAMEWORK": "' + framework + '","DIRECTOR_CLUSTER": "' + cluster + '"},"uris": ["http://riak-tools.s3.amazonaws.com/riak-mesos/' + op_sys + '/riak_mesos_director_linux_amd64_0.2.0.tar.gz"],"healthChecks": [{"protocol": "HTTP","path": "/health","gracePeriodSeconds": 3,"intervalSeconds": 10,"portIndex": 2,"timeoutSeconds": 10,"maxConsecutiveFailures": 3}]}'
     except errors.DCOSException as e:
         print(e.message)
         raise CliError("Unable to create marathon app")

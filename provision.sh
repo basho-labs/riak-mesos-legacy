@@ -34,7 +34,10 @@ cd $HOME/ && bash < <(curl -s -S -L https://raw.githubusercontent.com/moovweb/gv
 [[ -s "$HOME/.gvm/scripts/gvm" ]] && source "$HOME/.gvm/scripts/gvm"
 gvm install go1.4
 gvm use go1.4
+export GOPATH=/vagrant/goroot
 gvm install go1.5
+gvm use go1.5
+export GOPATH=/vagrant/goroot
 mkdir -p /vagrant/goroot
 
 # DCOS Prereq

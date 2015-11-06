@@ -6,22 +6,22 @@
 
 These packages include an Ubuntu image and they utilize chroot to run Erlang applications for mutiple platform support.
 
-* Riak Mesos Framework [riak_mesos_linux_amd64_0.1.1.tar.gz](http://riak-tools.s3.amazonaws.com/riak-mesos/coreos/riak_mesos_linux_amd64_0.1.1.tar.gz)
-* Riak Mesos Director [riak_mesos_director_linux_amd64_0.1.1.tar.gz](http://riak-tools.s3.amazonaws.com/riak-mesos/coreos/riak_mesos_director_linux_amd64_0.1.1.tar.gz)
+* Riak Mesos Framework [riak_mesos_linux_amd64_0.2.0.tar.gz](http://riak-tools.s3.amazonaws.com/riak-mesos/coreos/riak_mesos_linux_amd64_0.2.0.tar.gz)
+* Riak Mesos Director [riak_mesos_director_linux_amd64_0.2.0.tar.gz](http://riak-tools.s3.amazonaws.com/riak-mesos/coreos/riak_mesos_director_linux_amd64_0.2.0.tar.gz)
 
 ### Ubuntu (14.04) Packages
 
 These packages included Ubuntu Trusty flavors of the embedded Erlang applications
 
-* Riak Mesos Framework [riak_mesos_linux_amd64_0.1.1.tar.gz](http://riak-tools.s3.amazonaws.com/riak-mesos/ubuntu/riak_mesos_linux_amd64_0.1.1.tar.gz)
-* Riak Mesos Director [riak_mesos_director_linux_amd64_0.1.1.tar.gz](http://riak-tools.s3.amazonaws.com/riak-mesos/ubuntu/riak_mesos_director_linux_amd64_0.1.1.tar.gz)
+* Riak Mesos Framework [riak_mesos_linux_amd64_0.2.0.tar.gz](http://riak-tools.s3.amazonaws.com/riak-mesos/ubuntu/riak_mesos_linux_amd64_0.2.0.tar.gz)
+* Riak Mesos Director [riak_mesos_director_linux_amd64_0.2.0.tar.gz](http://riak-tools.s3.amazonaws.com/riak-mesos/ubuntu/riak_mesos_director_linux_amd64_0.2.0.tar.gz)
 
 ### CentOS (7.0) Packages
 
 These packages included CentOS flavors of the embedded Erlang applications
 
-* Riak Mesos Framework [riak_mesos_linux_amd64_0.1.1.tar.gz](http://riak-tools.s3.amazonaws.com/riak-mesos/centos/riak_mesos_linux_amd64_0.1.1.tar.gz)
-* Riak Mesos Director [riak_mesos_director_linux_amd64_0.1.1.tar.gz](http://riak-tools.s3.amazonaws.com/riak-mesos/centos/riak_mesos_director_linux_amd64_0.1.1.tar.gz)
+* Riak Mesos Framework [riak_mesos_linux_amd64_0.2.0.tar.gz](http://riak-tools.s3.amazonaws.com/riak-mesos/centos/riak_mesos_linux_amd64_0.2.0.tar.gz)
+* Riak Mesos Director [riak_mesos_director_linux_amd64_0.2.0.tar.gz](http://riak-tools.s3.amazonaws.com/riak-mesos/centos/riak_mesos_director_linux_amd64_0.2.0.tar.gz)
 
 ## Installation
 
@@ -50,7 +50,7 @@ Once the framework is up and running in Mesos, create and scale a cluster using 
 
 #### Start the framework
 
-Download and extract the Riak Mesos Framework (`riak_mesos_linux_amd64_0.1.1.tar.gz`, links above), and start the framework with an incantation similar to this:
+Download and extract the Riak Mesos Framework (`riak_mesos_linux_amd64_0.2.0.tar.gz`, links above), and start the framework with an incantation similar to this:
 
 ```
 ./framework_linux_amd64 \
@@ -67,7 +67,7 @@ Configure a few environment variables matching your setup for convenience.
 
 #### Create a cluster
 
-Download and extract the Riak Mesos Framework (`riak_mesos_linux_amd64_0.1.1.tar.gz`, links above), and execute the below commands using the included `tools_linux_amd64`:
+Download and extract the Riak Mesos Framework (`riak_mesos_linux_amd64_0.2.0.tar.gz`, links above), and execute the below commands using the included `tools_linux_amd64`:
 
 ```
 ./tools_linux_amd64 \
@@ -98,7 +98,7 @@ Get the base URL for the Riak Mesos Framework [HTTP API](HTTP-API.md) endpoints 
 
 #### Start the director
 
-Download and extract the Riak Mesos Director for your platform (`riak_mesos_director_linux_amd64_0.1.1.tar.gz`, links above), and start it with an incantation similar to this:
+Download and extract the Riak Mesos Director for your platform (`riak_mesos_director_linux_amd64_0.2.0.tar.gz`, links above), and start it with an incantation similar to this:
 
 ```
 DIRECTOR_CLUSTER=mycluster DIRECTOR_FRAMEWORK=riak DIRECTOR_ZK=master.mesos:2181 ./director_linux_amd64
