@@ -98,6 +98,11 @@
                     }
                 }
             },
+            "flags":{
+                "type": "string",
+                "description": "Additional flags include '-use_reservations', when this is true, utilize dynamic reservations and persistent volumes. This only works with versions of Mesos 0.24 and later.",
+                "default": "-use_reservations"
+            },
             "super-chroot":{
                 "type": "string",
                 "description": "When this is false, use the default chroot.",

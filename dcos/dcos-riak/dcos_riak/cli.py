@@ -35,7 +35,9 @@ def usage():
     print("Subcommands: ")
     print("    cluster list")
     print("    cluster create")
+    print("    cluster destroy")
     print("    node list")
+    print("    node remove --node <name>")
     print("    node add [--nodes <number>]")
     print("    proxy config [--zk <host:port> [--os centos|coreos|ubuntu][--disable-super-chroot]]")
     print("    proxy install [--zk <host:port> [--os centos|coreos|ubuntu][--disable-super-chroot]]")
@@ -43,7 +45,7 @@ def usage():
     print("    proxy endpoints [--public-dns <host>]")
     print("")
     print("Options (available on most commands): ")
-    print("    --cluster <cluster-name>      Default: riak-cluster")
+    print("    --cluster <cluster-name>      Default: default")
     print("    --framework <framework-name>  Default: riak")
     print("    --debug")
     print("    --help")
@@ -102,6 +104,14 @@ def create_cluster(service_url, name, debug_flag):
     else:
         format_json_value("Added cluster: ", r.text, "Name", "Error creating cluster.")
 
+def destroy_cluster(service_url, name, debug_flag):
+    r = requests.delete(service_url + "clusters/" + name, data="")
+    debug_request(debug_flag, r)
+    if r.text == "" or r.status_code != 202:
+        print("Failed to destroy cluster")
+    else:
+        print("Failed to destroy cluster: " + name)
+
 def get_nodes(service_url, name, debug_flag):
     r = requests.get(service_url + "clusters/" + name + "/nodes")
     debug_request(debug_flag, r)
@@ -115,6 +125,14 @@ def add_node(service_url, name, debug_flag):
     else:
         format_json_value("New node: ", r.text, "UUID", "Error adding node.")
     print("")
+
+def remove_node(service_url, name, node, debug_flag):
+    r = requests.delete(service_url + "clusters/" + name + "/nodes/" + node, data="")
+    debug_request(debug_flag, r)
+    if r.status_code == 404:
+        print(r.text)
+    else:
+        print("Removed node")
 
 def uninstall_director(framework):
     try:
@@ -206,7 +224,8 @@ def run(args):
     args, disable_super_chroot_flag = extract_flag(args, "--disable-super-chroot")
     args, op_sys = extract_option(args, "--os", "coreos")
     args, framework = extract_option(args, "--framework", "riak")
-    args, cluster = extract_option(args, "--cluster", "riak-cluster")
+    args, cluster = extract_option(args, "--cluster", "default")
+    args, cluster = extract_option(args, "--node", "")
     args, zk = extract_option(args, "--zk", "master.mesos:2181")
     args, num_nodes = extract_option(args, "--nodes", "1", "integer")
     num_nodes = int(num_nodes)
@@ -216,6 +235,7 @@ def run(args):
 
     debug(debug_flag, "Framework: " + framework)
     debug(debug_flag, "Cluster: " + cluster)
+    debug(debug_flag, "Node: " + node)
     debug(debug_flag, "Zookeeper: " + zk)
     debug(debug_flag, "Public DNS: " + public_dns)
     debug(debug_flag, "Nodes: " + str(num_nodes))
@@ -232,28 +252,41 @@ def run(args):
             get_clusters(service_url, debug_flag)
     elif cmd == "cluster create":
         if help_flag:
-            print("Creates a new cluster. Secify the name with --cluster (default is riak-cluster).")
+            print("Creates a new cluster. Secify the name with --cluster (default is default).")
         else:
             create_cluster(service_url, cluster, debug_flag)
+    elif cmd == "cluster destroy":
+        if help_flag:
+            print("Destroys a cluster. Secify the name with --cluster (default is default).")
+        else:
+            destroy_cluster(service_url, cluster, debug_flag)
     elif cmd == "node list" or cmd == "node":
         if help_flag:
-            print("Retrieves a list of node ids for a given --cluster (default is riak-cluster).")
+            print("Retrieves a list of node ids for a given --cluster (default is default).")
         else:
             get_nodes(service_url, cluster, debug_flag)
     elif cmd == "node add":
         if help_flag:
-            print("Adds one or more (using --nodes) nodes to a --cluster (default is riak-cluster).")
+            print("Adds one or more (using --nodes) nodes to a --cluster (default is default).")
         else:
             for x in range(0, num_nodes):
                 add_node(service_url, cluster, debug_flag)
+    elif cmd == "node remove":
+        if help_flag:
+            print("Removes a node from the cluster, specify node id with --node")
+        else:
+            if node == "":
+                raise CliError("Node name must be specified")
+            else:
+                remove_node(service_url, cluster, node, debug_flag)
     elif cmd == "proxy config" or cmd == "proxy":
         if help_flag:
-            print("Generates a marathon json config using --zookeeper (default is master.mesos:2181) and --cluster (default is riak-cluster).")
+            print("Generates a marathon json config using --zookeeper (default is master.mesos:2181) and --cluster (default is default).")
         else:
             print(generate_director_config(framework, cluster, zk, op_sys, disable_super_chroot_flag))
     elif cmd == "proxy install":
         if help_flag:
-            print("Installs a riak-mesos-director marathon app on the public Mesos node using --zookeeper (default is master.mesos:2181) and --cluster (default is riak-cluster).")
+            print("Installs a riak-mesos-director marathon app on the public Mesos node using --zookeeper (default is master.mesos:2181) and --cluster (default is default).")
         else:
             install_director(framework, cluster, zk, op_sys, disable_super_chroot_flag)
     elif cmd == "proxy uninstall":
