@@ -46,6 +46,10 @@ cd $GOPATH/src/github.com/basho-labs/riak-mesos && TAGS='"rel native"' make
 cd $GOPATH/src/github.com/basho-labs/riak-mesos && make package
 ```
 
+### For Mesos 0.24 and above
+
+Make sure to start the mesos master with `MESOS_ROLES=riak` or `--roles=riak`
+
 ### Start the Framework
 
 ```
@@ -54,7 +58,12 @@ cd $GOPATH/src/github.com/basho-labs/riak-mesos && make package
     -zk=localhost:2181 \
     -name=riak \
     -user=root \
-    -role=*
+    -node_cpus=1 \
+    -node_mem=256 \
+    -node_disk=512 \
+    -role=riak \ # Should be * for Mesos < 0.24
+    -mesos_authentication_principal=riak \ # Can be * for Mesos < 0.24
+    -use_reservations # Should remove for Mesos < 0.24
 ```
 
 ### Create a Cluster
@@ -67,7 +76,7 @@ cd $GOPATH/src/github.com/basho-labs/riak-mesos && make package
     -command="create-cluster"
 ```
 
-Add Riak nodes
+### Add Riak nodes
 
 ```
 ./tools_linux_amd64 \
@@ -76,6 +85,27 @@ Add Riak nodes
     -cluster-name=mycluster \
     -command="add-nodes" \
     -nodes=1
+```
+
+### Remove Riak nodes
+
+```
+./tools_linux_amd64 \
+    -name=riak \
+    -zk=localhost:2181 \
+    -cluster-name=mycluster \
+    -command="delete-node" \
+    -node=riak-mycluster-1
+```
+
+### Destroy a Cluster
+
+```
+./tools_linux_amd64 \
+    -name=riak \
+    -zk=localhost:2181 \
+    -cluster-name=mycluster \
+    -command="delete-cluster"
 ```
 
 ### Start the Director

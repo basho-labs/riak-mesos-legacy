@@ -46,9 +46,11 @@ may need to be used. Here is a minimal example:
         "zk": "master.mesos:2181",
         "user": "root",
         "framework-name": "riak",
+        "flags": "",
         "node": {
             "cpus": 1,
-            "mem": 8000
+            "mem": 8000,
+            "disk": 20000
         }
     }
 }
@@ -63,10 +65,14 @@ may need to be used. Here is a minimal example:
         "zk": "master.mesos:2181",
         "user": "root",
         "framework-name": "riak",
+        "role": "riak", # Should be "*" on mesos < 0.24
+        "auth-principal": "riak",
+        "flags": "-use_reservations", # Should be "" on mesos < 0.24
         "url": "http://riak-tools.s3.amazonaws.com/riak-mesos/ubuntu/riak_mesos_linux_amd64_0.2.0.tar.gz",
         "node": {
             "cpus": 1,
-            "mem": 8000
+            "mem": 8000,
+            "disk": 20000
         }
     }
 }
@@ -81,10 +87,14 @@ may need to be used. Here is a minimal example:
         "zk": "master.mesos:2181",
         "user": "root",
         "framework-name": "riak"
+        "role": "riak", # Should be "*" on mesos < 0.24
+        "auth-principal": "riak",
+        "flags": "-use_reservations", # Should be "" on mesos < 0.24
         "url": "http://riak-tools.s3.amazonaws.com/riak-mesos/centos/riak_mesos_linux_amd64_0.2.0.tar.gz",
         "node": {
             "cpus": 1,
-            "mem": 8000
+            "mem": 8000,
+            "disk": 20000
         }
     }
 }
@@ -112,15 +122,17 @@ Usage: dcos riak <subcommands> [options]
 Subcommands:
     cluster list
     cluster create
+    cluster destroy
     node list
     node add [--nodes <number>]
+    node remove --node <name>
     proxy config [--zk <host:port> [--os centos|coreos|ubuntu][--disable-super-chroot]]
     proxy install [--zk <host:port> [--os centos|coreos|ubuntu][--disable-super-chroot]]
     proxy uninstall
     proxy endpoints [--public-dns <host>]
 
 Options (available on most commands):
-    --cluster <cluster-name>      Default: riak-cluster
+    --cluster <cluster-name>      Default: default
     --framework <framework-name>  Default: riak
     --debug
     --help
@@ -130,7 +142,7 @@ Options (available on most commands):
 
 ### Add Riak Nodes
 
-Create a 3 node cluster named 'riak-cluster' (this is the default name).
+Create a 3 node cluster named 'default' (this is the default name).
 
 ```
 dcos riak cluster create
@@ -142,6 +154,22 @@ Create a second 1 node cluster named 'riak-test-cluster'.
 ```
 dcos riak cluster create --cluster riak-test-cluster
 dcos riak node add --cluster riak-test-cluster
+```
+
+### Remove Riak Nodes
+
+Remove the node named 'riak-default-1'.
+
+```
+dcos riak node remove --node riak-default-1
+```
+
+### Destroy a cluster and all Riak Nodes
+
+Remove the cluster named 'default'.
+
+```
+dcos riak cluster destroy
 ```
 
 ### Accessing Your Riak Nodes

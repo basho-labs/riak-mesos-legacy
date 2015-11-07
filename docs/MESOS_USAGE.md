@@ -48,6 +48,10 @@ Once the framework is up and running in Mesos, create and scale a cluster using 
 
 ### Manual Usage
 
+### For Mesos 0.24 and above
+
+Make sure to start the mesos master with `MESOS_ROLES=riak` or `--roles=riak`
+
 #### Start the framework
 
 Download and extract the Riak Mesos Framework (`riak_mesos_linux_amd64_0.2.0.tar.gz`, links above), and start the framework with an incantation similar to this:
@@ -58,7 +62,12 @@ Download and extract the Riak Mesos Framework (`riak_mesos_linux_amd64_0.2.0.tar
     -zk=master.mesos:2181 \
     -name=riak \
     -user=root \
-    -role=*
+    -node_cpus=1 \ # Should be > 50% of an agent's capacity to ensure 1 node per agent
+    -node_mem=256 \ # Should be > 50% of an agent's capacity to ensure 1 node per agent
+    -node_disk=512 \ # Should be > 50% of an agent's capacity to ensure 1 node per agent
+    -role=riak \ # Should be * for Mesos < 0.24
+    -mesos_authentication_principal=riak \ # Can be * for Mesos < 0.24
+    -use_reservations # Should remove for Mesos < 0.24
 ```
 
 Included with the framework tarball is a CLI tool named `tools_linux_amd64` which can be used to perform a variety of tasks on a running Riak Mesos Framework instance. Following are some usage instructions.
@@ -88,6 +97,27 @@ Download and extract the Riak Mesos Framework (`riak_mesos_linux_amd64_0.2.0.tar
     -nodes=5
 ```
 
+#### Remove Riak nodes
+
+```
+./tools_linux_amd64 \
+    -name=riak \
+    -zk=master.mesos:2181 \
+    -cluster-name=mycluster \
+    -command="delete-node" \
+    -node=riak-mycluster-1
+```
+
+### Destroy a Cluster
+
+```
+./tools_linux_amd64 \
+    -name=riak \
+    -zk=master.mesos:2181 \
+    -cluster-name=mycluster \
+    -command="delete-cluster"
+```
+
 #### Additional HTTP Endpoints
 
 Get the base URL for the Riak Mesos Framework [HTTP API](HTTP-API.md) endpoints for more ways to interact with the framework.
@@ -111,6 +141,13 @@ Starting the director should give you access to a number of endpoints:
 * Director HTTP API [http://master.mesos:9000](http://master.mesos:9000)
 
 These ports are the defaults, and will be dynamically assigned when using Marathon or DCOS.
+
+#### Writing and Reading Data
+
+```
+curl -v -XPUT http://master.mesos:8098/buckets/test/keys/one -d "hello"
+curl -v http://master.mesos:8098/buckets/test/keys/one
+```
 
 ## Uninstalling
 
