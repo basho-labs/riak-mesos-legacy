@@ -41,35 +41,59 @@ func NewFrameworkRiakCluster(name string) *FrameworkRiakCluster {
 // --- Resources ---
 
 func (frc *FrameworkRiakCluster) ApplyOffer(offerHelper *common.OfferHelper, sc *SchedulerCore) bool {
+	stateDirty := false
 	clusterNeedsReconciliation := false
 	for _, riakNode := range frc.Nodes {
 		if riakNode.NeedsToBeReconciled() {
 			clusterNeedsReconciliation = true
+			continue
 		}
-		if riakNode.CanBeScheduled() && (riakNode.HasRequestedReservation() || sc.compatibilityMode) {
-			log.Infof("Adding Riak node for scheduling (has reservations): %+v", riakNode.CurrentID())
+
+		// Try to lanch, compatibilityMode is true
+		if riakNode.CanBeScheduled() && sc.compatibilityMode {
+			log.Infof("Adding Riak node for scheduling (compatibilityMode): %+v", riakNode.CurrentID())
 			if riakNode.ApplyReservedOffer(offerHelper, sc) {
-				sc.schedulerState.Persist()
+				stateDirty = true
 			}
-		} else if riakNode.CanBeScheduled() && !riakNode.HasRequestedReservation() && !sc.compatibilityMode {
+			continue
+		}
+
+		// Reserved node, if the persistenceID matches, go ahead and launch!
+		if riakNode.CanBeScheduled() && riakNode.HasRequestedReservation() &&
+			offerHelper.HasPersistenceId(riakNode.PersistenceID()) {
+			log.Infof("Adding Riak node for scheduling (HasRequestedReservation, persistenceId match): %+v", riakNode.CurrentID())
+			if riakNode.ApplyReservedOffer(offerHelper, sc) {
+				stateDirty = true
+			}
+			continue
+		}
+
+		// Reserved node, if the slaveID matches but the apply fails, we need to unreserve the node
+		if riakNode.CanBeScheduled() && riakNode.HasRequestedReservation() &&
+			riakNode.SlaveID.GetValue() == offerHelper.MesosOffer.SlaveId.GetValue() {
+			log.Infof("Adding Riak node for scheduling (HasRequestedReservation, slaveId match): %+v", riakNode.CurrentID())
+			if !riakNode.ApplyReservedOffer(offerHelper, sc) {
+				log.Infof("Riak node has reservation, but slave no longer has it's reservation, unreserving node: %+v", riakNode.CurrentID())
+				riakNode.Unreserve()
+			}
+			stateDirty = true
+			continue
+		}
+
+		// New node, needs reservation
+		if riakNode.CanBeScheduled() && !riakNode.HasRequestedReservation() && !sc.compatibilityMode {
 			log.Infof("Adding Riak node for scheduling (no reservations): %+v", riakNode.CurrentID())
 			if riakNode.ApplyUnreservedOffer(offerHelper) {
-				sc.schedulerState.Persist()
+				stateDirty = true
 			}
 		}
+	}
+
+	if stateDirty {
+		sc.schedulerState.Persist()
 	}
 
 	return clusterNeedsReconciliation
-}
-
-func (frc *FrameworkRiakCluster) UnreserveNodes(sc *SchedulerCore) {
-	for _, riakNode := range frc.Nodes {
-		if riakNode.CanBeScheduled() && riakNode.HasRequestedReservation() {
-			log.Infof("Riak node has reservation, but there are no actions for the offer, unreserving node: %+v", riakNode.CurrentID())
-			riakNode.Unreserve()
-			sc.schedulerState.Persist()
-		}
-	}
 }
 
 // --- State ---

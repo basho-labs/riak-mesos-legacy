@@ -137,8 +137,7 @@ func (frn *FrameworkRiakNode) ApplyReservedOffer(offerHelper *common.OfferHelper
 		execAsk = offerHelper.ApplyUnreserved(CPUS_PER_EXECUTOR, MEM_PER_EXECUTOR, 0, 0)
 	} else {
 		if !offerHelper.CanFitReserved(frn.Cpus, frn.Mem, frn.Disk, 0) ||
-			!offerHelper.CanFitUnreserved(CPUS_PER_EXECUTOR, MEM_PER_EXECUTOR, 0, frn.Ports) ||
-			!offerHelper.HasPersistenceId(frn.PersistenceID()) {
+			!offerHelper.CanFitUnreserved(CPUS_PER_EXECUTOR, MEM_PER_EXECUTOR, 0, frn.Ports) {
 			return false
 		}
 		taskAsk = offerHelper.ApplyReserved(frn.Cpus, frn.Mem, frn.Disk, 0, *frn.Principal, *frn.Role, frn.PersistenceID(), frn.ContainerPath)

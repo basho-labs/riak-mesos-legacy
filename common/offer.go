@@ -76,14 +76,6 @@ func (offerHelper *OfferHelper) OfferHasVolumes() bool {
 	return len(offerHelper.PersistenceIDs) > 0
 }
 
-func (offerHelper *OfferHelper) HasNoActions() bool {
-	return len(offerHelper.ResourcesToReserve) == 0 &&
-		len(offerHelper.ResourcesToUneserve) == 0 &&
-		len(offerHelper.VolumesToCreate) == 0 &&
-		len(offerHelper.VolumesToDestroy) == 0 &&
-		len(offerHelper.TasksToLaunch) == 0
-}
-
 func (offerHelper *OfferHelper) MaybeUnreserve() {
 	if len(offerHelper.TasksToLaunch) > 0 {
 		return

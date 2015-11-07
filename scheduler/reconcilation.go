@@ -79,6 +79,7 @@ func (rServer *ReconcilationServer) killRiakNode(riakNode *FrameworkRiakNode) bo
 
 func (rServer *ReconcilationServer) killTasks() {
 	// Get Tasks to Kill
+	stateDirty := false
 	for _, cluster := range rServer.sc.schedulerState.Clusters {
 		nodesToKill, nodesToRemove := cluster.GetNodesToKillOrRemove()
 		for _, riakNode := range nodesToKill {
@@ -91,14 +92,17 @@ func (rServer *ReconcilationServer) killTasks() {
 			for _, riakNode := range nodesToRemove {
 				cluster.RemoveNode(riakNode)
 			}
-			rServer.sc.schedulerState.Persist()
+			stateDirty = true
 		}
 
 		if cluster.CanBeRemoved() {
 			rServer.sc.schedulerState.Graveyard[cluster.Name] = cluster
 			delete(rServer.sc.schedulerState.Clusters, cluster.Name)
-			rServer.sc.schedulerState.Persist()
+			stateDirty = true
 		}
+	}
+	if stateDirty {
+		rServer.sc.schedulerState.Persist()
 	}
 }
 

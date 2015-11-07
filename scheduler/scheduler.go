@@ -214,7 +214,6 @@ func (sc *SchedulerCore) ResourceOffers(driver sched.SchedulerDriver, offers []*
 
 func (sc *SchedulerCore) createOperationsForOffers(offers []*mesos.Offer) map[string][]*mesos.Offer_Operation {
 	operations := make(map[string][]*mesos.Offer_Operation)
-	acceptedAnyOffers := false
 
 	// Populate operations
 	for _, offer := range offers {
@@ -234,16 +233,6 @@ func (sc *SchedulerCore) createOperationsForOffers(offers []*mesos.Offer) map[st
 		}
 
 		operations[*offer.Id.Value] = offerHelper.Operations()
-
-		if !offerHelper.HasNoActions() {
-			acceptedAnyOffers = true
-		}
-	}
-
-	if !acceptedAnyOffers {
-		for _, cluster := range sc.schedulerState.Clusters {
-			cluster.UnreserveNodes(sc)
-		}
 	}
 
 	return operations
@@ -286,9 +275,12 @@ func (sc *SchedulerCore) StatusUpdate(driver sched.SchedulerDriver, status *meso
 		if cluster.HasNode(status.TaskId.GetValue()) {
 			foundNode = true
 			cluster.HandleNodeStatusUpdate(status)
-			sc.schedulerState.Persist()
 			break
 		}
+	}
+
+	if foundNode {
+		sc.schedulerState.Persist()
 	}
 
 	if !foundNode {
