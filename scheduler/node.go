@@ -122,6 +122,7 @@ func (frn *FrameworkRiakNode) ApplyUnreservedOffer(offerHelper *common.OfferHelp
 
 	// Update state
 	frn.SlaveID = offerHelper.MesosOffer.SlaveId
+	frn.Hostname = offerHelper.MesosOffer.GetHostname()
 	frn.CurrentState = process_state.Reserved
 	return true
 }

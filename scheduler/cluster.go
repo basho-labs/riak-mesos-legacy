@@ -68,10 +68,11 @@ func (frc *FrameworkRiakCluster) ApplyOffer(offerHelper *common.OfferHelper, sc 
 			continue
 		}
 
-		// Reserved node, if the slaveID matches but the apply fails, we need to unreserve the node
+		// Reserved node, if the slaveID / hostname matches but the apply fails, we need to unreserve the node
 		if riakNode.CanBeScheduled() && riakNode.HasRequestedReservation() &&
-			riakNode.SlaveID.GetValue() == offerHelper.MesosOffer.SlaveId.GetValue() {
-			log.Infof("Adding Riak node for scheduling (HasRequestedReservation, slaveId match): %+v", riakNode.CurrentID())
+			(riakNode.SlaveID.GetValue() == offerHelper.MesosOffer.SlaveId.GetValue() ||
+				riakNode.Hostname == offerHelper.MesosOffer.GetHostname()) {
+			log.Infof("Adding Riak node for scheduling (HasRequestedReservation, slaveId/hostname match): %+v", riakNode.CurrentID())
 			if !riakNode.ApplyReservedOffer(offerHelper, sc) {
 				log.Infof("Riak node has reservation, but slave no longer has it's reservation, unreserving node: %+v", riakNode.CurrentID())
 				riakNode.Unreserve()
