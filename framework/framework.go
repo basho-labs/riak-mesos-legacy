@@ -44,7 +44,7 @@ func init() {
 	flag.StringVar(&schedulerIPAddr, "ip", "", "Framework ip")
 	flag.StringVar(&user, "user", "", "Framework Username")
 	flag.StringVar(&logFile, "log", "", "Log File Location")
-	flag.StringVar(&frameworkName, "name", "riakMesosFramework", "Framework Instance Name")
+	flag.StringVar(&frameworkName, "name", "riak", "Framework Instance Name")
 	flag.StringVar(&frameworkRole, "role", "*", "Framework Role Name")
 	flag.StringVar(&nodeCpus, "node_cpus", "1.0", "Per Node CPUs")
 	flag.StringVar(&nodeMem, "node_mem", "16000", "Per Node Mem")

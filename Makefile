@@ -5,6 +5,7 @@ BUILD_DIR       ?= $(BASE_DIR)/_build
 export PROJECT_BASE    ?= riak-mesos
 export DEPLOY_BASE     ?= riak-tools/$(PROJECT_BASE)
 export DEPLOY_OS       ?= coreos
+export OS_ARCH		   ?= linux_amd64
 # The project is actually cross platform, but this is the current repository location for all packages.
 
 .PHONY: all clean clean_bin package clean_package sync
@@ -23,18 +24,18 @@ package: clean_package
 ### Framework begin
 .PHONY: framework clean_framework
 # Depends on artifacts, because it depends on scheduler which depends on artifacts
-.bin.framework_linux_amd64:
-	go build -o bin/framework_linux_amd64 -tags=$(TAGS) ./framework/
-	$(shell touch .bin.framework_linux_amd64)
-framework: .godep schroot artifacts cepm executor scheduler .bin.framework_linux_amd64
+.bin.framework_$(OS_ARCH):
+	go build -o bin/framework_$(OS_ARCH) -tags=$(TAGS) ./framework/
+	$(shell touch .bin.framework_$(OS_ARCH))
+framework: .godep schroot artifacts cepm executor scheduler .bin.framework_$(OS_ARCH)
 clean_bin: clean_framework
 clean_framework:
-	-rm -f .bin.framework_linux_amd64 bin/framework_linux_amd64
+	-rm -f .bin.framework_$(OS_ARCH) bin/framework_$(OS_ARCH)
 ### Framework end
 
 ### Scheduler begin
 .PHONY: scheduler clean_scheduler
-.scheduler.bindata_generated: .scheduler.data.executor_linux_amd64 .process_manager.bindata_generated  scheduler/data/advanced.config scheduler/data/riak.conf
+.scheduler.bindata_generated: .scheduler.data.executor_$(OS_ARCH) .process_manager.bindata_generated  scheduler/data/advanced.config scheduler/data/riak.conf
 	go generate -tags=$(TAGS) ./scheduler
 	$(shell touch .scheduler.bindata_generated)
 scheduler: .scheduler.bindata_generated
@@ -44,15 +45,15 @@ clean_scheduler:
 ### Scheduler end
 
 ### Executor begin
-.PHONY: executor clean_executor .scheduler.data.executor_linux_amd64
-executor: .scheduler.data.executor_linux_amd64
-.scheduler.data.executor_linux_amd64: cepm .process_manager.bindata_generated
-	GOOS=linux GOARCH=amd64 go build -o scheduler/data/executor_linux_amd64 -tags=$(TAGS) ./executor/
-	$(shell touch .scheduler.data.executor_linux_amd64)
+.PHONY: executor clean_executor .scheduler.data.executor_$(OS_ARCH)
+executor: .scheduler.data.executor_$(OS_ARCH)
+.scheduler.data.executor_$(OS_ARCH): cepm .process_manager.bindata_generated
+	GOOS=linux GOARCH=amd64 go build -o scheduler/data/executor_$(OS_ARCH) -tags=$(TAGS) ./executor/
+	$(shell touch .scheduler.data.executor_$(OS_ARCH))
 clean_bin: clean_executor
 clean_executor:
 	-rm -f .executor.bindata_generated executor/bindata_generated.go
-	-rm -f .scheduler.data.executor_linux_amd64 scheduler/data/executor_linux_amd64
+	-rm -f .scheduler.data.executor_$(OS_ARCH) scheduler/data/executor_$(OS_ARCH)
 ### Executor end
 
 ### Artifact begin
@@ -79,14 +80,17 @@ clean_artifacts:
 ### Artifact end
 
 ### Tools begin
-.PHONY: tools clean_tools .bin.tools_linux_amd64
-.bin.tools_linux_amd64:
-	go build -o bin/tools_linux_amd64 -tags=$(TAGS) ./tools/
-	$(shell touch .bin.tools_linux_amd64)
-tools: .bin.tools_linux_amd64
+.PHONY: tools clean_tools .bin.tools_$(OS_ARCH)
+.bin.tools_$(OS_ARCH):
+	go build -o bin/tools_$(OS_ARCH) -tags=$(TAGS) ./tools/
+	$(shell touch .bin.tools_$(OS_ARCH))
+.bin.zktool_$(OS_ARCH):
+	go build -o bin/zktool_$(OS_ARCH) -tags=$(TAGS) ./tools/zk/
+	$(shell touch .bin.zktool_$(OS_ARCH))
+tools: .bin.zktool_$(OS_ARCH) .bin.tools_$(OS_ARCH)
 clean_bin: clean_tools
 clean_tools:
-	-rm -rf .bin.tools_linux_amd64 bin/tools_linux_amd64
+	-rm -rf .bin.tools_$(OS_ARCH) bin/tools_$(OS_ARCH) .bin.zktool_$(OS_ARCH)
 ### Tools end
 
 ### Director begin
@@ -95,10 +99,10 @@ clean_tools:
 	go generate -tags=$(TAGS) ./director
 	$(shell touch .director.bindata_generated)
 director: artifacts .director.bindata_generated
-	GOOS=linux GOARCH=amd64 go build -o bin/director_linux_amd64 -tags=$(TAGS) ./director/
+	GOOS=linux GOARCH=amd64 go build -o bin/director_$(OS_ARCH) -tags=$(TAGS) ./director/
 clean_bin: clean_director
 clean_director:
-	-rm -rf .director.bindata_generated director/bindata_generated.go bin/director_linux_amd64
+	-rm -rf .director.bindata_generated director/bindata_generated.go bin/director_$(OS_ARCH)
 ### Scheduler end
 
 ### Schroot begin
@@ -159,46 +163,46 @@ fmt:
 ### Framework Package begin
 .PHONY: package_framework sync_framework clean_framework_package
 package: package_framework
-package_framework: $(BUILD_DIR)/riak_mesos_linux_amd64_$(PACKAGE_VERSION).tar.gz
-$(BUILD_DIR)/riak_mesos_linux_amd64_$(PACKAGE_VERSION).tar.gz:
+package_framework: $(BUILD_DIR)/riak_mesos_$(OS_ARCH)_$(PACKAGE_VERSION).tar.gz
+$(BUILD_DIR)/riak_mesos_$(OS_ARCH)_$(PACKAGE_VERSION).tar.gz:
 	-rm -rf $(BUILD_DIR)/riak_mesos_framework
 	mkdir -p $(BUILD_DIR)/riak_mesos_framework
-	cp bin/framework_linux_amd64 $(BUILD_DIR)/riak_mesos_framework/
-	cp bin/tools_linux_amd64 $(BUILD_DIR)/riak_mesos_framework/
+	cp bin/framework_$(OS_ARCH) $(BUILD_DIR)/riak_mesos_framework/
+	cp bin/tools_$(OS_ARCH) $(BUILD_DIR)/riak_mesos_framework/
 	echo "Thank you for downloading Riak Mesos Framework. Please visit https://github.com/basho-labs/riak-mesos for usage information." > $(BUILD_DIR)/riak_mesos_framework/INSTALL.txt
-	cd $(BUILD_DIR) && tar -zcvf riak_mesos_linux_amd64_$(PACKAGE_VERSION).tar.gz riak_mesos_framework
+	cd $(BUILD_DIR) && tar -zcvf riak_mesos_$(OS_ARCH)_$(PACKAGE_VERSION).tar.gz riak_mesos_framework
 sync: sync_framework
 sync_framework:
 	cd $(BUILD_DIR)/ && \
-		s3cmd put --acl-public riak_mesos_linux_amd64_$(PACKAGE_VERSION).tar.gz s3://$(DEPLOY_BASE)/$(DEPLOY_OS)/
+		s3cmd put --acl-public riak_mesos_$(OS_ARCH)_$(PACKAGE_VERSION).tar.gz s3://$(DEPLOY_BASE)/$(DEPLOY_OS)/
 sync_framework_test:
 	cd $(BUILD_DIR)/ && \
-		s3cmd put --acl-public riak_mesos_linux_amd64_$(PACKAGE_VERSION).tar.gz s3://$(DEPLOY_BASE)/$(DEPLOY_OS)/test/
+		s3cmd put --acl-public riak_mesos_$(OS_ARCH)_$(PACKAGE_VERSION).tar.gz s3://$(DEPLOY_BASE)/$(DEPLOY_OS)/test/
 clean_package: clean_framework_package
 clean_framework_package:
-	-rm $(BUILD_DIR)/riak_mesos_linux_amd64_$(PACKAGE_VERSION).tar.gz
+	-rm $(BUILD_DIR)/riak_mesos_$(OS_ARCH)_$(PACKAGE_VERSION).tar.gz
 ### Framework Package end
 
 ### Director Package begin
 .PHONY: package_director sync_director clean_director_package
 package: package_director
-package_director: $(BUILD_DIR)/riak_mesos_director_linux_amd64_$(PACKAGE_VERSION).tar.gz
-$(BUILD_DIR)/riak_mesos_director_linux_amd64_$(PACKAGE_VERSION).tar.gz:
+package_director: $(BUILD_DIR)/riak_mesos_director_$(OS_ARCH)_$(PACKAGE_VERSION).tar.gz
+$(BUILD_DIR)/riak_mesos_director_$(OS_ARCH)_$(PACKAGE_VERSION).tar.gz:
 	-rm -rf $(BUILD_DIR)/riak_mesos_director
 	mkdir -p $(BUILD_DIR)/riak_mesos_director
-	cp bin/director_linux_amd64 $(BUILD_DIR)/riak_mesos_director/
+	cp bin/director_$(OS_ARCH) $(BUILD_DIR)/riak_mesos_director/
 	echo "Thank you for downloading Riak Mesos Framework. Please visit https://github.com/basho-labs/riak-mesos for usage information." > $(BUILD_DIR)/riak_mesos_director/INSTALL.txt
-	cd $(BUILD_DIR) && tar -zcvf riak_mesos_director_linux_amd64_$(PACKAGE_VERSION).tar.gz riak_mesos_director
+	cd $(BUILD_DIR) && tar -zcvf riak_mesos_director_$(OS_ARCH)_$(PACKAGE_VERSION).tar.gz riak_mesos_director
 sync: sync_director
 sync_director:
 	cd $(BUILD_DIR)/ && \
-		s3cmd put --acl-public riak_mesos_director_linux_amd64_$(PACKAGE_VERSION).tar.gz s3://$(DEPLOY_BASE)/$(DEPLOY_OS)/
+		s3cmd put --acl-public riak_mesos_director_$(OS_ARCH)_$(PACKAGE_VERSION).tar.gz s3://$(DEPLOY_BASE)/$(DEPLOY_OS)/
 sync_director_test:
 	cd $(BUILD_DIR)/ && \
-		s3cmd put --acl-public riak_mesos_director_linux_amd64_$(PACKAGE_VERSION).tar.gz s3://$(DEPLOY_BASE)/$(DEPLOY_OS)/test/
+		s3cmd put --acl-public riak_mesos_director_$(OS_ARCH)_$(PACKAGE_VERSION).tar.gz s3://$(DEPLOY_BASE)/$(DEPLOY_OS)/test/
 clean_package: clean_director_package
 clean_director_package:
-	-rm $(BUILD_DIR)/riak_mesos_director_linux_amd64_$(PACKAGE_VERSION).tar.gz
+	-rm $(BUILD_DIR)/riak_mesos_director_$(OS_ARCH)_$(PACKAGE_VERSION).tar.gz
 ### Director Package end
 
 ### DCOS Package begin

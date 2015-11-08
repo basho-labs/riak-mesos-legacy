@@ -279,8 +279,7 @@ func (frn *FrameworkRiakNode) CanBeKilled() bool {
 }
 func (frn *FrameworkRiakNode) CanBeRemoved() bool {
 	return frn.DestinationState == process_state.Shutdown &&
-		(frn.CurrentState == process_state.Shutdown ||
-			frn.CurrentState == process_state.Failed)
+		frn.CurrentState != process_state.Started
 }
 func (frn *FrameworkRiakNode) CanJoinCluster() bool {
 	return frn.CurrentState == process_state.Starting &&

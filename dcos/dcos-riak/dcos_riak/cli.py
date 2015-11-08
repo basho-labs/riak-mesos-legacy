@@ -225,7 +225,7 @@ def run(args):
     args, op_sys = extract_option(args, "--os", "coreos")
     args, framework = extract_option(args, "--framework", "riak")
     args, cluster = extract_option(args, "--cluster", "default")
-    args, cluster = extract_option(args, "--node", "")
+    args, node = extract_option(args, "--node", "")
     args, zk = extract_option(args, "--zk", "master.mesos:2181")
     args, num_nodes = extract_option(args, "--nodes", "1", "integer")
     num_nodes = int(num_nodes)
