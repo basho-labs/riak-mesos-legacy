@@ -480,6 +480,87 @@ def run(args):
             except:
                 raise CliError("Unable to generate config for framework: " + config.get('framework-name'))
         return
+    elif cmd == "framework uninstall":
+        if help_flag:
+            print("Retrieves a list of cluster names")
+            return 0
+        else:
+            output = "Uninstalling framework..."
+            try:
+                client = create_client(config.get_any('marathon', 'url'))
+                client.remove_app('/' + config.get('framework-name'))
+                print("Finished removing " + '/' + config.get('framework-name') + " from marathon")
+            except Exception as e:
+                print(e.message)
+                output += "\nUnable to uninstall marathon app"
+            try:
+                output = "\nRemoving zookeeper information\n"
+                tool = ""
+                if _platform == "linux" or _platform == "linux2":
+                    tool = "zktool_linux_amd64"
+                elif _platform == "darwin":
+                    tool = "zktool_darwin_amd64"
+                output += os.popen('./bin/' + tool + ' -zk=' + config.get('zk') + ' -name=/riak/frameworks/' + config.get('framework-name') + ' -command=zk-delete').read()
+            except:
+                print(e.message)
+                output += "\nUnable to remove zookeeper metadata for framework"
+        print(output)
+        return
+    elif cmd == "proxy config" or cmd == "proxy":
+        if help_flag:
+            print("Generates a marathon json config using --zookeeper (default is master.mesos:2181) and --cluster (default is default).")
+        else:
+            try:
+                return config.director_marathon_string(cluster)
+            except:
+                raise CliError("Unable to generate proxy config for framework: " + config.get('framework-name'))
+        return
+    elif cmd == "proxy install":
+        if help_flag:
+            print("Installs a riak-mesos-director marathon app on the public Mesos node using --zookeeper (default is master.mesos:2181) and --cluster (default is default).")
+        else:
+            try:
+                director_json = config.director_marathon_json(cluster)
+                client = create_client(self.get_any('marathon', 'url'))
+                client.add_app(director_json)
+                print("Finished adding " + director_json['id'] + " to marathon")
+            except Exception as e:
+                print(e.message)
+                raise CliError("Unable to create marathon app")
+            except:
+                raise CliError("Unable to communicate with marathon.")
+        return
+    elif cmd == "proxy uninstall":
+        if help_flag:
+            print("Uninstalls the riak-mesos-director marathon app.")
+        else:
+            try:
+                client = create_client(self.get_any('marathon', 'url'))
+                client.remove_app('/' + config.get('framework-name') + '-director')
+                print("Finished removing " + '/' + config.get('framework-name') + '-director' + " from marathon")
+            except Exception as e:
+                print(e.message)
+                raise CliError("Unable to uninstall marathon app")
+            except:
+                raise CliError("Unable to communicate with marathon.")
+        return
+    elif cmd == "proxy endpoints":
+        if help_flag:
+            print("Lists the endpoints exposed by a riak-mesos-director marathon app --public-dns (default is {{public-dns}}).")
+        else:
+            try:
+                client = create_client(self.get_any('marathon', 'url'))
+                app = client.get_app(config.get('framework-name') + '-director')
+                ports = app['ports']
+                print("\nLoad Balanced Riak Cluster (HTTP)")
+                print("    http://" + public_dns + ":" + str(ports[0]))
+                print("\nLoad Balanced Riak Cluster (Protobuf)")
+                print("    http://" + public_dns + ":" + str(ports[1]))
+                print("\nRiak Mesos Director API (HTTP)")
+                print("    http://" + public_dns + ":" + str(ports[2]))
+            except:
+                raise CliError("Unable to get ports for: riak-director")
+        return
 
     service_url = config.api_url() + "api/v1/"
     debug(debug_flag, "Service URL: " + service_url)
@@ -491,7 +572,7 @@ def run(args):
         else:
             try:
                 framework_json = config.framework_marathon_json()
-                client = create_client(self.get_any('marathon', 'url'))
+                client = create_client(config.get_any('marathon', 'url'))
                 client.add_app(framework_json)
                 print("Finished adding " + framework_json['id'] + " to marathon")
             except Exception as e:
@@ -499,40 +580,18 @@ def run(args):
                 raise CliError("Unable to create marathon app")
             except:
                 raise CliError("Unable to communicate with marathon.")
-    elif cmd == "framework uninstall":
-        if help_flag:
-            print("Retrieves a list of cluster names")
-            return 0
-        else:
-            try:
-                client = create_client(self.get_any('marathon', 'url'))
-                client.remove_app('/' + config.get('framework-name'))
-                print("Finished removing " + '/' + config.get('framework-name') + " from marathon")
-            except Exception as e:
-                print(e.message)
-                raise CliError("Unable to uninstall marathon app")
-            except:
-                raise CliError("Unable to communicate with marathon.")
-            try:
-                tool = ""
-                if _platform == "linux" or _platform == "linux2":
-                    tool = "zktool_linux_amd64"
-                elif _platform == "darwin":
-                    tool = "zktool_darwin_amd64"
-                os.popen('./bin/' + tool + ' -zk=' + config.get('zk') + ' -name=' + config.get('framework-name') + ' -command=delete-framework').read()
-            except:
-                raise CliError("Unable to remove zookeeper metadata for framework")
     elif cmd == "framework endpoints":
+        # TODO impl
         if help_flag:
-            print("Retrieves a list of cluster names")
+            print("Retrieves useful endpoints for the framework")
             return 0
-        else:
-            r = requests.get(service_url + "clusters")
-            debug_request(debug_flag, r)
-            if r.status_code == 200:
-                format_json_array_keys("Clusters: ", r.text, "[]")
-            else:
-                print("No clusters created")
+        # else:
+        #     r = requests.get(service_url + "clusters")
+        #     debug_request(debug_flag, r)
+        #     if r.status_code == 200:
+        #         format_json_array_keys("Clusters: ", r.text, "[]")
+        #     else:
+        #         print("No clusters created")
     elif cmd == "cluster config":
         if help_flag:
             print("Retrieves riak configuration details for cluster")
@@ -620,57 +679,6 @@ def run(args):
                     print("Failed to remove node, status_code: " + str(r.status_code))
                 else:
                     print("Removed node")
-    elif cmd == "proxy config" or cmd == "proxy":
-        if help_flag:
-            print("Generates a marathon json config using --zookeeper (default is master.mesos:2181) and --cluster (default is default).")
-        else:
-            try:
-                return config.director_marathon_string(cluster)
-            except:
-                raise CliError("Unable to generate proxy config for framework: " + config.get('framework-name'))
-    elif cmd == "proxy install":
-        if help_flag:
-            print("Installs a riak-mesos-director marathon app on the public Mesos node using --zookeeper (default is master.mesos:2181) and --cluster (default is default).")
-        else:
-            try:
-                director_json = config.director_marathon_json(cluster)
-                client = create_client(self.get_any('marathon', 'url'))
-                client.add_app(director_json)
-                print("Finished adding " + director_json['id'] + " to marathon")
-            except Exception as e:
-                print(e.message)
-                raise CliError("Unable to create marathon app")
-            except:
-                raise CliError("Unable to communicate with marathon.")
-    elif cmd == "proxy uninstall":
-        if help_flag:
-            print("Uninstalls the riak-mesos-director marathon app.")
-        else:
-            try:
-                client = create_client(self.get_any('marathon', 'url'))
-                client.remove_app('/' + config.get('framework-name') + '-director')
-                print("Finished removing " + '/' + config.get('framework-name') + '-director' + " from marathon")
-            except Exception as e:
-                print(e.message)
-                raise CliError("Unable to uninstall marathon app")
-            except:
-                raise CliError("Unable to communicate with marathon.")
-    elif cmd == "proxy endpoints":
-        if help_flag:
-            print("Lists the endpoints exposed by a riak-mesos-director marathon app --public-dns (default is {{public-dns}}).")
-        else:
-            try:
-                client = create_client(self.get_any('marathon', 'url'))
-                app = client.get_app(config.get('framework-name') + '-director')
-                ports = app['ports']
-                print("\nLoad Balanced Riak Cluster (HTTP)")
-                print("    http://" + public_dns + ":" + str(ports[0]))
-                print("\nLoad Balanced Riak Cluster (Protobuf)")
-                print("    http://" + public_dns + ":" + str(ports[1]))
-                print("\nRiak Mesos Director API (HTTP)")
-                print("    http://" + public_dns + ":" + str(ports[2]))
-            except:
-                raise CliError("Unable to get ports for: riak-director")
     elif cmd == "":
         print("No commands executed")
     elif cmd.startswith("-"):
