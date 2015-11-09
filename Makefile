@@ -87,10 +87,13 @@ clean_artifacts:
 .bin.zktool_$(OS_ARCH):
 	go build -o bin/zktool_$(OS_ARCH) -tags=$(TAGS) ./tools/zk/
 	$(shell touch .bin.zktool_$(OS_ARCH))
-tools: .bin.zktool_$(OS_ARCH) .bin.tools_$(OS_ARCH)
+.bin.riak-mesos:
+	cp tools/riak-mesos.py bin/riak-mesos
+	$(shell touch .bin.riak-mesos)
+tools: .bin.zktool_$(OS_ARCH) .bin.tools_$(OS_ARCH) .bin.riak-mesos
 clean_bin: clean_tools
 clean_tools:
-	-rm -rf .bin.tools_$(OS_ARCH) bin/tools_$(OS_ARCH) .bin.zktool_$(OS_ARCH)
+	-rm -rf .bin.tools_$(OS_ARCH) bin/tools_$(OS_ARCH) .bin.zktool_$(OS_ARCH) bin/zktool_$(OS_ARCH) .bin.riak-mesos bin/riak-mesos
 ### Tools end
 
 ### Director begin
@@ -161,7 +164,7 @@ fmt:
 ### Go Tools end
 
 ### Framework Package begin
-.PHONY: package_framework sync_framework clean_framework_package
+.PHONY: package_framework sync_framework clean_framework_package sync_framework_test
 package: package_framework
 package_framework: $(BUILD_DIR)/riak_mesos_$(OS_ARCH)_$(PACKAGE_VERSION).tar.gz
 $(BUILD_DIR)/riak_mesos_$(OS_ARCH)_$(PACKAGE_VERSION).tar.gz:
@@ -205,23 +208,47 @@ clean_director_package:
 	-rm $(BUILD_DIR)/riak_mesos_director_$(OS_ARCH)_$(PACKAGE_VERSION).tar.gz
 ### Director Package end
 
+### CLI Package end
+.PHONY: package_cli sync_cli clean_cli_package
+#package: package_cli
+package_cli: $(BUILD_DIR)/riak_mesos_cli_$(PACKAGE_VERSION).tar.gz
+$(BUILD_DIR)/riak_mesos_cli_$(PACKAGE_VERSION).tar.gz:
+	-rm -rf $(BUILD_DIR)/riak_mesos_cli
+	mkdir -p $(BUILD_DIR)/riak_mesos_cli
+	cp bin/riak-mesos $(BUILD_DIR)/riak_mesos_cli/
+	cp bin/zktool_linux_amd64 $(BUILD_DIR)/riak_mesos_cli/
+	cp bin/zktool_darwin_amd64 $(BUILD_DIR)/riak_mesos_cli/
+	cd $(BUILD_DIR)/riak_mesos_cli/ && ./riak-mesos config --json | python -m json.tool > tmp.json
+	mv $(BUILD_DIR)/riak_mesos_cli/tmp.json $(BUILD_DIR)/riak_mesos_cli/config.json
+	echo "Thank you for downloading Riak Mesos Framework CLI tools. Run './riak-mesos --help' to get started. Please visit https://github.com/basho-labs/riak-mesos for usage information." > $(BUILD_DIR)/riak_mesos_cli/INSTALL.txt
+	cd $(BUILD_DIR) && tar -zcvf riak_mesos_cli_$(PACKAGE_VERSION).tar.gz riak_mesos_cli
+#sync: sync_cli
+sync_cli:
+	cd $(BUILD_DIR)/ && \
+		s3cmd put --acl-public riak_mesos_cli_$(PACKAGE_VERSION).tar.gz s3://$(DEPLOY_BASE)/$(DEPLOY_OS)/
+#clean_package: clean_cli_package
+clean_cli_package:
+	-rm -rf $(BUILD_DIR)/riak_mesos_cli
+	-rm $(BUILD_DIR)/riak_mesos_cli_$(PACKAGE_VERSION).tar.gz
+### CLI Package end
+
 ### DCOS Package begin
 .PHONY: package_dcos sync_dcos clean_dcos_package
-package: package_dcos
+#package: package_dcos
 package_dcos: $(BUILD_DIR)/dcos-riak-$(PACKAGE_VERSION).tar.gz
 $(BUILD_DIR)/dcos-riak-$(PACKAGE_VERSION).tar.gz:
 	-rm -rf $(BUILD_DIR)/dcos-riak-*
 	mkdir -p $(BUILD_DIR)/
 	cp -R dcos/dcos-riak $(BUILD_DIR)/dcos-riak-$(PACKAGE_VERSION)
 	cd $(BUILD_DIR) && tar -zcvf dcos-riak-$(PACKAGE_VERSION).tar.gz dcos-riak-$(PACKAGE_VERSION)
-sync: sync_dcos
+#sync: sync_dcos
 sync_dcos:
 	cd $(BUILD_DIR)/ && \
 		s3cmd put --acl-public dcos-riak-$(PACKAGE_VERSION).tar.gz s3://$(DEPLOY_BASE)/
 sync_dcos_test:
 	cd $(BUILD_DIR)/ && \
 		s3cmd put --acl-public dcos-riak-$(PACKAGE_VERSION).tar.gz s3://$(DEPLOY_BASE)/test/
-clean_package: clean_dcos_package
+#clean_package: clean_dcos_package
 clean_dcos_package:
 	-rm $(BUILD_DIR)/dcos-riak-$(PACKAGE_VERSION).tar.gz
 ### DCOS Package end
