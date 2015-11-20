@@ -29,27 +29,28 @@ type FrameworkRiakNode struct {
 	reconciled           bool      `json:"-"`
 	lastAskedToReconcile time.Time `json:"-"`
 
-	SimpleId         int
-	DestinationState process_state.ProcessState
-	CurrentState     process_state.ProcessState
-	TaskStatus       *mesos.TaskStatus
-	Generation       int
-	SlaveID          *mesos.SlaveID
-	Hostname         string
-	TaskData         common.TaskData
-	FrameworkName    string
-	ClusterName      string
-	Role             *string
-	Principal        *string
-	Cpus             float64
-	Mem              float64
-	Disk             float64
-	Ports            int
-	UUID             string
-	ContainerPath    string
+	SimpleId          int
+	DestinationState  process_state.ProcessState
+	CurrentState      process_state.ProcessState
+	TaskStatus        *mesos.TaskStatus
+	Generation        int
+	SlaveID           *mesos.SlaveID
+	Hostname          string
+	TaskData          common.TaskData
+	FrameworkName     string
+	ClusterName       string
+	Role              *string
+	Principal         *string
+	Cpus              float64
+	Mem               float64
+	Disk              float64
+	Ports             int
+	UUID              string
+	ContainerPath     string
+	RestartGeneration int64
 }
 
-func NewFrameworkRiakNode(sc *SchedulerCore, clusterName string, simpleId int) *FrameworkRiakNode {
+func NewFrameworkRiakNode(sc *SchedulerCore, clusterName string, restartGeneration int64, simpleId int) *FrameworkRiakNode {
 	nodeCpusFloat, err := strconv.ParseFloat(sc.nodeCpus, 64)
 	if err != nil {
 		log.Panicf("Unable to determine node_cpus: %+v", err)
@@ -64,21 +65,22 @@ func NewFrameworkRiakNode(sc *SchedulerCore, clusterName string, simpleId int) *
 	}
 
 	return &FrameworkRiakNode{
-		DestinationState: process_state.Started,
-		CurrentState:     process_state.Unknown,
-		Generation:       0,
-		reconciled:       false,
-		FrameworkName:    sc.frameworkName,
-		Role:             &sc.frameworkRole,
-		Principal:        &sc.mesosAuthPrincipal,
-		SimpleId:         simpleId,
-		ClusterName:      clusterName,
-		Cpus:             nodeCpusFloat,
-		Mem:              nodeMemFloat,
-		Disk:             nodeDiskFloat,
-		Ports:            PORTS_PER_TASK,
-		UUID:             uuid.NewV4().String(),
-		ContainerPath:    CONTAINER_PATH,
+		DestinationState:  process_state.Started,
+		CurrentState:      process_state.Unknown,
+		Generation:        0,
+		reconciled:        false,
+		FrameworkName:     sc.frameworkName,
+		Role:              &sc.frameworkRole,
+		Principal:         &sc.mesosAuthPrincipal,
+		SimpleId:          simpleId,
+		ClusterName:       clusterName,
+		Cpus:              nodeCpusFloat,
+		Mem:               nodeMemFloat,
+		Disk:              nodeDiskFloat,
+		Ports:             PORTS_PER_TASK,
+		UUID:              uuid.NewV4().String(),
+		ContainerPath:     CONTAINER_PATH,
+		RestartGeneration: restartGeneration,
 	}
 }
 
@@ -252,6 +254,23 @@ func (frn *FrameworkRiakNode) CanBeScheduled() bool {
 	}
 
 	switch frn.DestinationState {
+	case process_state.Restarting:
+		{
+			switch frn.CurrentState {
+			case process_state.Started:
+				return false
+			case process_state.Unknown:
+				return true
+			case process_state.Reserved:
+				return true
+			case process_state.Starting:
+				return false
+			case process_state.Shutdown:
+				return true
+			case process_state.Failed:
+				return true
+			}
+		}
 	case process_state.Started:
 		{
 			switch frn.CurrentState {
@@ -292,8 +311,21 @@ func (frn *FrameworkRiakNode) CanBeJoined() bool {
 func (frn *FrameworkRiakNode) CanBeLeft() bool {
 	return frn.CanBeJoined()
 }
+func (frn *FrameworkRiakNode) HasRestarted(generation int64) bool {
+	return frn.DestinationState == process_state.Started &&
+		frn.CurrentState == process_state.Started &&
+		frn.RestartGeneration >= generation
+}
+func (frn *FrameworkRiakNode) IsRestarting() bool {
+	return frn.DestinationState == process_state.Restarting
+}
 
 // Setters
+func (frn *FrameworkRiakNode) Restart(generation int64) {
+	frn.RestartGeneration = generation
+	frn.DestinationState = process_state.Restarting
+}
+
 func (frn *FrameworkRiakNode) Unreserve() {
 	frn.CurrentState = process_state.Unknown
 	frn.SlaveID = nil
@@ -311,6 +343,7 @@ func (frn *FrameworkRiakNode) Start() {
 }
 func (frn *FrameworkRiakNode) Run() {
 	frn.CurrentState = process_state.Started
+	frn.DestinationState = process_state.Started
 }
 func (frn *FrameworkRiakNode) Finish() {
 	frn.CurrentState = process_state.Shutdown

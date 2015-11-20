@@ -16,6 +16,8 @@
 # limitations under the License.
 """Riak Mesos Framework CLI"""
 
+# TODO: Add "wait for" commands to make command chaining and testing easier
+
 from __future__ import print_function
 import subprocess
 import os
@@ -44,6 +46,7 @@ def usage():
     print('    cluster config')
     print('    cluster list [--json]')
     print('    cluster create')
+    print('    cluster restart')
     print('    cluster destroy')
     print('    node info --node <name>')
     print('    node list [--json]')
@@ -117,7 +120,7 @@ def _dcos_api_url(client, framework):
         print('    dcos service\n')
         raise CliError('Riak Mesos Framework is not running, try creating a dcos-riak.json with your correct framework name and run with --config dcos-riak.json')
     from dcos import util
-    return util.get_config().get('core.dcos_url').rstrip('/') + '/service/' + framework
+    return util.get_config().get('core.dcos_url').rstrip('/') + '/service/' + framework + '/'
 
 class Config(object):
     def __init__(self, override_file=None):
@@ -137,10 +140,10 @@ class Config(object):
             raise CliError('Unsupported platform: ' + _platform + '. Only linux, linux2, and darwin are supported currently')
         base_url = os.popen(os.path.dirname(__file__) + '/' + tool + ' -zk=' + self.get('zk') + ' -name=' + self.get('framework-name') + ' -command=get-url').read()
         if base_url.strip() == 'zk: node does not exist':
-            raise CliError('Riak Mesos Framework is not running, try with --framework <framework-name>.')
+            raise CliError('Riak Mesos Framework is not running, try specifying a different <framework-name> in your json config file.')
         elif base_url.strip() == 'zk: could not connect to a server':
             raise CliError('Unable to connect to Zookeeper: ' + self.get('zk'))
-        return base_url.strip()
+        return base_url.strip() + '/'
 
     def api_url(self):
         framework = self.get('framework-name')
@@ -643,7 +646,7 @@ def run(args):
                 print('No clusters created')
     elif cmd == 'cluster create':
         if help_flag:
-            print('Creates a new cluster. Secify the name with --cluster (default is default).')
+            print('Creates a new cluster. Specify the name with --cluster (default is default).')
         else:
             r = requests.post(service_url + 'clusters/' + cluster, data='')
             debug_request(debug_flag, r)
@@ -651,9 +654,21 @@ def run(args):
                 print('Cluster already exists')
             else:
                 format_json_fact('Added cluster: ', r.text, 'Name', 'Error creating cluster.')
+    elif cmd == 'cluster restart':
+        if help_flag:
+            print('Performs a rolling restart on a cluster. Specify the name with --cluster (default is default).')
+        else:
+            r = requests.post(service_url + 'clusters/' + cluster + '/restart', data='')
+            debug_request(debug_flag, r)
+            if r.status_code == 404:
+                print('Cluster does not exist')
+            elif r.status_code != 202:
+                print('Failed to restart cluster, status code: ' + str(r.status_code))
+            else:
+                print('Cluster restart initiated')
     elif cmd == 'cluster destroy':
         if help_flag:
-            print('Destroys a cluster. Secify the name with --cluster (default is default).')
+            print('Destroys a cluster. Specify the name with --cluster (default is default).')
         else:
             r = requests.delete(service_url + 'clusters/' + cluster, data='')
             debug_request(debug_flag, r)

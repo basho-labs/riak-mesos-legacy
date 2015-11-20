@@ -16,4 +16,5 @@ const (
 	ShuttingDown
 	Shutdown
 	Failed
+	Restarting
 )

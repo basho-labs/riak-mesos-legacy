@@ -38,9 +38,9 @@ cd $GOPATH/src/github.com/mesos/mesos-go/mesosproto && \
   protoc --proto_path=${GOPATH}/src:${GOPATH}/src/github.com/gogo/protobuf/protobuf:. --gogofast_out=. *.proto
 gvm use go1.5
 export GOPATH=$REAL_GOPATH
-go get github.com/golang/protobuf/proto
-go get github.com/gogo/protobuf/proto
-go get github.com/gogo/protobuf/protoc-gen-gogo
-go get github.com/gogo/protobuf/protoc-gen-gogofast
-cd $GOPATH/src/github.com/mesos/mesos-go/mesosproto && \
-  protoc --proto_path=${GOPATH}/src:${GOPATH}/src/github.com/gogo/protobuf/protobuf:. --gogofast_out=. *.proto
+# go get github.com/golang/protobuf/proto
+# go get github.com/gogo/protobuf/proto
+# go get github.com/gogo/protobuf/protoc-gen-gogo
+# go get github.com/gogo/protobuf/protoc-gen-gogofast
+# cd $GOPATH/src/github.com/mesos/mesos-go/mesosproto && \
+#   protoc --proto_path=${GOPATH}/src:${GOPATH}/src/github.com/gogo/protobuf/protobuf:. --gogofast_out=. *.proto

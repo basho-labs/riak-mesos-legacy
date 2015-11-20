@@ -39,8 +39,9 @@ func (rServer *ReconcilationServer) reconcile() {
 	if rServer.enabled.Load().(bool) == true {
 		rServer.sc.lock.Lock()
 		defer rServer.sc.lock.Unlock()
-		rServer.reconcileTasks()
-		rServer.killTasks()
+		if !rServer.reconcileTasks() {
+			rServer.killTasks()
+		}
 	}
 }
 func (rServer *ReconcilationServer) loop() {
@@ -100,18 +101,32 @@ func (rServer *ReconcilationServer) killTasks() {
 			delete(rServer.sc.schedulerState.Clusters, cluster.Name)
 			stateDirty = true
 		}
+
+		nodesToRestart, stateModified := cluster.GetNodesToRestart()
+		for _, riakNode := range nodesToRestart {
+			if !rServer.finishRiakNode(riakNode) {
+				rServer.killRiakNode(riakNode)
+			}
+		}
+		if stateModified {
+			stateDirty = true
+		}
 	}
 	if stateDirty {
 		rServer.sc.schedulerState.Persist()
 	}
 }
 
-func (rServer *ReconcilationServer) reconcileTasks() {
+func (rServer *ReconcilationServer) reconcileTasks() bool {
+	tasksReconcilable := false
 	for _, cluster := range rServer.sc.schedulerState.Clusters {
 		tasksToReconcile := cluster.GetNodeTasksToReconcile()
 		if len(tasksToReconcile) != 0 {
+			tasksReconcilable = true
 			log.Debug("Reconciling tasks: ", tasksToReconcile)
 			rServer.driver.ReconcileTasks(tasksToReconcile)
 		}
 	}
+
+	return tasksReconcilable
 }

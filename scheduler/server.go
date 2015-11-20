@@ -53,6 +53,24 @@ func (schttp *SchedulerHTTPServer) createCluster(w http.ResponseWriter, r *http.
 	}
 }
 
+func (schttp *SchedulerHTTPServer) restartCluster(w http.ResponseWriter, r *http.Request) {
+	schttp.sc.lock.Lock()
+	defer schttp.sc.lock.Unlock()
+	vars := mux.Vars(r)
+	clusterName := vars["cluster"]
+	cluster, assigned := schttp.sc.schedulerState.Clusters[clusterName]
+	log.Info("RESTART CLUSTER: ", clusterName)
+	if !assigned {
+		w.WriteHeader(404)
+		fmt.Fprintf(w, "Cluster %s not found", clusterName)
+	} else {
+		cluster.RollingRestart()
+		schttp.sc.schedulerState.Persist()
+		w.WriteHeader(202)
+		json.NewEncoder(w).Encode(cluster)
+	}
+}
+
 func (schttp *SchedulerHTTPServer) removeCluster(w http.ResponseWriter, r *http.Request) {
 	schttp.sc.lock.Lock()
 	defer schttp.sc.lock.Unlock()
@@ -318,6 +336,7 @@ func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *Schedul
 
 	router.HandleFunc("/api/v1/clusters", schttp.serveClusters)
 	router.Methods("POST", "PUT").Path("/api/v1/clusters/{cluster}").HandlerFunc(schttp.createCluster)
+	router.Methods("POST").Path("/api/v1/clusters/{cluster}/restart").HandlerFunc(schttp.restartCluster)
 	router.Methods("DELETE").Path("/api/v1/clusters/{cluster}").HandlerFunc(schttp.removeCluster)
 	router.Methods("GET").Path("/api/v1/clusters/{cluster}").HandlerFunc(schttp.getCluster)
 	router.Methods("GET").Path("/api/v1/clusters/{cluster}/nodes").HandlerFunc(schttp.serveNodes)

@@ -222,8 +222,7 @@ func (sc *SchedulerCore) createOperationsForOffers(offers []*mesos.Offer) map[st
 		log.Infof("Got offer with these resources: %s", offerHelper.String())
 
 		for _, cluster := range sc.schedulerState.Clusters {
-			clusterNeedsReconciliation := cluster.ApplyOffer(offerHelper, sc)
-			if clusterNeedsReconciliation {
+			if cluster.ApplyOffer(offerHelper, sc) {
 				needsReconciliation = true
 			}
 		}

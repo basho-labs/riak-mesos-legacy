@@ -16,6 +16,8 @@ type FrameworkRiakCluster struct {
 	RiakConfig     string
 	AdvancedConfig string
 	IsKilled       bool
+	IsRestarting   bool
+	Generation     int64
 }
 
 func NewFrameworkRiakCluster(name string) *FrameworkRiakCluster {
@@ -35,6 +37,8 @@ func NewFrameworkRiakCluster(name string) *FrameworkRiakCluster {
 		AdvancedConfig: string(advancedConfig),
 		RiakConfig:     string(riakConfig),
 		IsKilled:       false,
+		IsRestarting:   false,
+		Generation:     0,
 	}
 }
 
@@ -99,6 +103,14 @@ func (frc *FrameworkRiakCluster) ApplyOffer(offerHelper *common.OfferHelper, sc 
 
 // --- State ---
 
+func (frc *FrameworkRiakCluster) RollingRestart() {
+	if frc.IsRestarting {
+		return
+	}
+	frc.IsRestarting = true
+	frc.Generation = frc.Generation + 1
+}
+
 func (frc *FrameworkRiakCluster) KillNext() {
 	frc.IsKilled = true
 }
@@ -120,7 +132,7 @@ func (frc *FrameworkRiakCluster) GetNextSimpleId() int {
 
 func (frc *FrameworkRiakCluster) CreateNode(sc *SchedulerCore) *FrameworkRiakNode {
 	simpleId := frc.GetNextSimpleId()
-	riakNode := NewFrameworkRiakNode(sc, frc.Name, simpleId)
+	riakNode := NewFrameworkRiakNode(sc, frc.Name, frc.Generation, simpleId)
 	frc.Nodes[riakNode.CurrentID()] = riakNode
 	return riakNode
 }
@@ -135,6 +147,44 @@ func (frc *FrameworkRiakCluster) RemoveNode(riakNode *FrameworkRiakNode) {
 	log.Infof("Removing node: %+v", riakNode.CurrentID())
 	frc.Graveyard[riakNode.CurrentID()] = riakNode
 	delete(frc.Nodes, riakNode.CurrentID())
+}
+
+func (frc *FrameworkRiakCluster) GetNodesToRestart() (map[string]*FrameworkRiakNode, bool) {
+	nodesToRestart := make(map[string]*FrameworkRiakNode)
+	stateModified := false
+	alreadyRestarted := 0
+
+	if !frc.IsRestarting {
+		return nodesToRestart, stateModified
+	}
+
+	log.Info("Cluster restarting, checking for nodes to restart.")
+
+	for _, riakNode := range frc.Nodes {
+		if riakNode.HasRestarted(frc.Generation) {
+			log.Infof("Found a node that is already restarted: %+v", riakNode.CurrentID())
+			alreadyRestarted = alreadyRestarted + 1
+			continue
+		}
+		if riakNode.IsRestarting() {
+			log.Infof("Found a node that is restarting: %+v", riakNode.CurrentID())
+			continue
+		}
+		log.Infof("Found a node that is needs to be restarted: %+v", riakNode.CurrentID())
+		riakNode.Restart(frc.Generation)
+		nodesToRestart[riakNode.CurrentID()] = riakNode
+		stateModified = true
+		break
+	}
+
+	// If IsRestarting but all nodes already restarted, we're no longer restarting
+	log.Infof("Finished checking nodes for restarts, alreadyRestarted: %+v, length of nodes: %v", alreadyRestarted, len(frc.Nodes))
+	if alreadyRestarted == len(frc.Nodes) {
+		frc.IsRestarting = false
+		stateModified = true
+	}
+
+	return nodesToRestart, stateModified
 }
 
 func (frc *FrameworkRiakCluster) GetNodesToKillOrRemove() (map[string]*FrameworkRiakNode, map[string]*FrameworkRiakNode) {
@@ -189,7 +239,9 @@ func (frc *FrameworkRiakCluster) HandleNodeStatusUpdate(status *mesos.TaskStatus
 	case mesos.TaskState_TASK_RUNNING:
 		frc.Join(riakNode)
 	case mesos.TaskState_TASK_FINISHED:
-		frc.Leave(riakNode)
+		if !riakNode.IsRestarting() {
+			frc.Leave(riakNode)
+		}
 		riakNode.Finish()
 	case mesos.TaskState_TASK_FAILED:
 		// frc.Leave(riakNode)
