@@ -3,17 +3,17 @@ package scheduler
 import (
 	"encoding/json"
 	"fmt"
+	log "github.com/Sirupsen/logrus"
+	"github.com/basho-labs/riak-mesos/artifacts"
+	rexclient "github.com/basho-labs/riak-mesos/riak_explorer"
+	"github.com/elazarl/go-bindata-assetfs"
+	"github.com/gorilla/mux"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/pprof"
 	"os"
 	"strconv"
-
-	log "github.com/Sirupsen/logrus"
-	"github.com/basho-labs/riak-mesos/artifacts"
-	"github.com/elazarl/go-bindata-assetfs"
-	"github.com/gorilla/mux"
-	"io/ioutil"
 )
 
 type SchedulerHTTPServer struct {
@@ -100,22 +100,22 @@ func (schttp *SchedulerHTTPServer) setConfig(w http.ResponseWriter, r *http.Requ
 		w.WriteHeader(404)
 		fmt.Fprintf(w, "Cluster %s not found", clusterName)
 		return
-	} else {
-		data, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			w.WriteHeader(503)
-			fmt.Fprintln(w, "Unable to read file: ", err)
-			return
-		}
-		cluster.RiakConfig = string(data)
-		if err := schttp.sc.schedulerState.Persist(); err != nil {
-			w.WriteHeader(503)
-			fmt.Fprintln(w, "Unable persist cluster data: ", err)
-			log.Error("Unable persist cluster data: ", err)
-		}
-		w.WriteHeader(200)
-		fmt.Println(w, "Success!")
 	}
+	data, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		w.WriteHeader(503)
+		fmt.Fprintln(w, "Unable to read file: ", err)
+		return
+	}
+	cluster.RiakConfig = string(data)
+	if err := schttp.sc.schedulerState.Persist(); err != nil {
+		w.WriteHeader(503)
+		fmt.Fprintln(w, "Unable persist cluster data: ", err)
+		log.Error("Unable persist cluster data: ", err)
+		return
+	}
+	w.WriteHeader(200)
+	fmt.Fprintf(w, "Success!")
 }
 func (schttp *SchedulerHTTPServer) getConfig(w http.ResponseWriter, r *http.Request) {
 	schttp.sc.lock.Lock()
@@ -142,23 +142,23 @@ func (schttp *SchedulerHTTPServer) setAdvancedConfig(w http.ResponseWriter, r *h
 	if !assigned {
 		w.WriteHeader(404)
 		fmt.Fprintf(w, "Cluster %s not found", clusterName)
-	} else {
-		data, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			w.WriteHeader(503)
-			fmt.Fprintln(w, "Unable to read file: ", err)
-			return
-		}
-		cluster.AdvancedConfig = string(data)
-		if err := schttp.sc.schedulerState.Persist(); err != nil {
-			w.WriteHeader(503)
-			fmt.Fprintln(w, "Unable persist cluster data: ", err)
-			log.Error("Unable persist cluster data: ", err)
-		}
-		w.WriteHeader(200)
-		fmt.Println(w, "Success!")
+		return
 	}
-
+	data, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		w.WriteHeader(503)
+		fmt.Fprintln(w, "Unable to read file: ", err)
+		return
+	}
+	cluster.AdvancedConfig = string(data)
+	if err := schttp.sc.schedulerState.Persist(); err != nil {
+		w.WriteHeader(503)
+		fmt.Fprintln(w, "Unable persist cluster data: ", err)
+		log.Error("Unable persist cluster data: ", err)
+		return
+	}
+	w.WriteHeader(200)
+	fmt.Fprint(w, "Success!")
 }
 
 func (schttp *SchedulerHTTPServer) getAdvancedConfig(w http.ResponseWriter, r *http.Request) {
@@ -171,10 +171,9 @@ func (schttp *SchedulerHTTPServer) getAdvancedConfig(w http.ResponseWriter, r *h
 		w.WriteHeader(404)
 		fmt.Fprintf(w, "Cluster %s not found", clusterName)
 		return
-	} else {
-		w.WriteHeader(200)
-		fmt.Fprint(w, cluster.AdvancedConfig)
 	}
+	w.WriteHeader(200)
+	fmt.Fprint(w, cluster.AdvancedConfig)
 }
 
 func (schttp *SchedulerHTTPServer) serveClusters(w http.ResponseWriter, r *http.Request) {
@@ -251,6 +250,195 @@ func (schttp *SchedulerHTTPServer) serveNodes(w http.ResponseWriter, r *http.Req
 		w.WriteHeader(200)
 		json.NewEncoder(w).Encode(cluster.Nodes)
 	}
+}
+
+func (schttp *SchedulerHTTPServer) nodeAAE(w http.ResponseWriter, r *http.Request) {
+	schttp.sc.lock.Lock()
+	defer schttp.sc.lock.Unlock()
+	vars := mux.Vars(r)
+	clusterName := vars["cluster"]
+	nodeName := vars["node"]
+	cluster, assigned := schttp.sc.schedulerState.Clusters[clusterName]
+	if !assigned {
+		w.WriteHeader(404)
+		fmt.Fprintf(w, "Cluster %s not found", clusterName)
+		return
+	}
+	node, assigned := cluster.Nodes[nodeName]
+	if !assigned {
+		w.WriteHeader(404)
+		fmt.Fprintf(w, "Node %s not found", nodeName)
+		return
+	}
+	rexHostname := fmt.Sprintf("%s:%d", node.Hostname, node.TaskData.HTTPPort)
+	rexc := rexclient.NewRiakExplorerClient(rexHostname)
+	body, err := rexc.GetAAEStatusJSON(node.TaskData.FullyQualifiedNodeName)
+	if err != nil {
+		w.WriteHeader(503)
+		fmt.Fprintln(w, "Unable to read data: ", err)
+		return
+	}
+
+	w.WriteHeader(200)
+	fmt.Fprintf(w, body)
+}
+func (schttp *SchedulerHTTPServer) nodeStatus(w http.ResponseWriter, r *http.Request) {
+	schttp.sc.lock.Lock()
+	defer schttp.sc.lock.Unlock()
+	vars := mux.Vars(r)
+	clusterName := vars["cluster"]
+	nodeName := vars["node"]
+	cluster, assigned := schttp.sc.schedulerState.Clusters[clusterName]
+	if !assigned {
+		w.WriteHeader(404)
+		fmt.Fprintf(w, "Cluster %s not found", clusterName)
+		return
+	}
+	node, assigned := cluster.Nodes[nodeName]
+	if !assigned {
+		w.WriteHeader(404)
+		fmt.Fprintf(w, "Node %s not found", nodeName)
+		return
+	}
+	rexHostname := fmt.Sprintf("%s:%d", node.Hostname, node.TaskData.HTTPPort)
+	rexc := rexclient.NewRiakExplorerClient(rexHostname)
+	body, err := rexc.GetStatusJSON(node.TaskData.FullyQualifiedNodeName)
+	if err != nil {
+		w.WriteHeader(503)
+		fmt.Fprintln(w, "Unable to read data: ", err)
+		return
+	}
+
+	w.WriteHeader(200)
+	fmt.Fprintf(w, body)
+}
+func (schttp *SchedulerHTTPServer) nodeRingready(w http.ResponseWriter, r *http.Request) {
+	schttp.sc.lock.Lock()
+	defer schttp.sc.lock.Unlock()
+	vars := mux.Vars(r)
+	clusterName := vars["cluster"]
+	nodeName := vars["node"]
+	cluster, assigned := schttp.sc.schedulerState.Clusters[clusterName]
+	if !assigned {
+		w.WriteHeader(404)
+		fmt.Fprintf(w, "Cluster %s not found", clusterName)
+		return
+	}
+	node, assigned := cluster.Nodes[nodeName]
+	if !assigned {
+		w.WriteHeader(404)
+		fmt.Fprintf(w, "Node %s not found", nodeName)
+		return
+	}
+	rexHostname := fmt.Sprintf("%s:%d", node.Hostname, node.TaskData.HTTPPort)
+	rexc := rexclient.NewRiakExplorerClient(rexHostname)
+	body, err := rexc.GetRingreadyJSON(node.TaskData.FullyQualifiedNodeName)
+	if err != nil {
+		w.WriteHeader(503)
+		fmt.Fprintln(w, "Unable to read data: ", err)
+		return
+	}
+
+	w.WriteHeader(200)
+	fmt.Fprintf(w, body)
+}
+func (schttp *SchedulerHTTPServer) nodeTransfers(w http.ResponseWriter, r *http.Request) {
+	schttp.sc.lock.Lock()
+	defer schttp.sc.lock.Unlock()
+	vars := mux.Vars(r)
+	clusterName := vars["cluster"]
+	nodeName := vars["node"]
+	cluster, assigned := schttp.sc.schedulerState.Clusters[clusterName]
+	if !assigned {
+		w.WriteHeader(404)
+		fmt.Fprintf(w, "Cluster %s not found", clusterName)
+		return
+	}
+	node, assigned := cluster.Nodes[nodeName]
+	if !assigned {
+		w.WriteHeader(404)
+		fmt.Fprintf(w, "Node %s not found", nodeName)
+		return
+	}
+	rexHostname := fmt.Sprintf("%s:%d", node.Hostname, node.TaskData.HTTPPort)
+	rexc := rexclient.NewRiakExplorerClient(rexHostname)
+	body, err := rexc.GetTransfersJSON(node.TaskData.FullyQualifiedNodeName)
+	if err != nil {
+		w.WriteHeader(503)
+		fmt.Fprintln(w, "Unable to read data: ", err)
+		return
+	}
+
+	w.WriteHeader(200)
+	fmt.Fprintf(w, body)
+}
+func (schttp *SchedulerHTTPServer) nodeTypes(w http.ResponseWriter, r *http.Request) {
+	schttp.sc.lock.Lock()
+	defer schttp.sc.lock.Unlock()
+	vars := mux.Vars(r)
+	clusterName := vars["cluster"]
+	nodeName := vars["node"]
+	cluster, assigned := schttp.sc.schedulerState.Clusters[clusterName]
+	if !assigned {
+		w.WriteHeader(404)
+		fmt.Fprintf(w, "Cluster %s not found", clusterName)
+		return
+	}
+	node, assigned := cluster.Nodes[nodeName]
+	if !assigned {
+		w.WriteHeader(404)
+		fmt.Fprintf(w, "Node %s not found", nodeName)
+		return
+	}
+	rexHostname := fmt.Sprintf("%s:%d", node.Hostname, node.TaskData.HTTPPort)
+	rexc := rexclient.NewRiakExplorerClient(rexHostname)
+	body, err := rexc.GetBucketTypesJSON(node.TaskData.FullyQualifiedNodeName)
+	if err != nil {
+		w.WriteHeader(503)
+		fmt.Fprintln(w, "Unable to read data: ", err)
+		return
+	}
+
+	w.WriteHeader(200)
+	fmt.Fprintf(w, body)
+}
+func (schttp *SchedulerHTTPServer) nodeCreateType(w http.ResponseWriter, r *http.Request) {
+	schttp.sc.lock.Lock()
+	defer schttp.sc.lock.Unlock()
+	vars := mux.Vars(r)
+	clusterName := vars["cluster"]
+	nodeName := vars["node"]
+	bucketType := vars["buckettype"]
+	cluster, assigned := schttp.sc.schedulerState.Clusters[clusterName]
+	if !assigned {
+		w.WriteHeader(404)
+		fmt.Fprintf(w, "Cluster %s not found", clusterName)
+		return
+	}
+	node, assigned := cluster.Nodes[nodeName]
+	if !assigned {
+		w.WriteHeader(404)
+		fmt.Fprintf(w, "Node %s not found", nodeName)
+		return
+	}
+
+	data, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		w.WriteHeader(503)
+		fmt.Fprintln(w, "Unable to read data: ", err)
+		return
+	}
+	rexHostname := fmt.Sprintf("%s:%d", node.Hostname, node.TaskData.HTTPPort)
+	rexc := rexclient.NewRiakExplorerClient(rexHostname)
+
+	if _, err := rexc.CreateBucketTypeJSON(node.TaskData.FullyQualifiedNodeName, bucketType, string(data)); err != nil {
+		w.WriteHeader(503)
+		fmt.Fprintln(w, "Unable to create bucket type: ", err)
+		log.Error("Unable to create bucket type: ", err)
+		return
+	}
+	w.WriteHeader(204)
+	fmt.Fprintf(w, "Created and activated bucket type %s", bucketType)
 }
 
 type simpleNode struct {
@@ -341,6 +529,12 @@ func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *Schedul
 	router.Methods("GET").Path("/api/v1/clusters/{cluster}").HandlerFunc(schttp.getCluster)
 	router.Methods("GET").Path("/api/v1/clusters/{cluster}/nodes").HandlerFunc(schttp.serveNodes)
 	router.Methods("DELETE").Path("/api/v1/clusters/{cluster}/nodes/{node}").HandlerFunc(schttp.removeNode)
+	router.Methods("GET").Path("/api/v1/clusters/{cluster}/nodes/{node}/aae").HandlerFunc(schttp.nodeAAE)
+	router.Methods("GET").Path("/api/v1/clusters/{cluster}/nodes/{node}/status").HandlerFunc(schttp.nodeStatus)
+	router.Methods("GET").Path("/api/v1/clusters/{cluster}/nodes/{node}/ringready").HandlerFunc(schttp.nodeRingready)
+	router.Methods("GET").Path("/api/v1/clusters/{cluster}/nodes/{node}/transfers").HandlerFunc(schttp.nodeTransfers)
+	router.Methods("POST").Path("/api/v1/clusters/{cluster}/nodes/{node}/types/{buckettype}").HandlerFunc(schttp.nodeCreateType)
+	router.Methods("GET").Path("/api/v1/clusters/{cluster}/nodes/{node}/types").HandlerFunc(schttp.nodeTypes)
 
 	router.Methods("POST").Path("/api/v1/clusters/{cluster}/config").HandlerFunc(schttp.setConfig)
 	router.Methods("GET").Path("/api/v1/clusters/{cluster}/config").HandlerFunc(schttp.getConfig)

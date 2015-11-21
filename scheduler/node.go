@@ -316,8 +316,10 @@ func (frn *FrameworkRiakNode) HasRestarted(generation int64) bool {
 		frn.CurrentState == process_state.Started &&
 		frn.RestartGeneration >= generation
 }
-func (frn *FrameworkRiakNode) IsRestarting() bool {
-	return frn.DestinationState == process_state.Restarting
+func (frn *FrameworkRiakNode) IsRestarting(generation int64) bool {
+	return (frn.DestinationState == process_state.Started || frn.DestinationState == process_state.Restarting) &&
+		frn.CurrentState != process_state.Started &&
+		frn.RestartGeneration >= generation
 }
 
 // Setters

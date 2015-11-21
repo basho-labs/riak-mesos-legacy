@@ -4,15 +4,11 @@ import (
 	json "encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
+	"strings"
 )
-
-// Links are location metadata about a Riak Explorer resource
-type Links struct {
-	Self    string `json:"self"`
-	Related string `json:"related"`
-}
 
 // RiakExplorerClient contains information common to all Riak Explorer requests
 type RiakExplorerClient struct {
@@ -26,6 +22,59 @@ func NewRiakExplorerClient(host string) *RiakExplorerClient {
 	}
 
 	return c
+}
+
+// Links are location metadata about a Riak Explorer resource
+type Links struct {
+	Self    string `json:"self"`
+	Related string `json:"related"`
+}
+
+// GetAAEStatusJSON gets the aae-status of a node
+func (client *RiakExplorerClient) GetAAEStatusJSON(node string) (string, error) {
+	commandURI := fmt.Sprintf("control/nodes/%s/aae-status", node)
+	body, err := client.doGet(commandURI)
+	return string(body), err
+}
+
+// GetStatusJSON gets the member-status of a node
+func (client *RiakExplorerClient) GetStatusJSON(node string) (string, error) {
+	commandURI := fmt.Sprintf("control/nodes/%s/status", node)
+	body, err := client.doGet(commandURI)
+	return string(body), err
+}
+
+// GetRingreadyJSON gets the ringready status of a node
+func (client *RiakExplorerClient) GetRingreadyJSON(node string) (string, error) {
+	commandURI := fmt.Sprintf("control/nodes/%s/ringready", node)
+	body, err := client.doGet(commandURI)
+	return string(body), err
+}
+
+// GetTransfersJSON gets the transfers from a node
+func (client *RiakExplorerClient) GetTransfersJSON(node string) (string, error) {
+	commandURI := fmt.Sprintf("control/nodes/%s/transfers", node)
+	body, err := client.doGet(commandURI)
+	return string(body), err
+}
+
+// GetBucketTypesJSON gets the bucket types from a node
+func (client *RiakExplorerClient) GetBucketTypesJSON(node string) (string, error) {
+	commandURI := fmt.Sprintf("explore/nodes/%s/bucket_types", node)
+	body, err := client.doGet(commandURI)
+	return string(body), err
+}
+
+// CreateBucketTypeJSON performs a PUT to create and activate a bucket type
+func (client *RiakExplorerClient) CreateBucketTypeJSON(node string, bucketType string, props string) (string, error) {
+	commandURI := fmt.Sprintf("explore/nodes/%s/bucket_types/%s", node, bucketType)
+	body, err := client.doPutWithData(commandURI, strings.NewReader(props))
+	if err != nil {
+		return body, err
+	}
+	// Need to perform the post twice to actually activate the type
+	body, err = client.doPutWithData(commandURI, strings.NewReader(props))
+	return body, err
 }
 
 // PingReply is the expected result struct of a ping request
@@ -387,8 +436,29 @@ func (client *RiakExplorerClient) doGet(path string) ([]byte, error) {
 	}
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		return body, nil
-	} else {
-		return body, errors.New(fmt.Sprintf("Unknown HTTP Status: %d", resp.StatusCode))
 	}
-	return body, nil
+
+	return body, errors.New(fmt.Sprintf("Unknown HTTP Status: %d", resp.StatusCode))
+}
+
+func (client *RiakExplorerClient) doPutWithData(path string, data io.Reader) (string, error) {
+	commandURL := fmt.Sprintf("http://%s/admin/%s", client.Host, path)
+	httpClient := &http.Client{}
+	request, err := http.NewRequest("PUT", commandURL, data)
+	request.Header.Set("Content-Type", "application/json")
+	resp, err := httpClient.Do(request)
+	if err != nil {
+		return "", err
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		return string(body[:]), nil
+	}
+
+	return string(body[:]), errors.New(fmt.Sprintf("Unknown HTTP Status: %d", resp.StatusCode))
 }

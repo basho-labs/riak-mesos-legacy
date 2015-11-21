@@ -166,7 +166,7 @@ func (frc *FrameworkRiakCluster) GetNodesToRestart() (map[string]*FrameworkRiakN
 			alreadyRestarted = alreadyRestarted + 1
 			continue
 		}
-		if riakNode.IsRestarting() {
+		if riakNode.IsRestarting(frc.Generation) {
 			log.Infof("Found a node that is restarting: %+v", riakNode.CurrentID())
 			continue
 		}
@@ -239,7 +239,7 @@ func (frc *FrameworkRiakCluster) HandleNodeStatusUpdate(status *mesos.TaskStatus
 	case mesos.TaskState_TASK_RUNNING:
 		frc.Join(riakNode)
 	case mesos.TaskState_TASK_FINISHED:
-		if !riakNode.IsRestarting() {
+		if !riakNode.IsRestarting(frc.Generation) {
 			frc.Leave(riakNode)
 		}
 		riakNode.Finish()

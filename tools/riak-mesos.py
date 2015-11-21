@@ -49,6 +49,12 @@ def usage():
     print('    cluster restart')
     print('    cluster destroy')
     print('    node info --node <name>')
+    print('    node aae-status --node <name>')
+    print('    node status --node <name>')
+    print('    node ringready --node <name>')
+    print('    node transfers --node <name>')
+    print('    node bucket-type create --node <name> --bucket-type <name> --props "<json>"')
+    print('    node bucket-type list --node <name>')
     print('    node list [--json]')
     print('    node remove --node <name>')
     print('    node add [--nodes <number>]')
@@ -466,6 +472,8 @@ def run(args):
     args, debug_flag = extract_flag(args, '--debug')
     args, cluster = extract_option(args, '--cluster', 'default')
     args, node = extract_option(args, '--node', '')
+    args, bucket_type = extract_option(args, '--bucket-type', 'adhoc')
+    args, props = extract_option(args, '--props', '')
     args, num_nodes = extract_option(args, '--nodes', '1', 'integer')
     num_nodes = int(num_nodes)
     cmd = ' '.join(args)
@@ -571,7 +579,7 @@ def run(args):
         if help_flag:
             print('Lists the endpoints exposed by a riak-mesos-director marathon app --public-dns (default is {{public-dns}}).')
         else:
-            # try:
+            try:
                 client = create_client(config.get_any('marathon', 'url'))
                 app = client.get_app(config.get('framework-name') + '-director')
                 # ports = app['ports']
@@ -584,9 +592,9 @@ def run(args):
                 print('    http://' + hostname + ':' + str(ports[1]))
                 print('Riak Mesos Director API (HTTP)')
                 print('    http://' + hostname + ':' + str(ports[2]))
-            # except Exception as e:
-            #     print(e)
-            #     raise CliError('Unable to get ports for: riak-director')
+            except Exception as e:
+                print(e)
+                raise CliError('Unable to get ports for: riak-director')
         return
     elif cmd == 'framework install':
         if help_flag:
@@ -721,6 +729,84 @@ def run(args):
                     print('Failed to remove node, status_code: ' + str(r.status_code))
                 else:
                     print('Removed node')
+    elif cmd == 'node aae-status':
+        if help_flag:
+            print('Gets the active anti entropy status for a node, specify node id with --node')
+        else:
+            if node == '':
+                raise CliError('Node name must be specified')
+            else:
+                r = requests.get(service_url + 'clusters/' + cluster + '/nodes/' + node + '/aae')
+                debug_request(debug_flag, r)
+                if r.status_code != 200:
+                    print('Failed to get aae-status, status_code: ' + str(r.status_code))
+                else:
+                    format_json_object('', r.text, 'aae-status', '{}')
+    elif cmd == 'node status':
+        if help_flag:
+            print('Gets the member-status of a node, specify node id with --node')
+        else:
+            if node == '':
+                raise CliError('Node name must be specified')
+            else:
+                r = requests.get(service_url + 'clusters/' + cluster + '/nodes/' + node + '/status')
+                debug_request(debug_flag, r)
+                if r.status_code != 200:
+                    print('Failed to get status, status_code: ' + str(r.status_code))
+                else:
+                    format_json_object('', r.text, 'status', '{}')
+    elif cmd == 'node ringready':
+        if help_flag:
+            print('Gets the ringready value for a node, specify node id with --node')
+        else:
+            if node == '':
+                raise CliError('Node name must be specified')
+            else:
+                r = requests.get(service_url + 'clusters/' + cluster + '/nodes/' + node + '/ringready')
+                debug_request(debug_flag, r)
+                if r.status_code != 200:
+                    print('Failed to get ringready, status_code: ' + str(r.status_code))
+                else:
+                    format_json_object('', r.text, 'ringready', '{}')
+    elif cmd == 'node transfers':
+        if help_flag:
+            print('Gets the transfers status for a node, specify node id with --node')
+        else:
+            if node == '':
+                raise CliError('Node name must be specified')
+            else:
+                r = requests.get(service_url + 'clusters/' + cluster + '/nodes/' + node + '/transfers')
+                debug_request(debug_flag, r)
+                if r.status_code != 200:
+                    print('Failed to get transfers, status_code: ' + str(r.status_code))
+                else:
+                    format_json_object('', r.text, 'transfers', '{}')
+    elif cmd == 'node bucket-type create':
+        if help_flag:
+            print('Creates and activates a bucket type on a node, specify node id with --node')
+        else:
+            if node == '' or bucket_type == '' or props == '':
+                raise CliError('Node name, bucket-type, props must be specified')
+            else:
+                r = requests.post(service_url + 'clusters/' + cluster + '/nodes/' + node + '/types/' + bucket_type, data=props)
+                debug_request(debug_flag, r)
+                if r.status_code != 204:
+                    print('Failed to create bucket-type, status_code: ' + str(r.status_code))
+                else:
+                    print('Bucket type created')
+    elif cmd == 'node bucket-type list':
+        if help_flag:
+            print('Gets the bucket type list from a node, specify node id with --node')
+        else:
+            if node == '':
+                raise CliError('Node name must be specified')
+            else:
+                r = requests.get(service_url + 'clusters/' + cluster + '/nodes/' + node + '/types')
+                debug_request(debug_flag, r)
+                if r.status_code != 200:
+                    print('Failed to get bucket types, status_code: ' + str(r.status_code))
+                else:
+                    format_json_object('', r.text, 'bucket_types', '{}')
     elif cmd == '':
         print('No commands executed')
     elif cmd.startswith('-'):

@@ -12,7 +12,7 @@ native: riak-bin.tar.gz riak_mesos_director-bin.tar.gz
 ### Riak Explorer begin
 riak_explorer:
 	git clone https://github.com/basho-labs/riak_explorer.git
-	cd riak_explorer && git checkout riak-addon-master
+	cd riak_explorer && git checkout riak-addon-master && git pull
 riak_explorer-bin: riak_explorer OTP_R16B02_basho8-bin
 	cd riak_explorer && PATH=$(PREFIX)OTP_R16B02_basho8-bin/bin:$(PATH) $(MAKE) rel
 	cd riak_explorer && PATH=$(PREFIX)OTP_R16B02_basho8-bin/bin:$(PATH) $(MAKE) riak-addon
