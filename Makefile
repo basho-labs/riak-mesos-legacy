@@ -225,7 +225,7 @@ $(BUILD_DIR)/riak_mesos_cli_$(PACKAGE_VERSION).tar.gz:
 #sync: sync_cli
 sync_cli:
 	cd $(BUILD_DIR)/ && \
-		s3cmd put --acl-public riak_mesos_cli_$(PACKAGE_VERSION).tar.gz s3://$(DEPLOY_BASE)/$(DEPLOY_OS)/
+		s3cmd put --acl-public riak_mesos_cli_$(PACKAGE_VERSION).tar.gz s3://$(DEPLOY_BASE)/
 #clean_package: clean_cli_package
 clean_cli_package:
 	-rm -rf $(BUILD_DIR)/riak_mesos_cli

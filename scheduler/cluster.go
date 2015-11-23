@@ -239,10 +239,10 @@ func (frc *FrameworkRiakCluster) HandleNodeStatusUpdate(status *mesos.TaskStatus
 	case mesos.TaskState_TASK_RUNNING:
 		frc.Join(riakNode)
 	case mesos.TaskState_TASK_FINISHED:
+		riakNode.Finish()
 		if !riakNode.IsRestarting(frc.Generation) {
 			frc.Leave(riakNode)
 		}
-		riakNode.Finish()
 	case mesos.TaskState_TASK_FAILED:
 		// frc.Leave(riakNode)
 		riakNode.Fail()
