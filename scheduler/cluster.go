@@ -68,6 +68,8 @@ func (frc *FrameworkRiakCluster) ApplyOffer(offerHelper *common.OfferHelper, sc 
 			log.Infof("Adding Riak node for scheduling (HasRequestedReservation, persistenceId match): %+v", riakNode.CurrentID())
 			if riakNode.ApplyReservedOffer(offerHelper, sc) {
 				stateDirty = true
+			} else {
+				clusterNeedsReconciliation = true
 			}
 			continue
 		}
