@@ -170,9 +170,9 @@ func (frc *FrameworkRiakCluster) GetNodesToRestart() (map[string]*FrameworkRiakN
 		}
 		if riakNode.IsRestarting(frc.Generation) {
 			log.Infof("Found a node that is restarting: %+v", riakNode.CurrentID())
-			continue
+			break
 		}
-		log.Infof("Found a node that is needs to be restarted: %+v", riakNode.CurrentID())
+		log.Infof("Found a node that needs to be restarted: %+v", riakNode.CurrentID())
 		riakNode.Restart(frc.Generation)
 		nodesToRestart[riakNode.CurrentID()] = riakNode
 		stateModified = true
