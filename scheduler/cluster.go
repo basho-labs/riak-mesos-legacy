@@ -155,6 +155,7 @@ func (frc *FrameworkRiakCluster) GetNodesToRestart() (map[string]*FrameworkRiakN
 	nodesToRestart := make(map[string]*FrameworkRiakNode)
 	stateModified := false
 	alreadyRestarted := 0
+	currentlyRestarting := 0
 
 	if !frc.IsRestarting {
 		return nodesToRestart, stateModified
@@ -170,17 +171,25 @@ func (frc *FrameworkRiakCluster) GetNodesToRestart() (map[string]*FrameworkRiakN
 		}
 		if riakNode.IsRestarting(frc.Generation) {
 			log.Infof("Found a node that is restarting: %+v", riakNode.CurrentID())
+			currentlyRestarting = currentlyRestarting + 1
 			break
 		}
-		log.Infof("Found a node that needs to be restarted: %+v", riakNode.CurrentID())
-		riakNode.Restart(frc.Generation)
 		nodesToRestart[riakNode.CurrentID()] = riakNode
-		stateModified = true
 		break
 	}
 
+	if currentlyRestarting == 0 {
+		for _, riakNode := range nodesToRestart {
+			log.Infof("Found a node that needs to be restarted: %+v", riakNode.CurrentID())
+			riakNode.Restart(frc.Generation)
+			stateModified = true
+			break
+		}
+
+	}
+
 	// If IsRestarting but all nodes already restarted, we're no longer restarting
-	log.Infof("Finished checking nodes for restarts, alreadyRestarted: %+v, length of nodes: %v", alreadyRestarted, len(frc.Nodes))
+	log.Infof("Finished checking nodes for restarts, currentlyRestarting: %v, alreadyRestarted: %+v, length of nodes: %v", currentlyRestarting, alreadyRestarted, len(frc.Nodes))
 	if alreadyRestarted == len(frc.Nodes) {
 		frc.IsRestarting = false
 		stateModified = true
