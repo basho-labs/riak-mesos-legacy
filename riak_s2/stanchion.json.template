@@ -1,0 +1,14 @@
+{
+    "id":"/stanchion",
+    "cmd":"./stanchion/bin/stanchion",
+    "cpus":1.0,
+    "mem":2048.0,
+    "ports":[0],
+    "instances":1,
+    "env":{
+        "RIAKHOSTPORT": "{{.RIAKHOSTPORT}}",
+        "ADMIN_KEY": "{{.ADMIN_KEY}}",
+        "ADMIN_SECRET": "{{.ADMIN_SECRET}}"
+    },
+    "uris": ["http://master.mesos:8000/stanchion-bin.tar.gz"]
+}

@@ -1,0 +1,51 @@
+#!/bin/bash
+
+readonly DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+readonly RIAKS2DIR="${DIR}"/../riak-s2
+readonly RIAKS2="${RIAKS2DIR}"/bin/riak-cs
+readonly RIAKS2CONF="${RIAKS2DIR}"/etc/riak-cs.conf
+readonly STANCHIONDIR="${DIR}"/../stanchion
+readonly STANCHION="${STANCHIONDIR}"/bin/stanchion
+readonly STANCHIONCONF="${STANCHIONDIR}"/etc/stanchion.conf
+
+main() {
+    echo "Running checks for proper environment:"
+    echo "Checking that Riak S2 directory exists"
+    [ -d "${RIAKS2DIR}" ] || exit
+    echo "Checking for riak-cs executable"
+    [ -x "${RIAKS2}" ] || exit
+    echo "Checking that Stanchion directory exists"
+    [ -d "${STANCHIONDIR}" ] || exit
+    echo "Checking for stanchion executable"
+    [ -x "${STANCHION}" ] || exit
+    echo "Checking that PORT0 is set for Riak S2"
+    [ -n "${PORT0}" ] || exit
+    echo "Checking that PORT1 is set for Stanchion"
+    [ -n "${PORT1}" ] || exit
+    echo "Checking that RIAKHOSTPORT is set"
+    [ -n "${RIAKHOSTPORT}" ] || exit
+    echo "Checking if HOME is set..."
+    if [ -z "${HOME}" ]; then
+        echo "Setting HOME to $PWD"...
+        export HOME="${PWD}"
+    fi
+
+    echo "Configuring Riak and Stanchion to connect to Riak on host/port: $RIAKHOSTPORT..."
+    perl -pi -e "s/riak_host = .*/riak_host = ${RIAKHOSTPORT}/" "${RIAKS2CONF}"
+    perl -pi -e "s/riak_host = .*/riak_host = ${RIAKHOSTPORT}/" "${STANCHIONCONF}"
+    echo "Configuring Riak S2 to listen on 0.0.0.0:${PORT0}..."
+    perl -pi -e "s/listener = .*/listener = 0.0.0.0:${PORT0}/" "${RIAKS2CONF}"
+    echo "Configuring Stanchion to use port ${PORT1}..."
+    perl -pi -e "s/listener = .*/listener = 127.0.0.1:${PORT1}/" "${STANCHIONCONF}"
+    perl -pi -e "s/stanchion_host = .*/stanchion_host = 127.0.0.1:${PORT1}/" "${RIAKS2CONF}"
+
+    echo "Enabling anonymous user creation.."
+    perl -pi -e "s/anonymous_user_creation = off/anonymous_user_creation = on/" "${RIAKS2CONF}"
+
+    echo "Starting Stanchion..."
+    "${STANCHION}" start
+    echo "Starting Riak S2..."
+    "${RIAKS2}" console -noinput
+}
+
+main "$@"

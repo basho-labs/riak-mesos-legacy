@@ -1,0 +1,9 @@
+{
+    "riak": {
+        "master": "zk://master.mesos:2181/mesos",
+        "zk": "master.mesos:2181",
+        "user": "root",
+        "framework-name": "riak",
+        "url": "http://master.mesos:8000/riak_mesos_linux_amd64_0.2.0.tar.gz"
+    }
+}

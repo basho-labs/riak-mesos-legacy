@@ -1,0 +1,21 @@
+{
+    "id":"/riak-s2-init",
+    "cmd":"./riak-s2-init/bin/riak-s2-init",
+    "cpus":1.0,
+    "mem":2048.0,
+    "ports":[0,0],
+    "instances":1,
+    "env":{
+        "RIAKHOSTPORT": "{{.RIAKHOSTPORT}}"
+    },
+    "uris": ["http://master.mesos:8000/riak-s2-init-bin.tar.gz"],
+    "healthChecks": [{
+        "protocol": "HTTP",
+        "path": "/riak-cs/ping",
+        "gracePeriodSeconds": 3,
+        "intervalSeconds": 10,
+        "portIndex": 0,
+        "timeoutSeconds": 10,
+        "maxConsecutiveFailures": 3
+    }]
+}
