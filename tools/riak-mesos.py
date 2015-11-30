@@ -43,7 +43,8 @@ def usage():
     print('    framework install')
     print('    framework uninstall')
     print('    framework endpoints')
-    print('    cluster config')
+    print('    cluster config [--file]')
+    print('    cluster config advanced [--file]')
     print('    cluster list [--json]')
     print('    cluster create')
     print('    cluster restart')
@@ -467,6 +468,7 @@ def debug(debug_flag, debug_string):
 
 def run(args):
     args, config_file = extract_option(args, '--config', os.path.dirname(__file__) + '/' + 'config.json')
+    args, riak_file = extract_option(args, '--file', '')
     args, json_flag = extract_flag(args, '--json')
     args, help_flag = extract_flag(args, '--help')
     args, debug_flag = extract_flag(args, '--debug')
@@ -630,14 +632,42 @@ def run(args):
         #         print('No clusters created')
     elif cmd == 'cluster config':
         if help_flag:
-            print('Retrieves riak configuration details for cluster')
+            print('Gets or sets the riak.conf configuration for a cluster, specify cluster id with --cluster and config file location with --file')
         else:
-            r = requests.get(service_url + 'clusters/' + cluster)
-            debug_request(debug_flag, r)
-            if r.status_code == 200:
-                format_json_fact('Cluster: ', r.text, 'Name', 'Error getting cluster.')
+            if riak_file != '':
+                with open(riak_file) as data_file:
+                    r = requests.post(service_url + 'clusters/' + cluster + '/config', data=data_file)
+                    debug_request(debug_flag, r)
+                    if r.status_code != 200:
+                        print('Failed to set riak.conf, status_code: ' + str(r.status_code))
+                    else:
+                        print('riak.conf updated')
             else:
-                print('Cluster not created.')
+                r = requests.get(service_url + 'clusters/' + cluster)
+                debug_request(debug_flag, r)
+                if r.status_code == 200:
+                    format_json_fact('riak.conf: ', r.text, 'RiakConfig', 'Error getting cluster.')
+                else:
+                    print('Cluster not created.')
+    elif cmd == 'cluster config advanced':
+        if help_flag:
+            print('Gets or sets the advanced.config configuration for a cluster, specify cluster id with --cluster and config file location with --file')
+        else:
+            if riak_file != '':
+                with open(riak_file) as data_file:
+                    r = requests.post(service_url + 'clusters/' + cluster + '/advancedConfig', data=data_file)
+                    debug_request(debug_flag, r)
+                    if r.status_code != 200:
+                        print('Failed to set advanced.config, status_code: ' + str(r.status_code))
+                    else:
+                        print('advanced.config updated')
+            else:
+                r = requests.get(service_url + 'clusters/' + cluster)
+                debug_request(debug_flag, r)
+                if r.status_code == 200:
+                    format_json_fact('advanced.config: ', r.text, 'AdvancedConfig', 'Error getting cluster.')
+                else:
+                    print('Cluster not created.')
     elif cmd == 'cluster list' or cmd == 'cluster':
         if help_flag:
             print('Retrieves a list of cluster names')
