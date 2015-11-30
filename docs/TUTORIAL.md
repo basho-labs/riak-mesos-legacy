@@ -196,14 +196,134 @@ riak-mesos node transfers --node riak-default-1
 
 ## Update the Cluster Configuration
 
+You can customize the `riak.conf` and `advanced.config` for a cluster if necessary. Use [scheduler/data/riak.conf](https://github.com/basho-labs/riak-mesos/blob/master/scheduler/data/riak.conf) and [scheduler/data/advanced.config](https://github.com/basho-labs/riak-mesos/blob/master/scheduler/data/advanced.config) as templates to make your changes to. It is important that all of the values specified with `{{...}}` remain intact.
+
+Once you have created your customized versions of these files, you can save them to the cluster using the following commands:
+
+### Update riak.conf
+
+```
+riak-mesos cluster config --file /path/to/your/riak.conf
+```
+
+### Update advanced.config
+
+```
+riak-mesos cluster config advanced --file /path/to/your/advanced.config
+```
+
+***Note:*** If you already have nodes running in a cluster, you'll need to perform a `riak-mesos cluster restart` to force the cluster to pick up the new changes.
+
 ## Restart the Cluster
+
+If your Riak cluster is in a stable state (no active transfers, ringready is true), there are certain situations where you might want to perform a rolling restart on your cluster. Execute the following to restart your cluster:
+
+```
+riak-mesos cluster restart
+```
+
+Situations where a cluster restart is required include:
+
+* Changes to `riak.conf`
+* Changes to `advanced.config`
+* Upgrading to a new version of RMF / Riak
 
 ## Install the Proxy
 
+There are a few ways to access the Riak nodes in your cluster, including hosting your own HAProxy and keeping the config updated to include the host names and ports for all of the nodes. This approach can be problematic because the HAProxy config would need to be updated every time there is a change to one of the nodes in the cluster resulting from restarts, task failures, etc.
+
+To account for this difficulty, we've created a smart proxy called `riak mesos director`. The director should keep tabs on the current state of the cluster including all of the hostnames and ports, and it also provides a load balancer / proxy to spread load across all of the nodes.
+
+To install the proxy, simply run:
+
+```
+riak-mesos proxy install
+```
+
 ## Add Some Data
+
+Assuming that the proxy is now running, we can now find an endpoint to talk to Riak with this command:
+
+```
+riak-mesos proxy endpoints
+```
+
+The output should look similar to this:
+
+```
+Load Balanced Riak Cluster (HTTP)
+    http://SOME_AGENT_HOSTNAME:31026
+Load Balanced Riak Cluster (Protobuf)
+    http://SOME_AGENT_HOSTNAME:31027
+Riak Mesos Director API (HTTP)
+    http://SOME_AGENT_HOSTNAME:31028
+```
+
+Let's write a few keys to the cluster using the proxy:
+
+```
+RIAK_HTTP=http://SOME_AGENT_HOSTNAME:31026
+curl -XPUT $RIAK_HTTP/buckets/test/keys/one -d "this is data"
+curl -XPUT $RIAK_HTTP/buckets/test/keys/two -d "this is data too"
+```
 
 ## Scale the Cluster Up and Down
 
+### Scale up
+
+When scaling a cluster up, you should attempt to do so days or even weeks before the additional load is expected to allow the cluster some time to transfer partitions around and stabilize. When you are ready to increase the node count, you can just run the `node add` command like so:
+
+```
+riak-mesos node add
+```
+
+Check the status of the node and make sure it was successfully joined to the cluster using:
+
+```
+riak-mesos node status --node riak-default-4
+```
+
+### Scale down
+
+Scaling down requires the same patience as scaling up in that you should be waiting for transfers to complete between each node removal.
+
+Let's remove all but one of the nodes by performing a remove on `riak-default-2`, `riak-default-3`, and `riak-default-4`
+
+```
+riak-mesos node remove --node riak-default-2
+riak-mesos node remove --node riak-default-3
+riak-mesos node remove --node riak-default-4
+```
+
 ## Verify the Data
 
+Now that the cluster has undergone some changes, lets verify the data that was written previously with:
+
+```
+curl $RIAK_HTTP/buckets/test/keys/one
+curl $RIAK_HTTP/buckets/test/keys/two
+```
+
 ## Uninstall the RMF
+
+When you're all done with a cluster and need to uninstall the framework, follow these steps:
+
+### Destroy the Cluster
+
+```
+riak-mesos cluster destroy
+```
+
+### Uninstall the Proxy
+
+```
+riak-mesos proxy uninstall
+```
+
+### Uninstall the framework
+
+```
+riak-mesos framework uninstall
+```
+
+The last step `riak-mesos framework uninstall` can be run multiple times to ensure that all of the Zookeeper data is removed after the riak scheduler is killed.
