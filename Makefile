@@ -114,7 +114,7 @@ build_schroot:
 	cd process_manager/schroot/data && $(MAKE)
 schroot:
 	cd process_manager/schroot/data && $(MAKE) -f download.make
-sync: sync_schroot
+# sync: sync_schroot
 sync_schroot:
 	cd process_manager/schroot/data/ && \
 		s3cmd put --acl-public plain_chroot s3://$(DEPLOY_BASE)/$(DEPLOY_OS)/artifacts/$(PACKAGE_VERSION)/ && \
