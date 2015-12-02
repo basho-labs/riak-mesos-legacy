@@ -1,0 +1,27 @@
+{
+    "id":"/riak-s2-{{.S2NODENUM}}",
+    "cmd":"./riak-s2/bin/riak-s2",
+    "cpus":1.0,
+    "mem":2048.0,
+    "ports":[0],
+    "instances":1,
+    "env":{
+        "RIAKHOSTPORT": "{{.RIAKHOSTPORT}}",
+        "STANCHIONHOSTPORT": "{{.STANCHIONHOSTPORT}}",
+        "ADMIN_KEY": "{{.ADMIN_KEY}}",
+        "ADMIN_SECRET": "{{.ADMIN_SECRET}}"
+    },
+    "constraints": [
+        [ "hostname", "CLUSTER", "{{.RIAKHOSTNAME}}" ]
+    ],
+    "uris": ["http://master.mesos:8000/riak-s2-bin.tar.gz"],
+    "healthChecks": [{
+        "protocol": "HTTP",
+        "path": "/riak-cs/ping",
+        "gracePeriodSeconds": 3,
+        "intervalSeconds": 10,
+        "portIndex": 0,
+        "timeoutSeconds": 10,
+        "maxConsecutiveFailures": 3
+    }]
+}

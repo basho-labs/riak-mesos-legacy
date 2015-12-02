@@ -1,0 +1,45 @@
+#!/bin/bash
+
+readonly DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+readonly RIAKS2DIR="${DIR}"/../riak-s2
+readonly RIAKS2="${RIAKS2DIR}"/bin/riak-cs
+readonly RIAKS2CONF="${RIAKS2DIR}"/etc/riak-cs.conf
+
+main() {
+    echo "Running checks for proper environment:"
+    echo "Checking that RiakS2 directory exists"
+    [ -d "${RIAKS2DIR}" ] || exit
+    echo "Checking for riak-s2 executable"
+    [ -x "${RIAKS2}" ] || exit
+    echo "Checking that RIAKHOSTPORT is set"
+    [ -n "${RIAKHOSTPORT}" ] || exit
+    echo "Checking that STANCHIONHOSTPORT is set"
+    [ -n "${STANCHIONHOSTPORT}" ] || exit
+    echo "Checking that PORT0 is set"
+    [ -n "${PORT0}" ] || exit
+    echo "Checking that ADMIN_KEY is set"
+    [ -n "${ADMIN_KEY}" ] || exit
+    echo "Checking that ADMIN_SECRET is set"
+    [ -n "${ADMIN_SECRET}" ] || exit
+    echo "Checking if HOME is set..."
+    if [ -z "${HOME}" ]; then
+        echo "Setting HOME to ${PWD}"...
+        export HOME="${PWD}"
+    fi
+
+    echo "Configuring Riak S2 to connect to Riak on host/port: ${RIAKHOSTPORT}..."
+    perl -pi -e "s/riak_host = .*/riak_host = ${RIAKHOSTPORT}/" "${RIAKS2CONF}"
+    echo "Configuring Riak S2 to connect to Stanchion on host/port: ${STANCHIONHOSTPORT}..."
+    perl -pi -e "s/stanchion_host = .*/stanchion_host = ${STANCHIONHOSTPORT}/" "${RIAKS2CONF}"
+    echo "Configuring Riak S2 to listen on 0.0.0.0:${PORT0}..."
+    perl -pi -e "s/listener = .*/listener = 0.0.0.0:${PORT0}/" "${RIAKS2CONF}"
+
+    echo "Configuring Riak S2 with admin user..."
+    perl -pi -e "s/admin.key = admin-key/admin.key = $ADMIN_KEY/" "${RIAKS2CONF}"
+    perl -pi -e "s/admin.secret = admin-secret/admin.secret = $ADMIN_SECRET/" "${RIAKS2CONF}"
+
+    echo "Starting Riak S2..."
+    "${RIAKS2}" console -noinput
+}
+
+main "$@"
