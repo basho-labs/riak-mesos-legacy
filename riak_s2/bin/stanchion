@@ -1,0 +1,41 @@
+#!/bin/bash
+
+readonly DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+readonly STANCHIONDIR="${DIR}"/../stanchion
+readonly STANCHION="${STANCHIONDIR}"/bin/stanchion
+readonly STANCHIONCONF="${STANCHIONDIR}"/etc/stanchion.conf
+
+main() {
+    echo "Running checks for proper environment:"
+    echo "Checking that Stanchion directory exists"
+    [ -d "${STANCHIONDIR}" ] || exit
+    echo "Checking for stanchion executable"
+    [ -x "${STANCHION}" ] || exit
+    echo "Checking that PORT0 is set"
+    [ -n "${PORT0}" ] || exit
+    echo "Checking that RIAKHOSTPORT is set"
+    [ -n "${RIAKHOSTPORT}" ] || exit
+    echo "Checking that ADMIN_KEY is set"
+    [ -n "${ADMIN_KEY}" ] || exit
+    echo "Checking that ADMIN_SECRET is set"
+    [ -n "${ADMIN_SECRET}" ] || exit
+    echo "Checking if HOME is set..."
+    if [ -z "${HOME}" ]; then
+        echo "Setting HOME to $PWD"...
+        export HOME="${PWD}"
+    fi
+
+    echo "Configuring Stanchion to connect to Riak on host/port: ${RIAKHOSTPORT}..."
+    perl -pi -e "s/riak_host = .*/riak_host = ${RIAKHOSTPORT}/" "${STANCHIONCONF}"
+    echo "Configuring Stanchion to listen on 0.0.0.0:${PORT0}..."
+    perl -pi -e "s/listener = .*/listener = 0.0.0.0:${PORT0}/" "${STANCHIONCONF}"
+
+    echo "Configuring Stanchion with admin user..."
+    perl -pi -e "s/admin.key = admin-key/admin.key = $ADMIN_KEY/" "${STANCHIONCONF}"
+    perl -pi -e "s/admin.secret = admin-secret/admin.secret = $ADMIN_SECRET/" "${STANCHIONCONF}"
+
+    echo "Starting Stanchion..."
+    "${STANCHION}" console -noinput
+}
+
+main "$@"
