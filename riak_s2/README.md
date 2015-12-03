@@ -24,6 +24,9 @@ This will build the tarballs needed for Riak, the initial Riak S2 deployment,
 Riak S2, and Stanchion.  They will be placed in the `_build` directory ready to
 be served, as shown below.
 
+But, the artifacts are all built and deployed to Amazon AWS so a local build is
+not necessary.
+
 ## Configuration and Customization
 
 You will want to make changes to the following before deploying:
@@ -46,14 +49,22 @@ This setup assumes you are running mesos-dns.  If you are not, you need to edit
 the following files to replace all instances of master.mesos with the hostname
 or IP of your Mesos master node:
 - deploy-complete.sh
-- dcos-riak-local.json
+- dcos-riak.json
+
+The provided configurations and scripts assume that you are pulling the Riak
+Mesos Framework and associated artifacts from the Riak Tools Amazon AWS site.
+If you are doing a local build, edit the URIs in the following files:
+- dcos-riak.json
 - riak-s2-init.json.template
 - riak-s2.json.template
 - stanchion.json.template
 
-The provided configurations and scripts assume that the Riak Mesos Framework has
-been compiled locally and that you are serving the `_build` directory from the
-Mesos master node:
+Additionally, the URIs are for deploying to a CentOS host, however, Ubuntu and
+CoreOS are also supported.  If you are deploying to one of those, edit the URIs
+in the above files, replacing `centos` with `coreos` or `ubuntu`.
+
+If you have built locally using the directions above, all of the artifacts will
+be in the `_build` directory.  Serve them using this:
 
 ```
 cd riak-mesos/_build
@@ -62,8 +73,8 @@ python -m SimpleHTTPServer
 
 ## Deploying Riak and Riak S2
 
-After the `_build` directory is shared and you've made the necessary
-configuration changes to `deploy-complete.sh`, run:
+After you've made the necessary configuration changes to `deploy-complete.sh`,
+run:
 
 ```
 ./deploy-complete.sh
