@@ -261,6 +261,7 @@ $(BUILD_DIR)/dcos-repo-$(PACKAGE_VERSION).zip:
 	-rm -rf $(BUILD_DIR)/dcos-repo-*
 	mkdir -p $(BUILD_DIR)/
 	git clone https://github.com/mesosphere/universe.git $(BUILD_DIR)/dcos-repo-$(PACKAGE_VERSION)
+	rm -rf $(BUILD_DIR)/dcos-repo-$(PACKAGE_VERSION)/.git
 	cp -R dcos/repo/* $(BUILD_DIR)/dcos-repo-$(PACKAGE_VERSION)/repo/
 	cd $(BUILD_DIR) && zip -r dcos-repo-$(PACKAGE_VERSION).zip dcos-repo-$(PACKAGE_VERSION)
 sync: sync_repo
