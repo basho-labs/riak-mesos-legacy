@@ -61,22 +61,29 @@ clean_executor:
 build_artifacts_native:
 	cd artifacts/data && $(MAKE) native
 	go generate -tags=$(TAGS) ./artifacts
+	cd artifacts/data && cp riak-s2-bin.tar.gz riak-s2-init-bin.tar.gz stanchion-bin.tar.gz $(BUILD_DIR)
 build_artifacts:
 	cd artifacts/data && $(MAKE)
 	go generate -tags=$(TAGS) ./artifacts
+	cd artifacts/data && cp riak-s2-bin.tar.gz riak-s2-init-bin.tar.gz stanchion-bin.tar.gz $(BUILD_DIR)
 artifacts:
 	cd artifacts/data && $(MAKE) -f download.make
 	go generate -tags=$(TAGS) ./artifacts
+	cd artifacts/data && cp riak-s2-bin.tar.gz riak-s2-init-bin.tar.gz stanchion-bin.tar.gz $(BUILD_DIR)
 sync: sync_artifacts
 sync_artifacts:
 	cd artifacts/data/ && \
 		s3cmd put --acl-public riak-bin.tar.gz s3://$(DEPLOY_BASE)/$(DEPLOY_OS)/artifacts/$(PACKAGE_VERSION)/ && \
 		s3cmd put --acl-public riak_mesos_director-bin.tar.gz s3://$(DEPLOY_BASE)/$(DEPLOY_OS)/artifacts/$(PACKAGE_VERSION)/ && \
+		s3cmd put --acl-public riak-s2-bin.tar.gz s3://$(DEPLOY_BASE)/$(DEPLOY_OS)/artifacts/$(PACKAGE_VERSION)/ && \
+		s3cmd put --acl-public riak-s2-init-bin.tar.gz s3://$(DEPLOY_BASE)/$(DEPLOY_OS)/artifacts/$(PACKAGE_VERSION)/ && \
+		s3cmd put --acl-public stanchion-bin.tar.gz s3://$(DEPLOY_BASE)/$(DEPLOY_OS)/artifacts/$(PACKAGE_VERSION)/ && \
 		s3cmd put --acl-public trusty.tar.gz s3://$(DEPLOY_BASE)/$(DEPLOY_OS)/artifacts/$(PACKAGE_VERSION)/
 clean: clean_artifacts
 clean_artifacts:
 	cd artifacts/data && $(MAKE) clean
 	-rm -rf artifacts/bindata_generated.go
+	-rm -rf $(BUILD_DIR)/riak-s2-bin.tar.gz $(BUILD_DIR)/riak-s2-init-bin.tar.gz $(BUILD_DIR)/stanchion-bin.tar.gz
 ### Artifact end
 
 ### Tools begin
