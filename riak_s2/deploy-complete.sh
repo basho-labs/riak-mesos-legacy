@@ -31,7 +31,7 @@ echo ""
 echo "### Starting the Framework"
 echo ""
 
-dcos package install --yes riak --options=dcos-riak-local.json
+dcos package install --yes riak --options=dcos-riak.json
 
 echo ""
 echo ""
