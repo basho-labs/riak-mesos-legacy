@@ -10,6 +10,20 @@ The provided deployment scripts and configuration deploys one Riak S2 instance
 per Riak node, requesting the Riak S2 instance be allocated to the same host as
 the Riak node.  The deployment automatically creates the Riak S2 admin user.
 
+## Building Riak and Riak S2 packages
+
+In order to deploy Riak S2 to Mesos, you need a custom build of Riak and Riak
+S2.  If you want to do a local build, run the following from the top-level
+directory of the repository:
+
+```
+TAGS='"rel native"' make rebuild_all_native
+```
+
+This will build the tarballs needed for Riak, the initial Riak S2 deployment,
+Riak S2, and Stanchion.  They will be placed in the `_build` directory ready to
+be served, as shown below.
+
 ## Configuration and Customization
 
 You will want to make changes to the following before deploying:
