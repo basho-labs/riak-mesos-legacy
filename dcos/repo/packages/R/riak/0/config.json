@@ -1,6 +1,17 @@
 {
   "type": "object",
       "properties": {
+        "director": {
+          "type": "object",
+          "depscription": "Riak Mesos Proxy specific properties",
+          "properties": {
+            "url": {
+              "type": "string",
+              "description": "The URL of the Proxy package",
+              "default": "http://riak-tools.s3.amazonaws.com/riak-mesos/coreos/riak_mesos_director_linux_amd64_0.2.0.tar.gz"
+            }
+          }
+        },
         "riak": {
           "type": "object",
           "depscription": "Riak Mesos Framework specific properties",
@@ -40,7 +51,7 @@
             "role": {
               "type": "string",
               "description": "Framework Role.",
-              "default": "*"
+              "default": "riak"
             },
             "url": {
                 "type": "string",
