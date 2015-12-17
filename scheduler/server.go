@@ -431,14 +431,16 @@ func (schttp *SchedulerHTTPServer) nodeCreateType(w http.ResponseWriter, r *http
 	rexHostname := fmt.Sprintf("%s:%d", node.Hostname, node.TaskData.HTTPPort)
 	rexc := rexclient.NewRiakExplorerClient(rexHostname)
 
-	if _, err := rexc.CreateBucketTypeJSON(node.TaskData.FullyQualifiedNodeName, bucketType, string(data)); err != nil {
-		w.WriteHeader(503)
-		fmt.Fprintln(w, "Unable to create bucket type: ", err)
+	body, err := rexc.CreateBucketTypeJSON(node.TaskData.FullyQualifiedNodeName, bucketType, string(data))
+
+	if err != nil {
 		log.Error("Unable to create bucket type: ", err)
+		w.WriteHeader(500)
+		fmt.Fprintf(w, body)
 		return
 	}
-	w.WriteHeader(204)
-	fmt.Fprintf(w, "Created and activated bucket type %s", bucketType)
+	w.WriteHeader(200)
+	fmt.Fprintf(w, body)
 }
 
 type simpleNode struct {
