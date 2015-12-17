@@ -820,10 +820,11 @@ def run(args):
             else:
                 r = requests.post(service_url + 'clusters/' + cluster + '/nodes/' + node + '/types/' + bucket_type, data=props)
                 debug_request(debug_flag, r)
-                if r.status_code != 204:
+                if r.status_code != 200:
                     print('Failed to create bucket-type, status_code: ' + str(r.status_code))
+                    format_json_object('', r.text, '', '{}')
                 else:
-                    print('Bucket type created')
+                    format_json_object('', r.text, '', '{}')
     elif cmd == 'node bucket-type list':
         if help_flag:
             print('Gets the bucket type list from a node, specify node id with --node')

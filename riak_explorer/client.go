@@ -72,8 +72,6 @@ func (client *RiakExplorerClient) CreateBucketTypeJSON(node string, bucketType s
 	if err != nil {
 		return body, err
 	}
-	// Need to perform the post twice to actually activate the type
-	body, err = client.doPutWithData(commandURI, strings.NewReader(props))
 	return body, err
 }
 
