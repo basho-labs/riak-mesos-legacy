@@ -192,15 +192,16 @@ func (frn *FrameworkRiakNode) ApplyReservedOffer(offerHelper *common.OfferHelper
 			Name:       proto.String(execName),
 			Source:     proto.String(frn.FrameworkName),
 			Command: &mesos.CommandInfo{
-				Value: proto.String(sc.schedulerHTTPServer.executorName),
+				Value: proto.String("./riak_mesos_executor/bin/ermf-executor"),
 				Uris: []*mesos.CommandInfo_URI{
 					&mesos.CommandInfo_URI{
 						Value:      &(sc.schedulerHTTPServer.hostURI),
-						Executable: proto.Bool(true),
+						Executable: proto.Bool(false),
 					},
 				},
-				Shell:     proto.Bool(false),
-				Arguments: []string{sc.schedulerHTTPServer.executorName, "-logtostderr=true", "-taskinfo", frn.CurrentID()},
+				Shell: proto.Bool(false),
+				// Arguments: []string{sc.schedulerHTTPServer.executorName, "-logtostderr=true", "-taskinfo", frn.CurrentID()},
+				Arguments: []string{},
 			},
 			Resources: execAsk,
 		},
