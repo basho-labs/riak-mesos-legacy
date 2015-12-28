@@ -246,10 +246,10 @@ package_dcos: $(BUILD_DIR)/dcos-riak-$(PACKAGE_VERSION).tar.gz
 $(BUILD_DIR)/dcos-riak-$(PACKAGE_VERSION).tar.gz:
 	-rm -rf $(BUILD_DIR)/dcos-riak-*
 	mkdir -p $(BUILD_DIR)/
-	cp tools/riak-mesos.py dcos/dcos-riak/dcos_riak/cli.py
-	cp bin/zktool_linux_amd64 dcos/dcos-riak/dcos_riak/zktool_linux_amd64.py
-	cp bin/zktool_darwin_amd64 dcos/dcos-riak/dcos_riak/zktool_darwin_amd64.py
 	cp -R dcos/dcos-riak $(BUILD_DIR)/dcos-riak-$(PACKAGE_VERSION)
+	cp tools/riak-mesos.py $(BUILD_DIR)/dcos-riak-$(PACKAGE_VERSION)/dcos_riak/cli.py
+	cp bin/zktool_linux_amd64 $(BUILD_DIR)/dcos-riak-$(PACKAGE_VERSION)/dcos_riak/zktool_linux_amd64.py
+	cp bin/zktool_darwin_amd64 $(BUILD_DIR)/dcos-riak-$(PACKAGE_VERSION)/dcos_riak/zktool_darwin_amd64.py
 	cd $(BUILD_DIR) && tar -zcvf dcos-riak-$(PACKAGE_VERSION).tar.gz dcos-riak-$(PACKAGE_VERSION)
 #sync: sync_dcos
 sync_dcos:
