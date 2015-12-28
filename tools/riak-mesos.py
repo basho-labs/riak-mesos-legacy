@@ -117,7 +117,7 @@ def _default_framework_config():
 
 def _is_dcos():
     this_file = os.path.basename(__file__)
-    return this_file == 'cli.py'
+    return this_file == 'cli.py' or this_file == 'cli.pyc'
 
 def _dcos_api_url(client, framework):
     tasks = client.get_tasks(framework)
