@@ -1,2 +1,2 @@
-include dcos_riak/zktool_linux_amd64
-include dcos_riak/zktool_darwin_amd64
+include *_amd64
+include *_amd64

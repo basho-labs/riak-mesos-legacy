@@ -69,7 +69,9 @@ setup(
         'dev': ['check-manifest'],
         'test': ['coverage'],
     },
-    package_data={},
+    # package_data={},
+    package_data={'': ['dcos_riak/zktool_darwin_amd64','dcos_riak/zktool_linux_amd64']},
+    include_package_data=True,
     data_files=[],
 
     # To provide executable scripts, use entry points in preference to the
