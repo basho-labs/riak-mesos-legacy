@@ -164,12 +164,21 @@ class Config(object):
     def api_url(self):
         framework = self.get('framework-name')
         client = create_client(self.get_any('marathon', 'url'))
+        dcos_url = False
+
         # Try DCOS First
         if _is_dcos():
-            dcos_url = _dcos_api_url(client, framework)
-            r = requests.get(dcos_url + 'healthcheck')
-            if r.status_code == 200:
-                return dcos_url
+            try:
+                service_url = _dcos_api_url(client, framework)
+                r = requests.get(dcos_url + 'healthcheck')
+                if r.status_code == 200:
+                    dcos_url = service_url
+            except:
+                dcos_url = False
+
+        if dcos_url != False:
+            return dcos_url
+
         try:
             # Try Marathon
             tasks = client.get_tasks(framework)
