@@ -2,7 +2,7 @@ Metadata-Version: 1.1
 Name: dcos-riak
 Version: 0.2.0
 Summary: DCOS Riak Command Line Interface
-Home-page: https://github.com/basho-labs/riak-mesos/tree/master/cli
+Home-page: https://github.com/basho-labs/riak-mesos
 Author: Basho Technologies, Inc.
 Author-email: support@basho.com
 License: UNKNOWN

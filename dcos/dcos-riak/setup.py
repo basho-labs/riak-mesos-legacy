@@ -37,7 +37,7 @@ setup(
     long_description=long_description,
 
     # The project's main homepage.
-    url='https://github.com/basho-labs/riak-mesos/tree/master/cli',
+    url='https://github.com/basho-labs/riak-mesos',
 
     # Author details
     author='Basho Technologies, Inc.',
@@ -59,6 +59,7 @@ setup(
     keywords='dcos command riak mesosphere',
     packages=find_packages(exclude=['contrib', 'docs', 'tests*']),
     install_requires=[
+        'kazoo',
         'dcos>=0.1.6, <1.0',
         'docopt',
         'toml',

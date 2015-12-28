@@ -211,8 +211,8 @@ $(BUILD_DIR)/riak_mesos_cli_$(PACKAGE_VERSION).tar.gz:
 	-rm -rf $(BUILD_DIR)/riak_mesos_cli
 	mkdir -p $(BUILD_DIR)/riak_mesos_cli
 	cp bin/riak-mesos $(BUILD_DIR)/riak_mesos_cli/
-	cp bin/zktool_linux_amd64 $(BUILD_DIR)/riak_mesos_cli/
-	cp bin/zktool_darwin_amd64 $(BUILD_DIR)/riak_mesos_cli/
+	cp bin/zktool_linux_amd64 $(BUILD_DIR)/riak_mesos_cli/zktool_linux_amd64
+	cp bin/zktool_darwin_amd64 $(BUILD_DIR)/riak_mesos_cli/zktool_darwin_amd64
 	cd $(BUILD_DIR)/riak_mesos_cli/ && ./riak-mesos config --json | python -m json.tool > tmp.json
 	mv $(BUILD_DIR)/riak_mesos_cli/tmp.json $(BUILD_DIR)/riak_mesos_cli/config.json
 	echo "Thank you for downloading Riak Mesos Framework CLI tools. Run './riak-mesos --help' to get started. Please visit https://github.com/basho-labs/riak-mesos for usage information." > $(BUILD_DIR)/riak_mesos_cli/INSTALL.txt
@@ -234,10 +234,8 @@ package_dcos: $(BUILD_DIR)/dcos-riak-$(PACKAGE_VERSION).tar.gz
 $(BUILD_DIR)/dcos-riak-$(PACKAGE_VERSION).tar.gz:
 	-rm -rf $(BUILD_DIR)/dcos-riak-*
 	mkdir -p $(BUILD_DIR)/
-	cp tools/riak-mesos.py dcos/dcos-riak/dcos_riak/cli.py
-	cp bin/zktool_linux_amd64 dcos/dcos-riak/dcos_riak/
-	cp bin/zktool_darwin_amd64 dcos/dcos-riak/dcos_riak/
 	cp -R dcos/dcos-riak $(BUILD_DIR)/dcos-riak-$(PACKAGE_VERSION)
+	cp tools/riak-mesos.py $(BUILD_DIR)/dcos-riak-$(PACKAGE_VERSION)/dcos_riak/cli.py
 	cd $(BUILD_DIR) && tar -zcvf dcos-riak-$(PACKAGE_VERSION).tar.gz dcos-riak-$(PACKAGE_VERSION)
 #sync: sync_dcos
 sync_dcos:

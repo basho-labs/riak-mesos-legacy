@@ -117,7 +117,7 @@ def _default_framework_config():
 
 def _is_dcos():
     this_file = os.path.basename(__file__)
-    return this_file == 'cli.py'
+    return this_file == 'cli.py' or this_file == 'cli.pyc'
 
 def _dcos_api_url(client, framework):
     tasks = client.get_tasks(framework)
@@ -137,6 +137,15 @@ class Config(object):
                 data = json.load(data_file)
                 self._merge(data)
 
+    def _kazoo_api_url(self):
+        from kazoo.client import KazooClient
+        zk = KazooClient(hosts=self.get('zk'))
+        zk.start()
+        node='/riak/frameworks/' + self.get('framework-name') + '/uri'
+        data, stat = zk.get(node)
+        zk.stop()
+        return data.decode("utf-8").strip() + '/'
+
     def _zktool_api_url(self):
         tool = ''
         if _platform == 'linux' or _platform == 'linux2':
@@ -155,12 +164,21 @@ class Config(object):
     def api_url(self):
         framework = self.get('framework-name')
         client = create_client(self.get_any('marathon', 'url'))
+        dcos_url = False
+
         # Try DCOS First
         if _is_dcos():
-            dcos_url = _dcos_api_url(client, framework)
-            r = requests.get(dcos_url + 'healthcheck')
-            if r.status_code == 200:
-                return dcos_url
+            try:
+                service_url = _dcos_api_url(client, framework)
+                r = requests.get(dcos_url + 'healthcheck')
+                if r.status_code == 200:
+                    dcos_url = service_url
+            except:
+                dcos_url = False
+
+        if dcos_url != False:
+            return dcos_url
+
         try:
             # Try Marathon
             tasks = client.get_tasks(framework)
@@ -172,7 +190,10 @@ class Config(object):
             return self._zktool_api_url()
         except requests.exceptions.ConnectionError:
             # Marathon isn't running, try zktool
-            return self._zktool_api_url()
+            if os.path.isfile(os.path.dirname(__file__) + '/zktool_linux_amd64'):
+                return self._zktool_api_url()
+            else:
+                return self._kazoo_api_url()
         except Exception as e:
             raise CliError('Unable to get api url: ' + e.message)
 
@@ -531,12 +552,19 @@ def run(args):
                 output += '\nUnable to uninstall marathon app'
             try:
                 output = '\nRemoving zookeeper information\n'
-                tool = ''
-                if _platform == 'linux' or _platform == 'linux2':
-                    tool = 'zktool_linux_amd64'
-                elif _platform == 'darwin':
-                    tool = 'zktool_darwin_amd64'
-                output += os.popen(os.path.dirname(__file__) + '/' + tool + ' -zk=' + config.get('zk') + ' -name=/riak/frameworks/' + config.get('framework-name') + ' -command=zk-delete').read()
+                if os.path.isfile(os.path.dirname(__file__) + '/zktool_linux_amd64'):
+                    tool = ''
+                    if _platform == 'linux' or _platform == 'linux2':
+                        tool = 'zktool_linux_amd64'
+                    elif _platform == 'darwin':
+                        tool = 'zktool_darwin_amd64'
+                    output += os.popen(os.path.dirname(__file__) + '/' + tool + ' -zk=' + config.get('zk') + ' -name=/riak/frameworks/' + config.get('framework-name') + ' -command=zk-delete').read()
+                else:
+                    from kazoo.client import KazooClient
+                    zk = KazooClient(hosts=config.get('zk'))
+                    zk.start()
+                    zk.delete('/riak', recursive=True)
+                    zk.stop()
             except Exception as e:
                 print(e.message)
                 output += '\nUnable to remove zookeeper metadata for framework'
