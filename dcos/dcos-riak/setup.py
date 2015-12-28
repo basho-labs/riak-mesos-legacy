@@ -37,7 +37,7 @@ setup(
     long_description=long_description,
 
     # The project's main homepage.
-    url='https://github.com/basho-labs/riak-mesos/tree/master/cli',
+    url='https://github.com/basho-labs/riak-mesos',
 
     # Author details
     author='Basho Technologies, Inc.',
