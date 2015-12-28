@@ -108,7 +108,7 @@ executor-bin: riak_explorer-bin $(EXECUTOR_SOURCE_PKG) OTP_R16B02_basho8-bin
 	cd $(EXECUTOR_SOURCE_DIR) && PATH=$(PREFIX)OTP_R16B02_basho8-bin/bin:$(PATH) $(MAKE) rel
 	touch executor-bin
 riak_mesos_executor.tar.gz: executor-bin
-	tar -C $(EXECUTOR_SOURCE_DIR)/rel/ -czf riak_mesos_executor.tar.gz riak || rm -rf riak_mesos_executor.tar.gz
+	tar -C $(EXECUTOR_SOURCE_DIR)/rel/ -czf riak_mesos_executor.tar.gz riak_mesos_executor || rm -rf riak_mesos_executor.tar.gz
 clean: clean_executor clean_executor_tar
 clean_executor:
 	-rm -rf $(EXECUTOR_SOURCE_PKG) $(EXECUTOR_SOURCE_DIR)
