@@ -27,9 +27,10 @@ REAL_GOPATH=$GOPATH
 gvm use go1.4
 export GOPATH=$REAL_GOPATH
 rm -rf $GOPATH/src/github.com/mesos/mesos-go
-git clone https://github.com/basho-labs/mesos-go.git $GOPATH/src/github.com/mesos/mesos-go
+# git clone https://github.com/basho-labs/mesos-go.git $GOPATH/src/github.com/mesos/mesos-go
+git clone https://github.com/mesos/mesos-go.git $GOPATH/src/github.com/mesos/mesos-go
 cd $GOPATH/src/github.com/mesos/mesos-go
-git checkout ack-accept-offers
+# git checkout ack-accept-offers
 go get github.com/golang/protobuf/proto
 go get github.com/gogo/protobuf/proto
 go get github.com/gogo/protobuf/protoc-gen-gogo

@@ -20,7 +20,6 @@ artifacts/data/riak-*
 dev-sync.sh
 .cepmd.cepm.bindata_generated
 .director.bindata_generated
-.executor.bindata_generated
 .process_manager.bindata_generated
 .scheduler.bindata_generated
 artifacts/data/riak-bin

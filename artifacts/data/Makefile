@@ -100,6 +100,29 @@ clean_riak_tar:
 	-rm -rf riak-bin.tar.gz riak-bin
 ### Riak end
 
+### Executor begin
+$(RIAK_SOURCE_PKG):
+    git clone
+	curl -C - -O -L $(RIAK_SOURCE_DOWNLOAD)
+executor-bin: riak_explorer-bin $(RIAK_SOURCE_PKG) OTP_R16B02_basho8-bin
+	tar -xvf $(RIAK_SOURCE_PKG)
+	export PATH
+	rm -rf $(RIAK_SOURCE_DIR)/deps/node_package
+	git clone https://github.com/basho/node_package.git --branch no-epmd $(RIAK_SOURCE_DIR)/deps/node_package
+	cd $(RIAK_SOURCE_DIR) && PATH=$(PREFIX)OTP_R16B02_basho8-bin/bin:$(PATH) $(MAKE) rel
+	cp riak_explorer/rel/riak-addon/ebin/* $(RIAK_SOURCE_DIR)/rel/riak/lib/basho-patches/
+	-rm -rf $(RIAK_SOURCE_DIR)/rel/riak/priv
+	cp -R riak_explorer/rel/riak-addon/priv $(RIAK_SOURCE_DIR)/rel/riak/
+	touch executor-bin
+executor-bin.tar.gz: executor-bin
+	tar -C $(RIAK_SOURCE_DIR)/rel/ -czf executor-bin.tar.gz riak || rm -rf executor-bin.tar.gz
+clean: clean_riak clean_riak_tar
+clean_riak:
+	-rm -rf $(RIAK_SOURCE_PKG) $(RIAK_SOURCE_DIR)
+clean_riak_tar:
+	-rm -rf executor-bin.tar.gz executor-bin
+### Executor end
+
 ### Director begin
 riak_mesos_director:
 	git clone --depth=1 https://github.com/basho-labs/riak-mesos-director.git riak_mesos_director

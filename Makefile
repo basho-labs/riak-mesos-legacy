@@ -27,7 +27,7 @@ package: clean_package
 .bin.framework_$(OS_ARCH):
 	go build -o bin/framework_$(OS_ARCH) -tags=$(TAGS) ./framework/
 	$(shell touch .bin.framework_$(OS_ARCH))
-framework: .godep schroot artifacts cepm executor scheduler .bin.framework_$(OS_ARCH)
+framework: .godep schroot artifacts cepm scheduler .bin.framework_$(OS_ARCH)
 clean_bin: clean_framework
 clean_framework:
 	-rm -f .bin.framework_$(OS_ARCH) bin/framework_$(OS_ARCH)
@@ -35,7 +35,7 @@ clean_framework:
 
 ### Scheduler begin
 .PHONY: scheduler clean_scheduler
-.scheduler.bindata_generated: .scheduler.data.executor_$(OS_ARCH) .process_manager.bindata_generated  scheduler/data/advanced.config scheduler/data/riak.conf
+.scheduler.bindata_generated: .process_manager.bindata_generated  scheduler/data/advanced.config scheduler/data/riak.conf
 	go generate -tags=$(TAGS) ./scheduler
 	$(shell touch .scheduler.bindata_generated)
 scheduler: .scheduler.bindata_generated
@@ -43,18 +43,6 @@ clean_bin: clean_scheduler
 clean_scheduler:
 	-rm -rf .scheduler.bindata_generated scheduler/bindata_generated.go
 ### Scheduler end
-
-### Executor begin
-.PHONY: executor clean_executor .scheduler.data.executor_$(OS_ARCH)
-executor: .scheduler.data.executor_$(OS_ARCH)
-.scheduler.data.executor_$(OS_ARCH): cepm .process_manager.bindata_generated
-	GOOS=linux GOARCH=amd64 go build -o scheduler/data/executor_$(OS_ARCH) -tags=$(TAGS) ./executor/
-	$(shell touch .scheduler.data.executor_$(OS_ARCH))
-clean_bin: clean_executor
-clean_executor:
-	-rm -f .executor.bindata_generated executor/bindata_generated.go
-	-rm -f .scheduler.data.executor_$(OS_ARCH) scheduler/data/executor_$(OS_ARCH)
-### Executor end
 
 ### Artifact begin
 .PHONY: build_artifacts build_artifacts_native artifacts clean_artifacts
