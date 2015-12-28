@@ -3,8 +3,6 @@ setup.cfg
 setup.py
 dcos_riak/__init__.py
 dcos_riak/cli.py
-dcos_riak/zktool_linux_amd64.py
-dcos_riak/zktool_darwin_amd64.py
 dcos_riak/constants.py
 dcos_riak.egg-info/PKG-INFO
 dcos_riak.egg-info/SOURCES.txt

@@ -59,6 +59,7 @@ setup(
     keywords='dcos command riak mesosphere',
     packages=find_packages(exclude=['contrib', 'docs', 'tests*']),
     install_requires=[
+        'kazoo',
         'dcos>=0.1.6, <1.0',
         'docopt',
         'toml',
@@ -70,10 +71,7 @@ setup(
         'test': ['coverage'],
     },
     package_data={},
-    # package_data={'dcos_riak': ['zktool_darwin_amd64','zktool_linux_amd64']},
-    # include_package_data=True,
     data_files=[],
-    # data_files=[('dcos_riak', ['dcos_riak/zktool_darwin_amd64','dcos_riak/zktool_linux_amd64'])],
 
     # To provide executable scripts, use entry points in preference to the
     # "scripts" keyword. Entry points provide cross-platform support and allow
