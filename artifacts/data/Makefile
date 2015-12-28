@@ -105,6 +105,9 @@ $(EXECUTOR_SOURCE_PKG):
 	curl -C - -O -L $(EXECUTOR_SOURCE_DOWNLOAD)
 executor-bin: riak_explorer-bin $(EXECUTOR_SOURCE_PKG) OTP_R16B02_basho8-bin
 	tar -xvf $(EXECUTOR_SOURCE_PKG)
+	cd $(EXECUTOR_SOURCE_DIR) && PATH=$(PREFIX)OTP_R16B02_basho8-bin/bin:$(PATH) $(MAKE) deps
+	rm -rf $(EXECUTOR_SOURCE_DIR)/deps/node_package
+	git clone https://github.com/basho/node_package.git --branch no-epmd $(EXECUTOR_SOURCE_DIR)/deps/node_package
 	cd $(EXECUTOR_SOURCE_DIR) && PATH=$(PREFIX)OTP_R16B02_basho8-bin/bin:$(PATH) $(MAKE) rel
 	touch executor-bin
 riak_mesos_executor.tar.gz: executor-bin
