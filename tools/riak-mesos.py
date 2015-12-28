@@ -140,9 +140,9 @@ class Config(object):
     def _zktool_api_url(self):
         tool = ''
         if _platform == 'linux' or _platform == 'linux2':
-            tool = 'zktool_linux_amd64'
+            tool = 'zktool_linux_amd64.py'
         elif _platform == 'darwin':
-            tool = 'zktool_darwin_amd64'
+            tool = 'zktool_darwin_amd64.py'
         else:
             raise CliError('Unsupported platform: ' + _platform + '. Only linux, linux2, and darwin are supported currently')
         base_url = os.popen(os.path.dirname(__file__) + '/' + tool + ' -zk=' + self.get('zk') + ' -name=' + self.get('framework-name') + ' -command=get-url').read()
@@ -533,9 +533,9 @@ def run(args):
                 output = '\nRemoving zookeeper information\n'
                 tool = ''
                 if _platform == 'linux' or _platform == 'linux2':
-                    tool = 'zktool_linux_amd64'
+                    tool = 'zktool_linux_amd64.py'
                 elif _platform == 'darwin':
-                    tool = 'zktool_darwin_amd64'
+                    tool = 'zktool_darwin_amd64.py'
                 output += os.popen(os.path.dirname(__file__) + '/' + tool + ' -zk=' + config.get('zk') + ' -name=/riak/frameworks/' + config.get('framework-name') + ' -command=zk-delete').read()
             except Exception as e:
                 print(e.message)

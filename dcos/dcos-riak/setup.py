@@ -71,9 +71,9 @@ setup(
     },
     package_data={},
     # package_data={'dcos_riak': ['zktool_darwin_amd64','zktool_linux_amd64']},
-    include_package_data=True,
-    # data_files=[],
-    data_files=[('dcos_riak', ['dcos_riak/zktool_darwin_amd64','dcos_riak/zktool_linux_amd64'])],
+    # include_package_data=True,
+    data_files=[],
+    # data_files=[('dcos_riak', ['dcos_riak/zktool_darwin_amd64','dcos_riak/zktool_linux_amd64'])],
 
     # To provide executable scripts, use entry points in preference to the
     # "scripts" keyword. Entry points provide cross-platform support and allow
