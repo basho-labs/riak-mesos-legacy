@@ -50,14 +50,17 @@ build_artifacts_native:
 	cd artifacts/data && $(MAKE) native
 	go generate -tags=$(TAGS) ./artifacts
 	cd artifacts/data && cp riak-s2-bin.tar.gz riak-s2-init-bin.tar.gz stanchion-bin.tar.gz $(BUILD_DIR)
+	cd artifacts/data && cp riak_mesos_executor.tar.gz scheduler/data/
 build_artifacts:
 	cd artifacts/data && $(MAKE)
 	go generate -tags=$(TAGS) ./artifacts
 	cd artifacts/data && cp riak-s2-bin.tar.gz riak-s2-init-bin.tar.gz stanchion-bin.tar.gz $(BUILD_DIR)
+	cd artifacts/data && cp riak_mesos_executor.tar.gz scheduler/data/
 artifacts:
 	cd artifacts/data && $(MAKE) -f download.make
 	go generate -tags=$(TAGS) ./artifacts
 	cd artifacts/data && cp riak-s2-bin.tar.gz riak-s2-init-bin.tar.gz stanchion-bin.tar.gz $(BUILD_DIR)
+	cd artifacts/data && cp riak_mesos_executor.tar.gz scheduler/data/
 sync: sync_artifacts
 sync_artifacts:
 	cd artifacts/data/ && \
