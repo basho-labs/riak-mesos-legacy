@@ -12,8 +12,8 @@ STANCHION_SOURCE_PKG ?= stanchion-2.1.0.tar.gz
 STANCHION_SOURCE_DOWNLOAD ?= http://s3.amazonaws.com/downloads.basho.com/stanchion/2.1/2.1.0/stanchion-2.1.0.tar.gz
 
 .PHONY: all clean
-all: riak-bin.tar.gz trusty.tar.gz riak_mesos_director-bin.tar.gz riak-s2-bin.tar.gz stanchion-bin.tar.gz riak-s2-init-bin.tar.gz
-native: riak-bin.tar.gz riak_mesos_director-bin.tar.gz riak-s2-bin-native stanchion-bin.tar.gz riak-s2-init-bin.tar.gz
+all: riak-bin.tar.gz trusty.tar.gz riak_mesos_director-bin.tar.gz riak-s2-bin.tar.gz stanchion-bin.tar.gz riak-s2-init-bin.tar.gz riak_mesos_executor.tar.gz
+native: riak-bin.tar.gz riak_mesos_director-bin.tar.gz riak-s2-bin-native stanchion-bin.tar.gz riak-s2-init-bin.tar.gz riak_mesos_executor.tar.gz
 
 ### Riak Explorer begin
 riak_explorer:
