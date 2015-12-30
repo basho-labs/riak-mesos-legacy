@@ -20,34 +20,21 @@ package: clean_package
 
 ### Framework begin
 .PHONY: framework clean_framework
-# Depends on artifacts, because it depends on scheduler which depends on artifacts
+# Depends on artifacts
 .bin.framework_$(OS_ARCH):
 	go build -o bin/framework_$(OS_ARCH) -tags=$(TAGS) ./framework/
 	$(shell touch .bin.framework_$(OS_ARCH))
-framework: .godep artifacts cepm scheduler .bin.framework_$(OS_ARCH)
+framework: .godep artifacts cepm .bin.framework_$(OS_ARCH)
 clean_bin: clean_framework
 clean_framework:
 	-rm -f .bin.framework_$(OS_ARCH) bin/framework_$(OS_ARCH)
 ### Framework end
-
-### Scheduler begin
-.PHONY: scheduler clean_scheduler
-.scheduler.bindata_generated: .process_manager.bindata_generated  scheduler/data/advanced.config scheduler/data/riak.conf
-	go generate -tags=$(TAGS) ./scheduler
-	$(shell touch .scheduler.bindata_generated)
-scheduler: .scheduler.bindata_generated
-clean_bin: clean_scheduler
-clean_scheduler:
-	-rm -rf .scheduler.bindata_generated scheduler/bindata_generated.go
-### Scheduler end
 
 ### Artifact begin
 .PHONY: artifacts clean_artifacts
 artifacts:
 	cd artifacts/data && $(MAKE)
 	go generate -tags=$(TAGS) ./artifacts
-	rm $(BASE_DIR)/scheduler/data/riak_mesos_executor.tar.gz
-	cd artifacts/data && cp riak_mesos_executor.tar.gz $(BASE_DIR)/scheduler/data/
 clean: clean_artifacts
 clean_artifacts:
 	cd artifacts/data && $(MAKE) clean
