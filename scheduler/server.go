@@ -516,7 +516,7 @@ func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *Schedul
 		sc:           sc,
 		hostURI:      hostURI,
 		riakURI:      riakURI,
-		executorName: "./riak_mesos_executor.tar.gz",
+		executorName: "./riak_mesos_executor/bin/ermf-executor",
 		URI:          URI,
 	}
 
