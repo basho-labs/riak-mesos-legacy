@@ -20,6 +20,7 @@ type SchedulerHTTPServer struct {
 	sc           *SchedulerCore
 	hostURI      string
 	riakURI      string
+	cepmdURI     string
 	executorName string
 	URI          string
 }
@@ -495,6 +496,8 @@ func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *Schedul
 
 	hostURI := fmt.Sprintf("http://%s:%d/static/riak_mesos_executor.tar.gz", hostname, port)
 	riakURI := fmt.Sprintf("http://%s:%d/static/riak-bin.tar.gz", hostname, port)
+	cepmdURI := fmt.Sprintf("http://%s:%d/static/cepmd_linux_amd64", hostname, port)
+
 	URI := fmt.Sprintf("http://%s:%d", hostname, port)
 	//Info.Printf("Hosting artifact '%s' at '%s'", path, hostURI)
 	log.Println("Serving at HostURI: ", hostURI)
@@ -516,6 +519,7 @@ func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *Schedul
 		sc:           sc,
 		hostURI:      hostURI,
 		riakURI:      riakURI,
+		cepmdURI:     cepmdURI,
 		executorName: "./riak_mesos_executor/bin/ermf-executor",
 		URI:          URI,
 	}

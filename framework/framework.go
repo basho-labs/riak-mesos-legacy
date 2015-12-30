@@ -38,8 +38,8 @@ var (
 func init() {
 	runtime.GOMAXPROCS(1)
 	flag.BoolVar(&useReservations, "use_reservations", false, "Set this to true if the Mesos cluster supports Dynamic Reservations and Persistent Volumes")
-	flag.StringVar(&mesosMaster, "master", "zk://33.33.33.2:2181/mesos", "Mesos master")
-	flag.StringVar(&zookeeperAddr, "zk", "33.33.33.2:2181", "Zookeeper")
+	flag.StringVar(&mesosMaster, "master", "zk://master.mesos:2181/mesos", "Mesos master")
+	flag.StringVar(&zookeeperAddr, "zk", "master.mesos:2181", "Zookeeper")
 	flag.StringVar(&schedulerHostname, "hostname", "", "Framework hostname")
 	flag.StringVar(&schedulerIPAddr, "ip", "", "Framework ip")
 	flag.StringVar(&user, "user", "", "Framework Username")

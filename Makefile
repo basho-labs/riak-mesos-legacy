@@ -24,7 +24,7 @@ package: clean_package
 .bin.framework_$(OS_ARCH):
 	go build -o bin/framework_$(OS_ARCH) -tags=$(TAGS) ./framework/
 	$(shell touch .bin.framework_$(OS_ARCH))
-framework: .godep artifacts cepm .bin.framework_$(OS_ARCH)
+framework: .godep cepm artifacts .bin.framework_$(OS_ARCH)
 clean_bin: clean_framework
 clean_framework:
 	-rm -f .bin.framework_$(OS_ARCH) bin/framework_$(OS_ARCH)
@@ -47,11 +47,12 @@ erl_dist:
 	cd erlang_dist && $(MAKE)
 .cepmd.cepm.bindata_generated: erl_dist
 	go generate -tags=$(TAGS) ./cepmd/cepm
+	go build -o artifacts/data/cepmd_$(OS_ARCH) -tags=$(TAGS) ./cepmd/
 	$(shell touch .cepmd.cepm.bindata_generated)
 cepm: .cepmd.cepm.bindata_generated
 clean_bin: clean_cepmd
 clean_cepmd:
-	-rm -f .cepmd.cepm.bindata_generated cepmd/cepm/bindata_generated.go
+	-rm -f .cepmd.cepm.bindata_generated cepmd/cepm/bindata_generated.go artifacts/data/cepmd_$(OS_ARCH)
 ### CEPMd end
 
 ### Go Tools begin
