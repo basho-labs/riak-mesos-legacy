@@ -24,10 +24,11 @@ executor-bin: riak-mesos-executor
 	touch executor-bin
 riak_mesos_executor.tar.gz: executor-bin
 	-tar -C riak-mesos-executor/rel/ -czf riak_mesos_executor.tar.gz riak_mesos_executor || rm -rf riak_mesos_executor.tar.gz
-clean: clean_executor
+clean: clean_executor clean_executor_tar
 clean_executor:
-	-rm -rf riak-mesos-executor
-	-rm -rf riak_mesos_executor.tar.gz executor-bin
+	-rm -rf riak-mesos-executor executor-bin
+clean_executor_tar:
+	-rm -rf riak_mesos_executor.tar.gz
 ### Executor end
 
 ### Riak Explorer begin
@@ -57,12 +58,15 @@ riak-bin: riak_explorer-bin $(RIAK_SOURCE_PKG)
 	cp -R riak_explorer/rel/riak-addon/priv $(RIAK_SOURCE_DIR)/rel/riak/
 	touch riak-bin
 riak-bin.tar.gz: riak-bin
-	tar -C $(RIAK_SOURCE_DIR)/rel/ -czf riak-bin.tar.gz riak || rm -rf riak-bin.tar.gz
+	-rm -rf root
+	mkdir -p root
+	cp -R $(RIAK_SOURCE_DIR)/rel/riak root/
+	tar -czf riak-bin.tar.gz root || rm -rf riak-bin.tar.gz
 clean: clean_riak clean_riak_tar
 clean_riak:
-	-rm -rf $(RIAK_SOURCE_PKG) $(RIAK_SOURCE_DIR)
+	-rm -rf $(RIAK_SOURCE_PKG) $(RIAK_SOURCE_DIR) riak-bin
 clean_riak_tar:
-	-rm -rf riak-bin.tar.gz riak-bin
+	-rm -rf root riak-bin.tar.gz
 ### Riak end
 
 ### Riak S2 begin
