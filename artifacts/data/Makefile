@@ -20,7 +20,7 @@ riak-s2: riak-s2-bin.tar.gz stanchion-bin.tar.gz riak-s2-init-bin.tar.gz
 riak-mesos-executor:
 	git clone https://github.com/basho-labs/riak-mesos-executor.git
 	cd riak-mesos-executor && git checkout mtc-dev && git pull
-executor-bin: riak_explorer-bin riak-mesos-executor
+executor-bin: riak-mesos-executor
 	cd riak-mesos-executor && $(MAKE) deps
 	-rm -rf riak-mesos-executor/deps/node_package
 	git clone https://github.com/basho/node_package.git --branch no-epmd riak-mesos-executor/deps/node_package
