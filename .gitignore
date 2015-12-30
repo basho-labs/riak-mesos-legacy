@@ -14,5 +14,6 @@ _build
 .cepmd.cepm.bindata_generated
 # Build generated files
 artifacts/data/*-bin
-artifacts/data/riak-*
+artifacts/data/riak*
 artifacts/data/*.tar.gz
+artifacts/data/root
