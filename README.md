@@ -68,7 +68,7 @@ may need to be used. Here is a minimal example:
         "role": "riak", # Should be "*" on mesos < 0.24
         "auth-principal": "riak",
         "flags": "-use_reservations", # Should be "" on mesos < 0.24
-        "url": "http://riak-tools.s3.amazonaws.com/riak-mesos/ubuntu/riak_mesos_linux_amd64_0.2.0.tar.gz",
+        "url": "http://riak-tools.s3.amazonaws.com/riak-mesos/ubuntu/riak_mesos_linux_amd64_0.3.0.tar.gz",
         "node": {
             "cpus": 1,
             "mem": 8000,
@@ -90,7 +90,7 @@ may need to be used. Here is a minimal example:
         "role": "riak", # Should be "*" on mesos < 0.24
         "auth-principal": "riak",
         "flags": "-use_reservations", # Should be "" on mesos < 0.24
-        "url": "http://riak-tools.s3.amazonaws.com/riak-mesos/centos/riak_mesos_linux_amd64_0.2.0.tar.gz",
+        "url": "http://riak-tools.s3.amazonaws.com/riak-mesos/centos/riak_mesos_linux_amd64_0.3.0.tar.gz",
         "node": {
             "cpus": 1,
             "mem": 8000,
@@ -105,7 +105,7 @@ may need to be used. Here is a minimal example:
 The Riak framework should have at least 2GB of RAM and 0.5 CPUs to perform successfully.
 
 ```
-dcos config set package.sources '["http://riak-tools.s3.amazonaws.com/riak-mesos/dcos-repo-0.2.0.zip"]'
+dcos config set package.sources '["http://riak-tools.s3.amazonaws.com/riak-mesos/dcos-repo-0.3.0.zip"]'
 dcos package update
 dcos package install riak --options=dcos-riak.json
 ```

@@ -1,4 +1,4 @@
-PACKAGE_VERSION ?= 0.2.0
+PACKAGE_VERSION ?= 0.3.0
 PROJECT_BASE    ?= riak-mesos
 DEPLOY_OS       ?= coreos
 

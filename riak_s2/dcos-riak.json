@@ -4,6 +4,6 @@
         "zk": "master.mesos:2181",
         "user": "root",
         "framework-name": "riak",
-        "url": "http://riak-tools.s3.amazonaws.com/riak-mesos/centos/riak_mesos_linux_amd64_0.2.0.tar.gz"
+        "url": "http://riak-tools.s3.amazonaws.com/riak-mesos/centos/riak_mesos_linux_amd64_0.3.0.tar.gz"
     }
 }
