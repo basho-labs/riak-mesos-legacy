@@ -1,5 +1,5 @@
 BASE_DIR         = $(shell pwd)
-export TAGS     ?= rel
+export TAGS     ?= dev
 PACKAGE_VERSION ?= 0.3.0
 BUILD_DIR       ?= $(BASE_DIR)/_build
 export PROJECT_BASE    ?= riak-mesos
