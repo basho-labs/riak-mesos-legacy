@@ -12,4 +12,7 @@ scheduler/data/*.tar.gz
 _build
 .godep
 .cepmd.cepm.bindata_generated
-.scheduler.bindata_generated
+# Build generated files
+artifacts/data/*-bin
+artifacts/data/riak-*
+artifacts/data/*.tar.gz
