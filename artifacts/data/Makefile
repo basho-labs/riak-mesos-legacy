@@ -21,9 +21,6 @@ riak-mesos-executor:
 	git clone https://github.com/basho-labs/riak-mesos-executor.git
 	cd riak-mesos-executor && git checkout mtc-dev && git pull
 executor-bin: riak-mesos-executor
-	cd riak-mesos-executor && $(MAKE) deps
-	-rm -rf riak-mesos-executor/deps/node_package
-	git clone https://github.com/basho/node_package.git --branch no-epmd riak-mesos-executor/deps/node_package
 	cd riak-mesos-executor && $(MAKE) rel
 	touch executor-bin
 riak_mesos_executor.tar.gz: executor-bin
