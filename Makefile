@@ -8,7 +8,7 @@ export DEPLOY_OS       ?= coreos
 export OS_ARCH		   ?= linux_amd64
 
 .PHONY: all clean clean_bin package clean_package sync
-all: clean_bin artifacts framework
+all: clean_bin framework
 clean: clean_package clean_bin
 package: clean_package
 
