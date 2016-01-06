@@ -90,6 +90,10 @@ func (frn *FrameworkRiakNode) CurrentID() string {
 	return fmt.Sprintf("%s-%s-%d", frn.FrameworkName, frn.ClusterName, frn.SimpleId)
 }
 
+func (frn *FrameworkRiakNode) Name() string {
+	return fmt.Sprintf("%s-%s", frn.FrameworkName, frn.ClusterName)
+}
+
 func (frn *FrameworkRiakNode) ExecutorID() string {
 	return fmt.Sprintf("%s-%s-%s-%d", frn.FrameworkName, frn.ClusterName, frn.UUID, frn.Generation)
 }
@@ -184,7 +188,7 @@ func (frn *FrameworkRiakNode) ApplyReservedOffer(offerHelper *common.OfferHelper
 
 	execName := fmt.Sprintf("%s Executor", frn.CurrentID())
 	taskInfo := &mesos.TaskInfo{
-		Name:    proto.String(frn.CurrentID()),
+		Name:    proto.String(frn.Name()),
 		TaskId:  taskId,
 		SlaveId: frn.SlaveID,
 		Executor: &mesos.ExecutorInfo{
