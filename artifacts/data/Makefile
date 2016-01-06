@@ -1,9 +1,11 @@
 PREFIX := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 ERLC   := $(shell which erlc)
 TMP	   := /tmp
-RIAK_SOURCE_DIR ?= riak-2.1.1
-RIAK_SOURCE_PKG ?= riak-2.1.1.tar.gz
-RIAK_SOURCE_DOWNLOAD ?= http://s3.amazonaws.com/downloads.basho.com/riak/2.1/2.1.1/riak-2.1.1.tar.gz
+RIAK_GIT ?= https://github.com/basho/riak.git
+RIAK_TAG ?= riak-2.1.3
+RIAK_SOURCE_DIR ?= riak
+# RIAK_SOURCE_PKG ?= riak-2.1.1.tar.gz
+# RIAK_SOURCE_DOWNLOAD ?= http://s3.amazonaws.com/downloads.basho.com/riak/2.1/2.1.1/riak-2.1.1.tar.gz
 RIAK_S2_SOURCE_DIR ?= riak-cs-2.1.0
 RIAK_S2_SOURCE_PKG ?= riak-cs-2.1.0.tar.gz
 RIAK_S2_SOURCE_DOWNLOAD ?= http://s3.amazonaws.com/downloads.basho.com/riak-cs/2.1/2.1.0/riak-cs-2.1.0.tar.gz
@@ -45,11 +47,10 @@ clean_riak_explorer:
 ### Riak Explorer end
 
 ### Riak begin
-$(RIAK_SOURCE_PKG):
-	curl -C - -O -L $(RIAK_SOURCE_DOWNLOAD)
-riak-bin: riak_explorer-bin $(RIAK_SOURCE_PKG)
-	tar -xvf $(RIAK_SOURCE_PKG)
-	export PATH
+$(RIAK_SOURCE_DIR):
+	git clone $(RIAK_GIT)
+	cd $(RIAK_SOURCE_DIR) && git checkout $(RIAK_TAG) && git pull
+riak-bin: $(RIAK_SOURCE_DIR)
 	rm -rf $(RIAK_SOURCE_DIR)/deps/node_package
 	git clone https://github.com/basho/node_package.git --branch no-epmd $(RIAK_SOURCE_DIR)/deps/node_package
 	cd $(RIAK_SOURCE_DIR) && $(MAKE) rel
@@ -64,7 +65,7 @@ riak-bin.tar.gz: riak-bin
 	tar -czf riak-bin.tar.gz root || rm -rf riak-bin.tar.gz
 clean: clean_riak clean_riak_tar
 clean_riak:
-	-rm -rf $(RIAK_SOURCE_PKG) $(RIAK_SOURCE_DIR) riak-bin
+	-rm -rf $(RIAK_SOURCE_DIR) riak-bin
 clean_riak_tar:
 	-rm -rf root riak-bin.tar.gz
 ### Riak end
