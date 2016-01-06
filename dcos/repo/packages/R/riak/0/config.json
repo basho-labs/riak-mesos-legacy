@@ -1,160 +1,161 @@
 {
-  "type": "object",
+  "properties": {
+    "riak": {
+      "required": [
+        "framework-name",
+        "instances",
+        "cpus",
+        "mem",
+        "super-chroot",
+        "url",
+        "master",
+        "zk",
+        "user",
+        "healthcheck-grace-period-seconds",
+        "healthcheck-interval-seconds",
+        "healthcheck-timeout-seconds",
+        "healthcheck-max-consecutive-failures"
+      ],
       "properties": {
-        "director": {
-          "type": "object",
-          "depscription": "Riak Mesos Proxy specific properties",
-          "properties": {
-            "url": {
-              "type": "string",
-              "description": "The URL of the Proxy package",
-              "default": "http://riak-tools.s3.amazonaws.com/riak-mesos/coreos/riak_mesos_director_linux_amd64_0.2.0.tar.gz"
-            }
-          }
+        "healthcheck-max-consecutive-failures": {
+          "default": 5,
+          "description": "Memory requirements",
+          "type": "number"
         },
-        "riak": {
-          "type": "object",
-          "depscription": "Riak Mesos Framework specific properties",
+        "healthcheck-timeout-seconds": {
+          "default": 20,
+          "description": "Memory requirements",
+          "type": "number"
+        },
+        "healthcheck-interval-seconds": {
+          "default": 60,
+          "description": "Memory requirements",
+          "type": "number"
+        },
+        "healthcheck-grace-period-seconds": {
+          "default": 300,
+          "description": "Memory requirements",
+          "type": "number"
+        },
+        "super-chroot": {
+          "default": "true",
+          "description": "When this is false, use the default chroot.",
+          "type": "string"
+        },
+        "flags": {
+          "default": "-use_reservations",
+          "description": "Additional flags include '-use_reservations', when this is true, utilize dynamic reservations and persistent volumes. This only works with versions of Mesos 0.24 and later.",
+          "type": "string"
+        },
+        "node": {
           "properties": {
-            "master": {
-              "type": "string",
-              "description": "The URL of the Mesos master. The format is zk://host1:port/mesos.",
-              "default": "zk://leader.mesos:2181/mesos"
-            },
-            "zk": {
-              "type": "string",
-              "description": "Zookeeper address. Specify in the format host:port.",
-              "default": "leader.mesos:2181"
-            },
-            "ip": {
-              "type": "string",
-              "description": "Framework HTTP API bind address."
-            },
-            "hostname": {
-              "type": "string",
-              "description": "Framework HTTP API hostname."
-            },
-            "log": {
-              "type": "string",
-              "description": "Framework log file location."
-            },
-            "user": {
-              "type": "string",
-              "description": "Framework User.",
-              "default": "root"
-            },
-            "framework-name": {
-              "type": "string",
-              "description": "Framework Instance Name.",
-              "default": "riak"
-            },
-            "role": {
-              "type": "string",
-              "description": "Framework Role.",
-              "default": "riak"
-            },
-            "url": {
-                "type": "string",
-                "description": "Riak Mesos Framework download URL.",
-                "default": "http://riak-tools.s3.amazonaws.com/riak-mesos/coreos/riak_mesos_linux_amd64_0.2.0.tar.gz"
-            },
-            "auth-provider": {
-                "type": "string",
-                "description": "Authentication provider to use, default is SASL that supports mechanisms.",
-                "default": ""
-            },
-            "auth-principal": {
-                "type": "string",
-                "description": "Mesos authentication principal.",
-                "default": ""
-            },
-            "auth-secret-file": {
-                "type": "string",
-                "description": "Mesos authentication secret file.",
-                "default": ""
-            },
-            "instances": {
-                "type": "number",
-                "description": "Number of framework instances",
-                "default": 1
-            },
-            "cpus": {
-                "type": "number",
-                "description": "CPU requirements",
-                "default": 0.5
+            "disk": {
+              "default": 20000,
+              "description": "Per Node Disk requirements",
+              "type": "number"
             },
             "mem": {
-                "type": "number",
-                "description": "Memory requirements",
-                "default": 2048
+              "default": 8000,
+              "description": "Per Node Memory requirements",
+              "type": "number"
             },
-            "node": {
-                "type": "object",
-                "depscription": "Resource Requirements Per Riak Node",
-                "properties": {
-                    "cpus": {
-                        "type": "number",
-                        "description": "Per Node CPU requirements",
-                        "default": 1.0
-                    },
-                    "mem": {
-                        "type": "number",
-                        "description": "Per Node Memory requirements",
-                        "default": 8000
-                    },
-                    "disk": {
-                        "type": "number",
-                        "description": "Per Node Disk requirements",
-                        "default": 20000
-                    }
-                }
-            },
-            "flags":{
-                "type": "string",
-                "description": "Additional flags include '-use_reservations', when this is true, utilize dynamic reservations and persistent volumes. This only works with versions of Mesos 0.24 and later.",
-                "default": "-use_reservations"
-            },
-            "super-chroot":{
-                "type": "string",
-                "description": "When this is false, use the default chroot.",
-                "default": "true"
-            },
-            "healthcheck-grace-period-seconds": {
-                "type": "number",
-                "description": "Memory requirements",
-                "default": 300
-            },
-            "healthcheck-interval-seconds": {
-                "type": "number",
-                "description": "Memory requirements",
-                "default": 60
-            },
-            "healthcheck-timeout-seconds": {
-                "type": "number",
-                "description": "Memory requirements",
-                "default": 20
-            },
-            "healthcheck-max-consecutive-failures": {
-                "type": "number",
-                "description": "Memory requirements",
-                "default": 5
+            "cpus": {
+              "default": 1.0,
+              "description": "Per Node CPU requirements",
+              "type": "number"
             }
           },
-          "required": [
-            "framework-name",
-            "instances",
-            "cpus",
-            "mem",
-            "super-chroot",
-            "url",
-            "master",
-            "zk",
-            "user",
-            "healthcheck-grace-period-seconds",
-            "healthcheck-interval-seconds",
-            "healthcheck-timeout-seconds",
-            "healthcheck-max-consecutive-failures"
-          ]
+          "depscription": "Resource Requirements Per Riak Node",
+          "type": "object"
+        },
+        "mem": {
+          "default": 2048,
+          "description": "Memory requirements",
+          "type": "number"
+        },
+        "cpus": {
+          "default": 0.5,
+          "description": "CPU requirements",
+          "type": "number"
+        },
+        "instances": {
+          "default": 1,
+          "description": "Number of framework instances",
+          "type": "number"
+        },
+        "auth-secret-file": {
+          "default": "",
+          "description": "Mesos authentication secret file.",
+          "type": "string"
+        },
+        "auth-principal": {
+          "default": "",
+          "description": "Mesos authentication principal.",
+          "type": "string"
+        },
+        "auth-provider": {
+          "default": "",
+          "description": "Authentication provider to use, default is SASL that supports mechanisms.",
+          "type": "string"
+        },
+        "url": {
+          "default": "http:\/\/riak-tools.s3.amazonaws.com\/riak-mesos\/coreos\/riak_mesos_linux_amd64_0.2.0.tar.gz",
+          "description": "Riak Mesos Framework download URL.",
+          "type": "string"
+        },
+        "role": {
+          "default": "riak",
+          "description": "Framework Role.",
+          "type": "string"
+        },
+        "framework-name": {
+          "default": "riak",
+          "description": "Framework Instance Name.",
+          "type": "string"
+        },
+        "user": {
+          "default": "root",
+          "description": "Framework User.",
+          "type": "string"
+        },
+        "log": {
+          "description": "Framework log file location.",
+          "type": "string"
+        },
+        "hostname": {
+          "default": "riak.mesos",
+          "description": "Framework HTTP API hostname.",
+          "type": "string"
+        },
+        "ip": {
+          "description": "Framework HTTP API bind address.",
+          "type": "string"
+        },
+        "zk": {
+          "default": "leader.mesos:2181",
+          "description": "Zookeeper address. Specify in the format host:port.",
+          "type": "string"
+        },
+        "master": {
+          "default": "zk://leader.mesos:2181/mesos",
+          "description": "The URL of the Mesos master. The format is zk://host1:port/mesos.",
+          "type": "string"
         }
-      }
+      },
+      "depscription": "Riak Mesos Framework specific properties",
+      "type": "object"
+    },
+    "director": {
+      "properties": {
+        "url": {
+          "default": "http://riak-tools.s3.amazonaws.com/riak-mesos/coreos/riak_mesos_director_linux_amd64_0.2.0.tar.gz",
+          "description": "The URL of the Proxy package",
+          "type": "string"
+        }
+      },
+      "depscription": "Riak Mesos Proxy specific properties",
+      "type": "object"
+    }
+  },
+  "type": "object"
 }

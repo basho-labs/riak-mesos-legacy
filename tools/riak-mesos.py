@@ -83,7 +83,7 @@ def _default_framework_config():
             'master': 'zk://leader.mesos:2181/mesos',
             'zk': 'leader.mesos:2181',
             'ip': '',
-            'hostname': '',
+            'hostname': 'riak.mesos',
             'log': '',
             'user': 'root',
             'framework-name': 'riak',
