@@ -35,10 +35,10 @@ dcos package install --yes riak --options=dcos-riak.json
 
 echo ""
 echo ""
-echo "Waiting for the health check for riak to turn green in http://master.mesos:8080/ui/#/apps"
+echo "Waiting for the health check for riak to turn green in http://leader.mesos:8080/ui/#/apps"
 echo ""
 
-until [[ "1" -eq "$(curl --silent http://master.mesos:8080/v2/apps/riak | python -c 'import sys, json; print json.load(sys.stdin)["app"]["tasksHealthy"]')" ]]; do printf "."; sleep 1s; done
+until [[ "1" -eq "$(curl --silent http://leader.mesos:8080/v2/apps/riak | python -c 'import sys, json; print json.load(sys.stdin)["app"]["tasksHealthy"]')" ]]; do printf "."; sleep 1s; done
 
 echo ""
 echo "Riak Mesos Framework is up"
@@ -49,8 +49,8 @@ echo "### Creating a cluster of 3 nodes"
 echo ""
 
 cd "${DIR}" || exit
-FRAMEWORKHOST=$(curl --silent http://master.mesos:8080/v2/apps/riak | python -c 'import sys, json; print json.load(sys.stdin)["app"]["tasks"][0]["host"]')
-FRAMEWORKPORT=$(curl --silent http://master.mesos:8080/v2/apps/riak | python -c 'import sys, json; print json.load(sys.stdin)["app"]["tasks"][0]["ports"][0]')
+FRAMEWORKHOST=$(curl --silent http://leader.mesos:8080/v2/apps/riak | python -c 'import sys, json; print json.load(sys.stdin)["app"]["tasks"][0]["host"]')
+FRAMEWORKPORT=$(curl --silent http://leader.mesos:8080/v2/apps/riak | python -c 'import sys, json; print json.load(sys.stdin)["app"]["tasks"][0]["ports"][0]')
 
 curl -XPUT ${FRAMEWORKHOST}:${FRAMEWORKPORT}/api/v1/clusters/mycluster
 
@@ -100,18 +100,18 @@ dcos riak proxy endpoints --public-dns "${DIRECTOR_IP}"
 
 echo ""
 echo ""
-echo "Waiting for the health check for riak-director to turn green in http://master.mesos:8080/ui/#/apps"
+echo "Waiting for the health check for riak-director to turn green in http://leader.mesos:8080/ui/#/apps"
 echo ""
 
-until [[ "1" -eq "$(curl --silent http://master.mesos:8080/v2/apps/riak-director | python -c 'import sys, json; print json.load(sys.stdin)["app"]["tasksHealthy"]')" ]]; do printf "."; sleep 1s; done
+until [[ "1" -eq "$(curl --silent http://leader.mesos:8080/v2/apps/riak-director | python -c 'import sys, json; print json.load(sys.stdin)["app"]["tasksHealthy"]')" ]]; do printf "."; sleep 1s; done
 
 echo ""
 echo "### Finding available endpoints"
 echo ""
-HOST=$(curl --silent http://master.mesos:8080/v2/apps/riak-director | python -c 'import sys, json; print json.load(sys.stdin)["app"]["tasks"][0]["host"]')
-DIRPORT=$(curl --silent http://master.mesos:8080/v2/apps/riak-director | python -c 'import sys, json; print json.load(sys.stdin)["app"]["tasks"][0]["ports"][2]')
-HTTPPORT=$(curl --silent http://master.mesos:8080/v2/apps/riak-director | python -c 'import sys, json; print json.load(sys.stdin)["app"]["tasks"][0]["ports"][0]')
-PBPORT=$(curl --silent http://master.mesos:8080/v2/apps/riak-director | python -c 'import sys, json; print json.load(sys.stdin)["app"]["tasks"][0]["ports"][1]')
+HOST=$(curl --silent http://leader.mesos:8080/v2/apps/riak-director | python -c 'import sys, json; print json.load(sys.stdin)["app"]["tasks"][0]["host"]')
+DIRPORT=$(curl --silent http://leader.mesos:8080/v2/apps/riak-director | python -c 'import sys, json; print json.load(sys.stdin)["app"]["tasks"][0]["ports"][2]')
+HTTPPORT=$(curl --silent http://leader.mesos:8080/v2/apps/riak-director | python -c 'import sys, json; print json.load(sys.stdin)["app"]["tasks"][0]["ports"][0]')
+PBPORT=$(curl --silent http://leader.mesos:8080/v2/apps/riak-director | python -c 'import sys, json; print json.load(sys.stdin)["app"]["tasks"][0]["ports"][1]')
 
 for n in $(seq 0 $((NUM_NODES - 1))); do
     RIAKHOST[n]=$(curl --silent ${HOST}:${DIRPORT}/nodes | python -c 'import sys, json; print json.load(sys.stdin)["nodes"]['${n}']["http"]["host"]')
@@ -148,18 +148,18 @@ perl -pe "s/{{.RIAKHOSTPORT}}/${RIAKHOST[0]}:${RIAKPBPORT[0]}/" riak-s2-init.jso
 # Deploy riak-s2-init to RIAKHOST[0]
 echo ""
 echo "Deploying initial Riak S2 deployment..."
-curl -v -XPOST http://master.mesos:8080/v2/apps -d @./riak-s2-init.json -H "Content-Type: application/json"
+curl -v -XPOST http://leader.mesos:8080/v2/apps -d @./riak-s2-init.json -H "Content-Type: application/json"
 
 echo ""
 echo ""
-echo "Waiting for the health check for the initial Riak S2 deployment to turn green in http://master.mesos:8080/ui/#/apps"
+echo "Waiting for the health check for the initial Riak S2 deployment to turn green in http://leader.mesos:8080/ui/#/apps"
 echo ""
 
-until [[ "1" -eq "$(curl --silent http://master.mesos:8080/v2/apps/riak-s2-init | python -c 'import sys, json; print json.load(sys.stdin)["app"]["tasksHealthy"]')" ]]; do printf "."; sleep 1s; done
+until [[ "1" -eq "$(curl --silent http://leader.mesos:8080/v2/apps/riak-s2-init | python -c 'import sys, json; print json.load(sys.stdin)["app"]["tasksHealthy"]')" ]]; do printf "."; sleep 1s; done
 
 # Query Mesos to get HOST and PORT0 for riak-s2-init
-INITHOST=$(curl --silent http://master.mesos:8080/v2/apps/riak-s2-init | python -c 'import sys, json; print json.load(sys.stdin)["app"]["tasks"][0]["host"]')
-INITPORT=$(curl --silent http://master.mesos:8080/v2/apps/riak-s2-init | python -c 'import sys, json; print json.load(sys.stdin)["app"]["tasks"][0]["ports"][0]')
+INITHOST=$(curl --silent http://leader.mesos:8080/v2/apps/riak-s2-init | python -c 'import sys, json; print json.load(sys.stdin)["app"]["tasks"][0]["host"]')
+INITPORT=$(curl --silent http://leader.mesos:8080/v2/apps/riak-s2-init | python -c 'import sys, json; print json.load(sys.stdin)["app"]["tasks"][0]["ports"][0]')
 
 # Create the admin user
 RESULTS=$(curl -H 'Content-Type: application/json' \
@@ -174,18 +174,18 @@ echo "   * Admin secret: ${ADMIN_SECRET}"
 echo ""
 
 # Destroy the riak-s2-init app instance
-curl -v -XDELETE http://master.mesos:8080/v2/apps/riak-s2-init -H "Content-Type: application/json"
+curl -v -XDELETE http://leader.mesos:8080/v2/apps/riak-s2-init -H "Content-Type: application/json"
 
 # Generate Stanchion JSON file
 perl -p  -e "s/{{.RIAKHOSTPORT}}/${RIAKHOST[0]}:${RIAKPBPORT[0]}/" stanchion.json.template > stanchion.json
 perl -pi -e "s/{{.ADMIN_KEY}}/${ADMIN_KEY}/" stanchion.json
 perl -pi -e "s/{{.ADMIN_SECRET}}/${ADMIN_SECRET}/" stanchion.json
 # Deploy Stanchion App
-curl -v -XPOST http://master.mesos:8080/v2/apps -d @./stanchion.json -H "Content-Type: application/json"
+curl -v -XPOST http://leader.mesos:8080/v2/apps -d @./stanchion.json -H "Content-Type: application/json"
 sleep 5s
 # Query Mesos to get PORT0 for stanchion
-STANCHIONHOST=$(curl --silent http://master.mesos:8080/v2/apps/stanchion | python -c 'import sys, json; print json.load(sys.stdin)["app"]["tasks"][0]["host"]')
-STANCHIONPORT=$(curl --silent http://master.mesos:8080/v2/apps/stanchion | python -c 'import sys, json; print json.load(sys.stdin)["app"]["tasks"][0]["ports"][0]')
+STANCHIONHOST=$(curl --silent http://leader.mesos:8080/v2/apps/stanchion | python -c 'import sys, json; print json.load(sys.stdin)["app"]["tasks"][0]["host"]')
+STANCHIONPORT=$(curl --silent http://leader.mesos:8080/v2/apps/stanchion | python -c 'import sys, json; print json.load(sys.stdin)["app"]["tasks"][0]["ports"][0]')
 
 for n in $(seq 0 $((NUM_NODES - 1))); do
     node_num=$((n + 1))
@@ -200,19 +200,19 @@ for n in $(seq 0 $((NUM_NODES - 1))); do
     # Deploy riak-s2
     echo ""
     echo "Deploying Riak S2 node ${node_num} to ${RIAKHOST[0]}"
-    curl -v -XPOST http://master.mesos:8080/v2/apps -d @"${json_file}" -H "Content-Type: application/json"
+    curl -v -XPOST http://leader.mesos:8080/v2/apps -d @"${json_file}" -H "Content-Type: application/json"
 
     echo ""
     echo ""
-    echo "Waiting for the health check for the Riak S2 Node ${node_num} deployment to turn green in http://master.mesos:8080/ui/#/apps"
+    echo "Waiting for the health check for the Riak S2 Node ${node_num} deployment to turn green in http://leader.mesos:8080/ui/#/apps"
     echo ""
 
-    until [[ "1" -eq "$(curl --silent http://master.mesos:8080/v2/apps/riak-s2-"${node_num}" | python -c 'import sys, json; print json.load(sys.stdin)["app"]["tasksHealthy"]')" ]]; do printf "."; sleep 1s; done
+    until [[ "1" -eq "$(curl --silent http://leader.mesos:8080/v2/apps/riak-s2-"${node_num}" | python -c 'import sys, json; print json.load(sys.stdin)["app"]["tasksHealthy"]')" ]]; do printf "."; sleep 1s; done
     echo ""
 
     # Query Mesos to get host and port for Riak S2
-    RIAKS2HOST[n]=$(curl --silent http://master.mesos:8080/v2/apps/riak-s2-"${node_num}" | python -c 'import sys, json; print json.load(sys.stdin)["app"]["tasks"][0]["host"]')
-    RIAKS2PORT[n]=$(curl --silent http://master.mesos:8080/v2/apps/riak-s2-"${node_num}" | python -c 'import sys, json; print json.load(sys.stdin)["app"]["tasks"][0]["ports"][0]')
+    RIAKS2HOST[n]=$(curl --silent http://leader.mesos:8080/v2/apps/riak-s2-"${node_num}" | python -c 'import sys, json; print json.load(sys.stdin)["app"]["tasks"][0]["host"]')
+    RIAKS2PORT[n]=$(curl --silent http://leader.mesos:8080/v2/apps/riak-s2-"${node_num}" | python -c 'import sys, json; print json.load(sys.stdin)["app"]["tasks"][0]["ports"][0]')
 done
 
 echo "##### Riak S2 Nodes:"

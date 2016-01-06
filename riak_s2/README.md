@@ -46,7 +46,7 @@ are deployed to the same hosts, so ensure that you have enough available
 resources to run both Riak and Riak S2.
 
 This setup assumes you are running mesos-dns.  If you are not, you need to edit
-the following files to replace all instances of master.mesos with the hostname
+the following files to replace all instances of leader.mesos with the hostname
 or IP of your Mesos master node:
 - deploy-complete.sh
 - dcos-riak.json
