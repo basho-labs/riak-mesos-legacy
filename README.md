@@ -42,8 +42,8 @@ may need to be used. Here is a minimal example:
 ```
 {
     "riak": {
-        "master": "zk://master.mesos:2181/mesos",
-        "zk": "master.mesos:2181",
+        "master": "zk://leader.mesos:2181/mesos",
+        "zk": "leader.mesos:2181",
         "user": "root",
         "framework-name": "riak",
         "flags": "",
@@ -61,8 +61,8 @@ may need to be used. Here is a minimal example:
 ```
 {
     "riak": {
-        "master": "zk://master.mesos:2181/mesos",
-        "zk": "master.mesos:2181",
+        "master": "zk://leader.mesos:2181/mesos",
+        "zk": "leader.mesos:2181",
         "user": "root",
         "framework-name": "riak",
         "role": "riak", # Should be "*" on mesos < 0.24
@@ -83,8 +83,8 @@ may need to be used. Here is a minimal example:
 ```
 {
     "riak": {
-        "master": "zk://master.mesos:2181/mesos",
-        "zk": "master.mesos:2181",
+        "master": "zk://leader.mesos:2181/mesos",
+        "zk": "leader.mesos:2181",
         "user": "root",
         "framework-name": "riak"
         "role": "riak", # Should be "*" on mesos < 0.24
@@ -228,7 +228,7 @@ dcos package uninstall riak
 **Note:** Currently, Zookeeper entries are left behind by the framework even after uninstall. To completely remove these entries, use the tools binary included in the framework package download (links in [docs/MESOS_USAGE.md](docs/MESOS_USAGE.md)). Execute the following command to remove the framework ZK references:
 
 ```
-./tools_linux_amd64 -zk=master.mesos:2181 -name=riak -command="delete-framework"
+./tools_linux_amd64 -zk=leader.mesos:2181 -name=riak -command="delete-framework"
 ```
 
 Replace "-name=riak" with the framework name if different than "riak".

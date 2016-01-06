@@ -40,8 +40,8 @@ Sample Riak Mesos Director `marathon.json`: [../director.mararthon.json](../dire
 After modifying `marathon.json` and/or `director.marathon.json` appropriately for your environment, run the following to add them as Marathon apps:
 
 ```
-curl -v -XPOST http://master.mesos:8080/v2/apps -d @marathon.json
-curl -v -XPOST http://master.mesos:8080/v2/apps -d @director.marathon.json
+curl -v -XPOST http://leader.mesos:8080/v2/apps -d @marathon.json
+curl -v -XPOST http://leader.mesos:8080/v2/apps -d @director.marathon.json
 ```
 
 Once the framework is up and running in Mesos, create and scale a cluster using `tools_linux_amd64`, the instructions are below in the "Manual Usage, Create a cluster" section.
@@ -58,8 +58,8 @@ Download and extract the Riak Mesos Framework (`riak_mesos_linux_amd64_0.2.0.tar
 
 ```
 ./framework_linux_amd64 \
-    -master=zk://master.mesos:2181/mesos \
-    -zk=master.mesos:2181 \
+    -master=zk://leader.mesos:2181/mesos \
+    -zk=leader.mesos:2181 \
     -name=riak \
     -user=root \
     -node_cpus=1 \ # Should be > 50% of an agent's capacity to ensure 1 node per agent
@@ -81,7 +81,7 @@ Download and extract the Riak Mesos Framework (`riak_mesos_linux_amd64_0.2.0.tar
 ```
 ./tools_linux_amd64 \
     -name=riak \
-    -zk=master.mesos:2181 \
+    -zk=leader.mesos:2181 \
     -cluster-name=mycluster \
     -command="create-cluster"
 ```
@@ -91,7 +91,7 @@ Download and extract the Riak Mesos Framework (`riak_mesos_linux_amd64_0.2.0.tar
 ```
 ./tools_linux_amd64 \
     -name=riak \
-    -zk=master.mesos:2181 \
+    -zk=leader.mesos:2181 \
     -cluster-name=mycluster \
     -command="add-nodes" \
     -nodes=5
@@ -102,7 +102,7 @@ Download and extract the Riak Mesos Framework (`riak_mesos_linux_amd64_0.2.0.tar
 ```
 ./tools_linux_amd64 \
     -name=riak \
-    -zk=master.mesos:2181 \
+    -zk=leader.mesos:2181 \
     -cluster-name=mycluster \
     -command="delete-node" \
     -node=riak-mycluster-1
@@ -113,7 +113,7 @@ Download and extract the Riak Mesos Framework (`riak_mesos_linux_amd64_0.2.0.tar
 ```
 ./tools_linux_amd64 \
     -name=riak \
-    -zk=master.mesos:2181 \
+    -zk=leader.mesos:2181 \
     -cluster-name=mycluster \
     -command="delete-cluster"
 ```
@@ -131,22 +131,22 @@ Get the base URL for the Riak Mesos Framework [HTTP API](HTTP-API.md) endpoints 
 Download and extract the Riak Mesos Director for your platform (`riak_mesos_director_linux_amd64_0.2.0.tar.gz`, links above), and start it with an incantation similar to this:
 
 ```
-DIRECTOR_CLUSTER=mycluster DIRECTOR_FRAMEWORK=riak DIRECTOR_ZK=master.mesos:2181 ./director_linux_amd64
+DIRECTOR_CLUSTER=mycluster DIRECTOR_FRAMEWORK=riak DIRECTOR_ZK=leader.mesos:2181 ./director_linux_amd64
 ```
 
 Starting the director should give you access to a number of endpoints:
 
-* Balanced Riak HTTP [http://master.mesos:8098](http://master.mesos:8098)
-* Balanced Riak Protobuf [http://master.mesos:8087](http://master.mesos:8087)
-* Director HTTP API [http://master.mesos:9000](http://master.mesos:9000)
+* Balanced Riak HTTP [http://leader.mesos:8098](http://leader.mesos:8098)
+* Balanced Riak Protobuf [http://leader.mesos:8087](http://leader.mesos:8087)
+* Director HTTP API [http://leader.mesos:9000](http://leader.mesos:9000)
 
 These ports are the defaults, and will be dynamically assigned when using Marathon or DCOS.
 
 #### Writing and Reading Data
 
 ```
-curl -v -XPUT http://master.mesos:8098/buckets/test/keys/one -d "hello"
-curl -v http://master.mesos:8098/buckets/test/keys/one
+curl -v -XPUT http://leader.mesos:8098/buckets/test/keys/one -d "hello"
+curl -v http://leader.mesos:8098/buckets/test/keys/one
 ```
 
 ## Uninstalling
@@ -154,14 +154,14 @@ curl -v http://master.mesos:8098/buckets/test/keys/one
 To remove the proxy and framework from marathon, run these command:
 
 ```
-curl -XDELETE http://master.mesos:8080/v2/apps/riak
-curl -XDELETE http://master.mesos:8080/v2/apps/riak-director
+curl -XDELETE http://leader.mesos:8080/v2/apps/riak
+curl -XDELETE http://leader.mesos:8080/v2/apps/riak-director
 ```
 
 **Note:** Currently, Zookeeper entries are left behind by the framework even after uninstall. To completely remove these entries, use the tools binary included in the framework package download (links for `tools_linux_amd64` above). Execute the following command to remove the framework ZK references:
 
 ```
-./tools_linux_amd64 -zk=master.mesos:2181 -name=riak -command="delete-framework"
+./tools_linux_amd64 -zk=leader.mesos:2181 -name=riak -command="delete-framework"
 ```
 
 Replace "-name=riak" with the framework name if different than "riak".

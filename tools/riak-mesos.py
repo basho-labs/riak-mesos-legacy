@@ -80,8 +80,8 @@ def usage():
 def _default_framework_config():
     return {
         'riak': {
-            'master': 'zk://master.mesos:2181/mesos',
-            'zk': 'master.mesos:2181',
+            'master': 'zk://leader.mesos:2181/mesos',
+            'zk': 'leader.mesos:2181',
             'ip': '',
             'hostname': '',
             'log': '',
@@ -111,7 +111,7 @@ def _default_framework_config():
             'url': 'http://riak-tools.s3.amazonaws.com/riak-mesos/coreos/riak_mesos_director_linux_amd64_0.2.0.tar.gz'
         },
         'marathon': {
-            'url': 'http://master.mesos:8080'
+            'url': 'http://leader.mesos:8080'
         }
     }
 
@@ -572,7 +572,7 @@ def run(args):
         return
     elif cmd == 'proxy config' or cmd == 'proxy':
         if help_flag:
-            print('Generates a marathon json config using --zookeeper (default is master.mesos:2181) and --cluster (default is default).')
+            print('Generates a marathon json config using --zookeeper (default is leader.mesos:2181) and --cluster (default is default).')
         else:
             try:
                 return config.director_marathon_string(cluster)
@@ -581,7 +581,7 @@ def run(args):
         return
     elif cmd == 'proxy install':
         if help_flag:
-            print('Installs a riak-mesos-director marathon app on the public Mesos node using --zookeeper (default is master.mesos:2181) and --cluster (default is default).')
+            print('Installs a riak-mesos-director marathon app on the public Mesos node using --zookeeper (default is leader.mesos:2181) and --cluster (default is default).')
         else:
             try:
                 director_json = config.director_marathon_json(cluster)
