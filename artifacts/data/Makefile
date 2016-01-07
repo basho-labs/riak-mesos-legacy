@@ -4,8 +4,6 @@ TMP	   := /tmp
 RIAK_GIT ?= https://github.com/basho/riak.git
 RIAK_TAG ?= riak-2.1.3
 RIAK_SOURCE_DIR ?= riak
-# RIAK_SOURCE_PKG ?= riak-2.1.1.tar.gz
-# RIAK_SOURCE_DOWNLOAD ?= http://s3.amazonaws.com/downloads.basho.com/riak/2.1/2.1.1/riak-2.1.1.tar.gz
 RIAK_S2_SOURCE_DIR ?= riak-cs-2.1.0
 RIAK_S2_SOURCE_PKG ?= riak-cs-2.1.0.tar.gz
 RIAK_S2_SOURCE_DOWNLOAD ?= http://s3.amazonaws.com/downloads.basho.com/riak-cs/2.1/2.1.0/riak-cs-2.1.0.tar.gz
@@ -19,8 +17,8 @@ riak-s2: riak-s2-bin.tar.gz stanchion-bin.tar.gz riak-s2-init-bin.tar.gz
 
 ### Executor begin
 riak-mesos-executor:
-	git clone git@github.com:basho-labs/riak-mesos-executor.git
-	cd riak-mesos-executor && git checkout mtc-dev && git pull
+	git clone https://github.com/basho-labs/riak-mesos-executor.git
+	cd riak-mesos-executor && git checkout mtc-dev
 executor-bin: riak-mesos-executor
 	cd riak-mesos-executor && $(MAKE) rel
 	touch executor-bin
