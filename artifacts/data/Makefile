@@ -49,7 +49,7 @@ clean_riak_explorer:
 ### Riak begin
 $(RIAK_SOURCE_DIR):
 	git clone $(RIAK_GIT)
-	cd $(RIAK_SOURCE_DIR) && git checkout $(RIAK_TAG) && git pull
+	cd $(RIAK_SOURCE_DIR) && git checkout $(RIAK_TAG)
 riak-bin: $(RIAK_SOURCE_DIR)
 	rm -rf $(RIAK_SOURCE_DIR)/deps/node_package
 	git clone https://github.com/basho/node_package.git --branch no-epmd $(RIAK_SOURCE_DIR)/deps/node_package
