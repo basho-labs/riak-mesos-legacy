@@ -18,7 +18,6 @@ riak-s2: riak-s2-bin.tar.gz stanchion-bin.tar.gz riak-s2-init-bin.tar.gz
 ### Executor begin
 riak-mesos-executor:
 	git clone https://github.com/basho-labs/riak-mesos-executor.git
-	cd riak-mesos-executor && git checkout mtc-dev
 executor-bin: riak-mesos-executor
 	cd riak-mesos-executor && $(MAKE) rel
 	touch executor-bin
