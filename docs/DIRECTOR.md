@@ -11,64 +11,9 @@ The Director in turn will update it's list of balanced Riak connections.
 
 ![Director](RiakMesosControlFrame.png)
 
-## Marathon Setup
-
-Example marathon json file for the director can be found here: [../director.marathon.json](../director.marathon.json)
-
-## Manual Setup
-
-### Download
-
-Links for downloading the director package can be found in [MESOS_USAGE.md](MESOS_USAGE.md)
-
-### Configure
-
-Change `etc/director.conf` to match your environment
-
-```
-listener.web = on
-listener.web.http = 0.0.0.0:9000
-listener.proxy.http = 0.0.0.0:8098
-listener.proxy.protobuf = 0.0.0.0:8087
-zookeeper.address = master.mesos:2181
-framework.name = riak-mesos-go
-framework.cluster = mycluster
-```
-
-### Running the Director
-
-Start
-
-```
-./bin/director start
-```
-
-Stop
-
-```
-./bin/director start
-```
-
-Logs are located at `log/console.log`.
-
-## CLI
-
-Running `./bin/director-admin` will list available usage:
-
-```
-Usage: Usage: director-admin <sub-command>
-
-  Sub-commands:
-    status                            Display current information about the director
-    configure -f framework -c cluster Update and resynchronize proxy using the specified framework and cluster
-    list-frameworks                   List of running Riak Mesos Framework instance names
-    list-clusters                     List of running Riak clusters in the configured framework
-    list-nodes                        List of running Riak nodes in the configured cluster
-```
-
 ## HTTP API
 
-Functionality available in the `director-admin` tool is also available via an HTTP API.
+After locating your Director's address in Mesos, the HTTP API can be utilized:
 
 Name | Method | Path | Description
 --- | --- | --- | ---

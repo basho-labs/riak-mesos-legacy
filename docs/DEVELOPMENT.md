@@ -1,24 +1,39 @@
 # Development Guide
 
-## Quickstart
-
-To build the framework and get it running in a Mesos vagrant environment on Mac OSX, follow these steps:
-
 ### Vagrant Dev Environment
 
-Bring up the build environment with a running Mesos and ssh in
+For a Mesos / Vagrant / Erlang Vagrant environment, follow directions here: [mesos-erlang-vagrant](https://github.com/drewkerrigan/mesos-erlang-vagrant)
+
+### Go installation
 
 ```
-vagrant plugin install vagrant-hostmanager
-vagrant up
-vagrant reload
-vagrant ssh
+sudo apt-get -y update
+sudo apt-get -y upgrade
+sudo apt-get -y install git bison mercurial autoconf
+cd $HOME/ && bash < <(curl -s -S -L https://raw.githubusercontent.com/moovweb/gvm/master/binscripts/gvm-installer)
+[[ -s "$HOME/.gvm/scripts/gvm" ]] && source "$HOME/.gvm/scripts/gvm"
+gvm install go1.4
+gvm use go1.4
+mkdir -p ~/go
+export GOPATH=~/go
+gvm install go1.5
+gvm use go1.5
+export GOPATH=~/go
+export PATH=$PATH:$GOPATH/bin:$HOME/.gvm/gos/go1.5/bin:$HOME/bin
+### .bashrc changes
+echo '# Golang' >> $HOME/.bashrc
+echo [[ -s "$HOME/.gvm/scripts/gvm" ]] && source "$HOME/.gvm/scripts/gvm"' >> $HOME/.bashrc
+echo 'gvm use go1.5' >> $HOME/.bashrc
+echo 'export GOPATH=~/go' >> $HOME/.bashrc
+echo 'export PATH=$PATH:$GOPATH/bin:$HOME/.gvm/gos/go1.5/bin:$HOME/bin' >> $HOME/.bashrc
 ```
+
+Bring up the build environment with a running Mesos and ssh in
 
 ### Set up Dependencies
 
 ```
-cd /vagrant && ./setup-env.sh
+./setup-env.sh
 ```
 
 ### Build the Framework
@@ -32,102 +47,3 @@ or for a faster build with lower RAM requirements:
 ```
 cd $GOPATH/src/github.com/basho-labs/riak-mesos && TAGS=dev make
 ```
-
-### Creating Native / Platform Specific Builds
-
-By default, the build process will include a Debian Ubuntu image in the binary to support multiple platforms using chroot. To build the framework without relying on chroot, everything can be built natively:
-
-```
-# Rebuild all Erlang artifacts
-cd $GOPATH/src/github.com/basho-labs/riak-mesos && TAGS='"rel native"' make rebuild_all_native
-# Recompile the framework only
-cd $GOPATH/src/github.com/basho-labs/riak-mesos && TAGS='"rel native"' make
-# Create packages in the `_build/` directory
-cd $GOPATH/src/github.com/basho-labs/riak-mesos && make package
-```
-
-### For Mesos 0.24 and above
-
-Make sure to start the mesos master with `MESOS_ROLES=riak` or `--roles=riak`
-
-### Start the Framework
-
-```
-./framework_linux_amd64 \
-    -master=zk://localhost:2181/mesos \
-    -zk=localhost:2181 \
-    -name=riak \
-    -user=root \
-    -node_cpus=1 \
-    -node_mem=256 \
-    -node_disk=512 \
-    -role=riak \ # Should be * for Mesos < 0.24
-    -mesos_authentication_principal=riak \ # Can be * for Mesos < 0.24
-    -use_reservations # Should remove for Mesos < 0.24
-```
-
-### Create a Cluster
-
-```
-./tools_linux_amd64 \
-    -name=riak \
-    -zk=localhost:2181 \
-    -cluster-name=mycluster \
-    -command="create-cluster"
-```
-
-### Add Riak nodes
-
-```
-./tools_linux_amd64 \
-    -name=riak \
-    -zk=localhost:2181 \
-    -cluster-name=mycluster \
-    -command="add-nodes" \
-    -nodes=1
-```
-
-### Remove Riak nodes
-
-```
-./tools_linux_amd64 \
-    -name=riak \
-    -zk=localhost:2181 \
-    -cluster-name=mycluster \
-    -command="delete-node" \
-    -node=riak-mycluster-1
-```
-
-### Destroy a Cluster
-
-```
-./tools_linux_amd64 \
-    -name=riak \
-    -zk=localhost:2181 \
-    -cluster-name=mycluster \
-    -command="delete-cluster"
-```
-
-### Start the Director
-
-```
-DIRECTOR_CLUSTER=mycluster DIRECTOR_FRAMEWORK=riak DIRECTOR_ZK=localhost:2181 ./director_linux_amd64
-```
-
-### Endpoints for Testing
-
-* Director API: [http://192.168.0.30:9000/](http://192.168.0.30:9000/)
-* Riak HTTP (Director Proxy): [http://192.168.0.30:8098/](http://192.168.0.30:8098/)
-* Riak PB (Director Proxy) [http://192.168.0.30:8087/](http://192.168.0.30:8087/)
-* Framework API: Dynamically assigned, check output of framework_linux_amd64
-
-### Writing and Reading Data
-
-```
-curl -v -XPUT http://192.168.0.30:8098/buckets/test/keys/one -d "hello"
-curl -v http://192.168.0.30:8098/buckets/test/keys/one
-```
-
-## Further Usage
-
-See [MESOS_USAGE.md](MESOS_USAGE.md) for more information on how to use the binaries created in the `bin/` directory
