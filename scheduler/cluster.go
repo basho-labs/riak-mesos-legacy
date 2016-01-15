@@ -3,6 +3,7 @@ package scheduler
 import (
 	"fmt"
 	log "github.com/Sirupsen/logrus"
+	"github.com/basho-labs/riak-mesos/artifacts"
 	"github.com/basho-labs/riak-mesos/common"
 	rexclient "github.com/basho-labs/riak-mesos/riak_explorer"
 	mesos "github.com/mesos/mesos-go/mesosproto"
@@ -21,11 +22,11 @@ type FrameworkRiakCluster struct {
 }
 
 func NewFrameworkRiakCluster(name string) *FrameworkRiakCluster {
-	advancedConfig, err := Asset("advanced.config")
+	advancedConfig, err := artifacts.Asset("advanced.config")
 	if err != nil {
 		log.Error("Unable to open up advanced.config: ", err)
 	}
-	riakConfig, err := Asset("riak.conf")
+	riakConfig, err := artifacts.Asset("riak.conf")
 	if err != nil {
 		log.Error("Unable to open up riak.conf: ", err)
 	}

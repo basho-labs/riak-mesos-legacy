@@ -6,8 +6,10 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/basho-labs/riak-mesos/common"
 	metamgr "github.com/basho-labs/riak-mesos/metadata_manager"
+	"io/ioutil"
 	"net"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -152,13 +154,28 @@ func NewCPMd(port int, mgr *metamgr.MetadataManager) *CEPM {
 }
 
 // Drops the ERL files into the given directory
-func InstallInto(dir string) error {
+func InstallInto(dir string, port int) error {
 	var err error
 
-	err = RestoreAssets(dir, "")
+	kernelDirs, err := filepath.Glob(fmt.Sprint(dir, "/kernel*"))
 	if err != nil {
-		return err
+		log.Fatal("Could not find kernel directory")
 	}
+
+	log.Infof("Found kernel dirs: %v", kernelDirs)
+
+	err = RestoreAssets(fmt.Sprint(kernelDirs[0], "/ebin"), "")
+
+	if err != nil {
+		log.Panic(err)
+	}
+	if err := common.KillEPMD("root/riak"); err != nil {
+		log.Fatal("Could not kill EPMd: ", err)
+	}
+	os.MkdirAll(fmt.Sprint(kernelDirs[0], "/priv"), 0777)
+	ioutil.WriteFile(fmt.Sprint(kernelDirs[0], "/priv/cepmd_port"), []byte(fmt.Sprintf("%d.", port)), 0777)
+
+	log.Infof("Port written to %v", fmt.Sprint(kernelDirs[0], "/priv/cepmd_port"))
 
 	return nil
 }

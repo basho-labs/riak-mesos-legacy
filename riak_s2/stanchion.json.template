@@ -10,5 +10,5 @@
         "ADMIN_KEY": "{{.ADMIN_KEY}}",
         "ADMIN_SECRET": "{{.ADMIN_SECRET}}"
     },
-    "uris": ["http://riak-tools.s3.amazonaws.com/riak-mesos/centos/artifacts/0.2.0/stanchion-bin.tar.gz"]
+    "uris": ["http://riak-tools.s3.amazonaws.com/riak-mesos/centos/artifacts/0.3.0/stanchion-bin.tar.gz"]
 }

@@ -4,7 +4,7 @@
   "cpus": 0.5,
   "mem": 2048,
   "ports": [0, 0],
-  "uris": ["http://riak-tools.s3.amazonaws.com/riak-mesos/coreos/riak_mesos_linux_amd64_0.2.0.tar.gz"],
+  "uris": ["http://riak-tools.s3.amazonaws.com/riak-mesos/coreos/riak_mesos_linux_amd64_0.3.0.tar.gz"],
   "env": {},
   "cmd": "riak_mesos_framework/framework_linux_amd64 -master=zk://localhost:2181/mesos -zk=localhost:2181 -name=riak -user=root -role=riak -node_cpus=1 -node_mem=2048 -node_disk=5000 -mesos_authentication_principal=riak -use_reservations",
   "healthChecks": [

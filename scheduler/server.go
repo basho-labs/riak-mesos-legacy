@@ -20,6 +20,7 @@ type SchedulerHTTPServer struct {
 	sc           *SchedulerCore
 	hostURI      string
 	riakURI      string
+	cepmdURI     string
 	executorName string
 	URI          string
 }
@@ -493,21 +494,19 @@ func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *Schedul
 		hostname = schedulerHostname
 	}
 
-	hostURI := fmt.Sprintf("http://%s:%d/static/executor_linux_amd64", hostname, port)
-	riakURI := fmt.Sprintf("http://%s:%d/static/riak_linux_amd64.tar.gz", hostname, port)
+	hostURI := fmt.Sprintf("http://%s:%d/static/riak_mesos_executor.tar.gz", hostname, port)
+	riakURI := fmt.Sprintf("http://%s:%d/static/riak-bin.tar.gz", hostname, port)
+	cepmdURI := fmt.Sprintf("http://%s:%d/static/cepmd_linux_amd64", hostname, port)
+
 	URI := fmt.Sprintf("http://%s:%d", hostname, port)
 	//Info.Printf("Hosting artifact '%s' at '%s'", path, hostURI)
 	log.Println("Serving at HostURI: ", hostURI)
 
 	router := mux.NewRouter().StrictSlash(true)
 
-	fs := http.FileServer(&assetfs.AssetFS{Asset: Asset, AssetDir: AssetDir, Prefix: ""})
-
 	// This rewrites /static/FOO -> FOO
+	fs := http.FileServer(&assetfs.AssetFS{Asset: artifacts.Asset, AssetDir: artifacts.AssetDir, Prefix: ""})
 	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", fs))
-
-	fs2 := http.FileServer(&assetfs.AssetFS{Asset: artifacts.Asset, AssetDir: artifacts.AssetDir, Prefix: ""})
-	router.PathPrefix("/static2/").Handler(http.StripPrefix("/static2/", fs2))
 
 	debugMux := http.NewServeMux()
 	router.PathPrefix("/debug").Handler(debugMux)
@@ -520,7 +519,8 @@ func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *Schedul
 		sc:           sc,
 		hostURI:      hostURI,
 		riakURI:      riakURI,
-		executorName: "./executor_linux_amd64",
+		cepmdURI:     cepmdURI,
+		executorName: "./riak_mesos_executor/bin/ermf-executor",
 		URI:          URI,
 	}
 

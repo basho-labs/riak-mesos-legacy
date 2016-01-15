@@ -23,7 +23,7 @@ Before getting started with the RMF, there are a few environment and system rela
 
 ### Download and Install the CLI Tool
 
-The Python based CLI tool has been uploaded to [http://riak-tools.s3.amazonaws.com/riak-mesos/riak_mesos_cli_0.2.0.tar.gz](http://riak-tools.s3.amazonaws.com/riak-mesos/riak_mesos_cli_0.2.0.tar.gz). It should contain the following files:
+The Python based CLI tool has been uploaded to [http://riak-tools.s3.amazonaws.com/riak-mesos/riak_mesos_cli_0.3.0.tar.gz](http://riak-tools.s3.amazonaws.com/riak-mesos/riak_mesos_cli_0.3.0.tar.gz). It should contain the following files:
 
 * `config.json`: Sample configuration file with the default values.
 * `riak-mesos`: The executable Python CLI tool.
@@ -32,8 +32,8 @@ The Python based CLI tool has been uploaded to [http://riak-tools.s3.amazonaws.c
 
 ```
 mkdir -p $HOME/bin
-cd $HOME/bin && curl -O http://riak-tools.s3.amazonaws.com/riak-mesos/riak_mesos_cli_0.2.0.tar.gz
-tar xvzf riak_mesos_cli_0.2.0.tar.gz
+cd $HOME/bin && curl -O http://riak-tools.s3.amazonaws.com/riak-mesos/riak_mesos_cli_0.3.0.tar.gz
+tar xvzf riak_mesos_cli_0.3.0.tar.gz
 export PATH=$HOME/bin/riak_mesos_cli:$PATH
 ```
 
@@ -84,9 +84,9 @@ riak-mesos config --json | python -m json.tool > config.json
 The resulting `config.json` can then be modified to fit your environment. Here is a brief description of some of those values:
 
 * `riak.url`: Location of the RMF tar ball which contains the actual RMF executables.
-    * Use `"http://riak-tools.s3.amazonaws.com/riak-mesos/ubuntu/riak_mesos_linux_amd64_0.2.0.tar.gz"` for Ubuntu environments.
-    * Use `"http://riak-tools.s3.amazonaws.com/riak-mesos/centos/riak_mesos_linux_amd64_0.2.0.tar.gz"` for CentOS environments.
-    * Use `"http://riak-tools.s3.amazonaws.com/riak-mesos/coreos/riak_mesos_linux_amd64_0.2.0.tar.gz"` (Default) for CoreOS / Other Linux environments.
+    * Use `"http://riak-tools.s3.amazonaws.com/riak-mesos/ubuntu/riak_mesos_linux_amd64_0.3.0.tar.gz"` for Ubuntu environments.
+    * Use `"http://riak-tools.s3.amazonaws.com/riak-mesos/centos/riak_mesos_linux_amd64_0.3.0.tar.gz"` for CentOS environments.
+    * Use `"http://riak-tools.s3.amazonaws.com/riak-mesos/coreos/riak_mesos_linux_amd64_0.3.0.tar.gz"` (Default) for CoreOS / Other Linux environments.
 * `riak.master`: The address for the Mesos master. Example values:
     * `localhost:5050`
     * `leader.mesos:5050`

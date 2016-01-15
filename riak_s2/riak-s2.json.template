@@ -14,7 +14,7 @@
     "constraints": [
         [ "hostname", "CLUSTER", "{{.RIAKHOSTNAME}}" ]
     ],
-    "uris": ["http://riak-tools.s3.amazonaws.com/riak-mesos/centos/artifacts/0.2.0/riak-s2-bin.tar.gz"],
+    "uris": ["http://riak-tools.s3.amazonaws.com/riak-mesos/centos/artifacts/0.3.0/riak-s2-bin.tar.gz"],
     "healthChecks": [{
         "protocol": "HTTP",
         "path": "/riak-cs/ping",

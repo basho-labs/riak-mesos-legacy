@@ -30,7 +30,7 @@ listener.web = on
 listener.web.http = 0.0.0.0:9000
 listener.proxy.http = 0.0.0.0:8098
 listener.proxy.protobuf = 0.0.0.0:8087
-zookeeper.address = 33.33.33.2:2181
+zookeeper.address = master.mesos:2181
 framework.name = riak-mesos-go
 framework.cluster = mycluster
 ```
