@@ -9,8 +9,6 @@ intelligence to be built into Riak client libraries, a smart proxy application n
 The Director communicates with Zookeeper to keep up to date with Riak cluster changes.
 The Director in turn will update it's list of balanced Riak connections.
 
-![Director](RiakMesosControlFrame.png)
-
 ## HTTP API
 
 After locating your Director's address in Mesos, the HTTP API can be utilized:

@@ -20,12 +20,12 @@ For build and testing information, visit [docs/DEVELOPMENT.md](docs/DEVELOPMENT.
 
 The Riak Mesos Framework scheduler will attempt to spread Riak nodes across as many different mesos agents as possible to increase fault tolerance. If there are more nodes requested than there are agents available, the scheduler will then start adding more Riak nodes to existing agents.
 
-![Architecture](docs/RiakMesosFramework.png)
+![Architecture](docs/riak-mesos-framework-architecture.png)
 
 ### Director
 
 Due to the nature of Apache Mesos and the potential for Riak nodes to come and go on a regular basis, client applications using a Mesos based cluster must be kept up to date on the cluster's current state. Instead of requiring this intelligence to be built into Riak client libraries, a smart proxy application named `Director` has been created which can run alongside client applications.
 
-![Director](docs/RiakMesosControlFrame.png)
+![Director](docs/riak-mesos-director-architecture.png)
 
 For more information related to the Riak Mesos Director, please read [docs/DIRECTOR.md](docs/DIRECTOR.md)
