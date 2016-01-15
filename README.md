@@ -24,7 +24,7 @@ The Riak Mesos Framework scheduler will attempt to spread Riak nodes across as m
 
 Following is a flowchart describing the basic logic followed by the scheduler to reserve resources, launch Riak nodes, and handle status updates for those nodes:
 
-![Flow Chart](docs/riak-mesos-scheduler-flow.jpg)
+![Flow Chart](https://raw.githubusercontent.com/basho-labs/riak-mesos/master/docs/riak-mesos-scheduler-flow.jpg)
 
 ### Director
 
