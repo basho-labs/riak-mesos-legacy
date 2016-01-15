@@ -28,4 +28,4 @@ Due to the nature of Apache Mesos and the potential for Riak nodes to come and g
 
 ![Director](docs/RiakMesosControlFrame.png)
 
-For more information related to the Riak Mesos Director and instructions on running it outside of Mesos, please read [docs/DIRECTOR.md](docs/DIRECTOR.md)
+For more information related to the Riak Mesos Director, please read [docs/DIRECTOR.md](docs/DIRECTOR.md)
