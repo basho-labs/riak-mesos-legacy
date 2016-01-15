@@ -16,11 +16,15 @@ For build and testing information, visit [docs/DEVELOPMENT.md](docs/DEVELOPMENT.
 
 ## Architecture
 
-### Scheduler
+![Architecture](docs/riak-mesos-framework-architecture.png)
+
+### Scheduler ###
 
 The Riak Mesos Framework scheduler will attempt to spread Riak nodes across as many different mesos agents as possible to increase fault tolerance. If there are more nodes requested than there are agents available, the scheduler will then start adding more Riak nodes to existing agents.
 
-![Architecture](docs/riak-mesos-framework-architecture.png)
+Following is a flowchart describing the basic logic followed by the scheduler to reserve resources, launch Riak nodes, and handle status updates for those nodes:
+
+![Flow Chart](docs/riak-mesos-scheduler-flow.jpg)
 
 ### Director
 
