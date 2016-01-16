@@ -47,7 +47,7 @@ func (node *ZkNode) SetDataWithRetry(data []byte, currentRetry int, retry int) e
 		}
 		if err != nil {
 			log.Warning("Error persisting data, retrying: ", err)
-			node.mgr.createConnection()
+			node.mgr.CreateConnection()
 			return node.SetDataWithRetry(data, currentRetry + 1, retry)
 		}
 	} else {
@@ -58,7 +58,7 @@ func (node *ZkNode) SetDataWithRetry(data []byte, currentRetry int, retry int) e
 		}
 		if err != nil {
 			log.Warning("Error persisting data, retrying: ", err)
-			node.mgr.createConnection()
+			node.mgr.CreateConnection()
 			return node.SetDataWithRetry(data, currentRetry + 1, retry)
 		}
 		node.data, node.stat, err = node.mgr.zkConn.Get(node.ns.GetZKPath())
@@ -68,7 +68,7 @@ func (node *ZkNode) SetDataWithRetry(data []byte, currentRetry int, retry int) e
 		}
 		if err != nil {
 			log.Warning("Error persisting data, retrying: ", err)
-			node.mgr.createConnection()
+			node.mgr.CreateConnection()
 			return node.SetDataWithRetry(data, currentRetry + 1, retry)
 		}
 	}
@@ -172,7 +172,7 @@ func (mgr *MetadataManager) setup() {
 	mgr.CreateNSIfNotExists(mgr.namespace, false)
 }
 
-func (mgr *MetdataManager) createConnection() {
+func (mgr *MetdataManager) CreateConnection() {
 	conn, _, err := zk.Connect(mgr.zookeepers, time.Second)
 	if err != nil {
 		log.Panic(err)
@@ -194,7 +194,7 @@ func NewMetadataManager(frameworkID string, zookeepers []string) *MetadataManage
 	  zookeepers:  zookeepers,
 	}
 
-	manager.createConnection()
+	manager.CreateConnection()
 
 	manager.setup()
 	return manager
