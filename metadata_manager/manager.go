@@ -172,21 +172,6 @@ func (mgr *MetadataManager) setup() {
 	mgr.CreateNSIfNotExists(mgr.namespace, false)
 }
 
-func (mgr *MetdataManager) CreateConnection() {
-	conn, _, err := zk.Connect(mgr.zookeepers, time.Second)
-	if err != nil {
-		log.Panic(err)
-	}
-	bns := baseNamespace{}
-	ns := makeSubSpace(makeSubSpace(makeSubSpace(bns, "riak"), "frameworks"), mgr.frameworkID)
-	lockPath := makeSubSpace(ns, "lock")
-	zkLock := zk.NewLock(conn, lockPath.GetZKPath(), zk.WorldACL(zk.PermAll))
-
-	mgr.zkConn = conn
-	mgr.namespace = ns
-	mgr.zkLock = *zkLock
-}
-
 func NewMetadataManager(frameworkID string, zookeepers []string) *MetadataManager {
 	manager := &MetadataManager{
 		lock:        &sync.Mutex{},
@@ -231,6 +216,20 @@ func (mgr *MetadataManager) createPathIfNotExists(path string, ephemeral bool) {
 	}
 }
 
+func (mgr *MetadataManager) CreateConnection() {
+	conn, _, err := zk.Connect(mgr.zookeepers, time.Second)
+	if err != nil {
+		log.Panic(err)
+	}
+	bns := baseNamespace{}
+	ns := makeSubSpace(makeSubSpace(makeSubSpace(bns, "riak"), "frameworks"), mgr.frameworkID)
+	lockPath := makeSubSpace(ns, "lock")
+	zkLock := zk.NewLock(conn, lockPath.GetZKPath(), zk.WorldACL(zk.PermAll))
+
+	mgr.zkConn = conn
+	mgr.namespace = ns
+	mgr.zkLock = *zkLock
+}
 func (mgr *MetadataManager) CreateNSIfNotExists(ns Namespace, ephemeral bool) {
 	components := ns.GetComponents()
 	for idx := range components {
