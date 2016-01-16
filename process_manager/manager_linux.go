@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 	"syscall"
+	"path/filepath"
 
 	log "github.com/Sirupsen/logrus"
 )
@@ -57,6 +58,16 @@ func GetProcAttributes() *syscall.ProcAttr {
 func (pm *ProcessManager) start(executablePath string, args []string, chroot *string, useSuperChroot bool) {
 	pm.maybeChroot(executablePath, args, chroot, useSuperChroot)
 }
+
+func (pm *ProcessManager) maybeChroot(executablePath string, args []string, chroot *string, _ bool) {
+	executablePath = filepath.Join(*chroot, executablePath)
+
+	realArgs := []string{}
+	realArgs = append([]string{executablePath}, args...)
+	procattr := GetProcAttributes()
+	pm.doStart(executablePath, realArgs, procattr)
+}
+
 
 // setOpenFilesLimit sets the open file limit in the kernel
 // cur is the soft limit, max is the ceiling (or hard limit) for that limit
