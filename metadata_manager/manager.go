@@ -34,28 +34,47 @@ func (node *ZkNode) GetLock() *zk.Lock {
 	return zkLock
 }
 func (node *ZkNode) SetData(data []byte) error {
+	return node.SetDataWithRetry(data, 0, 10)
+}
+func (node *ZkNode) SetDataWithRetry(data []byte, currentRetry int, retry int) error {
 	var err error
 	log.Info("Persisting data")
 	if node.stat != nil {
 		node.stat, err = node.mgr.zkConn.Set(node.ns.GetZKPath(), data, node.stat.Version)
-		if err != nil {
+		if err != nil && currentRetry >= retry {
 			log.Panic("Error persisting data: ", err)
 			return err
+		}
+		if err != nil {
+			log.Warning("Error persisting data, retrying: ", err)
+			node.mgr.createConnection()
+			return node.SetDataWithRetry(data, currentRetry + 1, retry)
 		}
 	} else {
 		_, err = node.mgr.zkConn.Create(node.ns.GetZKPath(), data, 0, zk.WorldACL(zk.PermAll))
-		if err != nil {
+		if err != nil && currentRetry >= retry {
 			log.Panic("Error persisting data: ", err)
 			return err
 		}
-		node.data, node.stat, err = node.mgr.zkConn.Get(node.ns.GetZKPath())
 		if err != nil {
+			log.Warning("Error persisting data, retrying: ", err)
+			node.mgr.createConnection()
+			return node.SetDataWithRetry(data, currentRetry + 1, retry)
+		}
+		node.data, node.stat, err = node.mgr.zkConn.Get(node.ns.GetZKPath())
+		if err != nil && currentRetry >= retry {
 			log.Panic("Error persisting data: ", err)
 			return err
+		}
+		if err != nil {
+			log.Warning("Error persisting data, retrying: ", err)
+			node.mgr.createConnection()
+			return node.SetDataWithRetry(data, currentRetry + 1, retry)
 		}
 	}
 	return nil
 }
+
 func (node *ZkNode) GetChildren() []*ZkNode {
 	return node.mgr.getChildren(node.ns)
 }
@@ -146,29 +165,36 @@ type MetadataManager struct {
 	namespace   Namespace
 	lock        *sync.Mutex
 	zkLock      zk.Lock
+	zookeepers  []string
 }
 
 func (mgr *MetadataManager) setup() {
 	mgr.CreateNSIfNotExists(mgr.namespace, false)
 }
 
-func NewMetadataManager(frameworkID string, zookeepers []string) *MetadataManager {
-	conn, _, err := zk.Connect(zookeepers, time.Second)
+func (mgr *MetdataManager) createConnection() {
+	conn, _, err := zk.Connect(mgr.zookeepers, time.Second)
 	if err != nil {
 		log.Panic(err)
 	}
 	bns := baseNamespace{}
-	ns := makeSubSpace(makeSubSpace(makeSubSpace(bns, "riak"), "frameworks"), frameworkID)
+	ns := makeSubSpace(makeSubSpace(makeSubSpace(bns, "riak"), "frameworks"), mgr.frameworkID)
 	lockPath := makeSubSpace(ns, "lock")
 	zkLock := zk.NewLock(conn, lockPath.GetZKPath(), zk.WorldACL(zk.PermAll))
 
+	mgr.zkConn = conn
+	mgr.namespace = ns
+	mgr.zkLock = *zkLock
+}
+
+func NewMetadataManager(frameworkID string, zookeepers []string) *MetadataManager {
 	manager := &MetadataManager{
 		lock:        &sync.Mutex{},
 		frameworkID: frameworkID,
-		zkConn:      conn,
-		namespace:   ns,
-		zkLock:      *zkLock,
+	  zookeepers:  zookeepers,
 	}
+
+	manager.createConnection()
 
 	manager.setup()
 	return manager
