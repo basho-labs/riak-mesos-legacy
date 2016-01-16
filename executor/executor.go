@@ -1,7 +1,5 @@
 package main
 
-//go:generate go-bindata -o bindata_generated.go data/
-
 import (
 	"fmt"
 	log "github.com/Sirupsen/logrus"

@@ -24,7 +24,7 @@ package: clean_package
 .bin.framework_$(OS_ARCH):
 	go build -o bin/framework_$(OS_ARCH) -tags=$(TAGS) ./framework/
 	$(shell touch .bin.framework_$(OS_ARCH))
-framework: .godep cepm artifacts executor .bin.framework_$(OS_ARCH)
+framework: .godep executor artifacts .bin.framework_$(OS_ARCH)
 clean_bin: clean_framework
 clean_framework:
 	-rm -f .bin.framework_$(OS_ARCH) bin/framework_$(OS_ARCH)
@@ -33,35 +33,13 @@ clean_framework:
 ### Executor begin
 .PHONY: executor clean_executor .scheduler.data.executor_$(OS_ARCH)
 executor: .scheduler.data.executor_$(OS_ARCH)
-.scheduler.data.executor_$(OS_ARCH): cepm .process_manager.bindata_generated
+.scheduler.data.executor_$(OS_ARCH): cepm
 	GOOS=linux GOARCH=amd64 go build -o artifacts/data/executor_$(OS_ARCH) -tags=$(TAGS) ./executor/
 	$(shell touch .scheduler.data.executor_$(OS_ARCH))
 clean_bin: clean_executor
 clean_executor:
-	-rm -f .executor.bindata_generated executor/bindata_generated.go
 	-rm -f .scheduler.data.executor_$(OS_ARCH) artifacts/data/executor_$(OS_ARCH)
 ### Executor end
-
-### Artifact begin
-.PHONY: artifacts clean_artifacts
-artifacts:
-	cd artifacts/data && $(MAKE)
-	go generate -tags=$(TAGS) ./artifacts
-clean: clean_artifacts
-clean_artifacts:
-	cd artifacts/data && $(MAKE) clean
-	-rm -rf artifacts/bindata_generated.go
-### Artifact end
-
-### Process Manager begin
-.PHONY: .process_manager.bindata_generated
-.process_manager.bindata_generated:
-	go generate -tags=$(TAGS) ./process_manager/...
-	$(shell touch .process_manager.bindata_generated)
-clean_bin: clean_process_manager
-clean_process_manager:
-	rm -rf .process_manager.bindata_generated process_manager/bindata_generated.go
-### Process Manager end
 
 ### CEPMd begin
 .PHONY: cepm clean_cepmd erl_dist
@@ -75,6 +53,17 @@ clean_bin: clean_cepmd
 clean_cepmd:
 	-rm -f .cepmd.cepm.bindata_generated cepmd/cepm/bindata_generated.go
 ### CEPMd end
+
+### Artifact begin
+.PHONY: artifacts clean_artifacts
+artifacts:
+	cd artifacts/data && $(MAKE)
+	go generate -tags=$(TAGS) ./artifacts
+clean: clean_artifacts
+clean_artifacts:
+	cd artifacts/data && $(MAKE) clean
+	-rm -rf artifacts/bindata_generated.go
+### Artifact end
 
 ### Go Tools begin
 test:
