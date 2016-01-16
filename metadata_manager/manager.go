@@ -189,7 +189,7 @@ func (mgr *MetadataManager) DeleteChildrenWithRetry(path string, currentRetry in
 		}
 		if err != nil {
 			log.Warning(err)
-			return mgr.DeleteChildrenWithRetry(path, currentRetry + 1, retry)
+			mgr.DeleteChildrenWithRetry(path, currentRetry + 1, retry)
 		} else {
 			return
 		}
@@ -237,7 +237,7 @@ func (mgr *MetadataManager) CreateNSIfNotExists(ns Namespace, ephemeral bool) {
 	}
 }
 func (mgr *MetadataManager) createIfNotExists(path string, ephemeral bool) {
-	return mgr.createIfNotExistsWithRetry(0, 10)
+	mgr.createIfNotExistsWithRetry(path, ephemeral, 0, 10)
 }
 func (mgr *MetadataManager) createIfNotExistsWithRetry(path string, ephemeral bool, currentRetry int, retry int) {
 	exists, _, err := mgr.zkConn.Exists(path)
@@ -256,13 +256,13 @@ func (mgr *MetadataManager) createIfNotExistsWithRetry(path string, ephemeral bo
 	}
 	if err != nil {
 		log.Warning(err)
-		return createIfNotExistsWithRetry(path, ephemeral, currentRetry + 1, retry)
+		mgr.createIfNotExistsWithRetry(path, ephemeral, currentRetry + 1, retry)
 	}
 }
 
 // This subspaces the node in the "current working namespace"
 func (mgr *MetadataManager) GetRootNode() *ZkNode {
-	mgr.GetRootNodeWithRetry(0, 10)
+	return mgr.GetRootNodeWithRetry(0, 10)
 }
 func (mgr *MetadataManager) GetRootNodeWithRetry(currentRetry int, retry int) *ZkNode {
 	node, err := mgr.getNode(mgr.namespace)
@@ -278,12 +278,13 @@ func (mgr *MetadataManager) GetRootNodeWithRetry(currentRetry int, retry int) *Z
 }
 
 func (mgr *MetadataManager) getChildrenW(ns Namespace) ([]*ZkNode, <-chan zk.Event) {
-	mgr.getChildrenWWithRetry(ns, 0, 10)
+	return mgr.getChildrenWWithRetry(ns, 0, 10)
 }
 func (mgr *MetadataManager) getChildrenWWithRetry(ns Namespace, currentRetry int, retry int) ([]*ZkNode, <-chan zk.Event) {
 	children, _, watchChan, err := mgr.zkConn.ChildrenW(ns.GetZKPath())
+	var result []*ZkNode
 	if err == nil {
-		result := make([]*ZkNode, len(children))
+		result = make([]*ZkNode, len(children))
 		for idx, name := range children {
 			result[idx], err = mgr.getNode(makeSubSpace(ns, name))
 			if err != nil {
