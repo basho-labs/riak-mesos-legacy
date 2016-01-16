@@ -40,38 +40,27 @@ func (node *ZkNode) SetDataWithRetry(data []byte, currentRetry int, retry int) e
 	var err error
 	log.Info("Persisting data")
 	if node.stat != nil {
-		node.stat, err = node.mgr.zkConn.Set(node.ns.GetZKPath(), data, node.stat.Version)
-		if err != nil && currentRetry >= retry {
-			log.Panic("Error persisting data: ", err)
-			return err
-		}
+		node.data, node.stat, err = node.mgr.zkConn.Get(node.ns.GetZKPath())
 		if err != nil {
-			log.Warning("Error persisting data, retrying: ", err)
-			node.mgr.CreateConnection()
-			return node.SetDataWithRetry(data, currentRetry + 1, retry)
+			node.stat, err = node.mgr.zkConn.Set(node.ns.GetZKPath(), data, node.stat.Version)
 		}
 	} else {
 		_, err = node.mgr.zkConn.Create(node.ns.GetZKPath(), data, 0, zk.WorldACL(zk.PermAll))
-		if err != nil && currentRetry >= retry {
-			log.Panic("Error persisting data: ", err)
-			return err
-		}
-		if err != nil {
-			log.Warning("Error persisting data, retrying: ", err)
-			node.mgr.CreateConnection()
-			return node.SetDataWithRetry(data, currentRetry + 1, retry)
-		}
-		node.data, node.stat, err = node.mgr.zkConn.Get(node.ns.GetZKPath())
-		if err != nil && currentRetry >= retry {
-			log.Panic("Error persisting data: ", err)
-			return err
-		}
-		if err != nil {
-			log.Warning("Error persisting data, retrying: ", err)
-			node.mgr.CreateConnection()
-			return node.SetDataWithRetry(data, currentRetry + 1, retry)
+		if err == nil {
+			node.data, node.stat, err = node.mgr.zkConn.Get(node.ns.GetZKPath())
 		}
 	}
+
+	if err != nil && currentRetry >= retry {
+		log.Panic("Error persisting data: ", err)
+		return err
+	}
+	if err != nil {
+		log.Warning("Error persisting data, retrying: ", err)
+		node.mgr.CreateConnection()
+		return node.SetDataWithRetry(data, currentRetry + 1, retry)
+	}
+
 	return nil
 }
 
