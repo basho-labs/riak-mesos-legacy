@@ -41,7 +41,7 @@ func (node *ZkNode) SetDataWithRetry(data []byte, currentRetry int, retry int) e
 	log.Info("Persisting data")
 	if node.stat != nil {
 		node.data, node.stat, err = node.mgr.zkConn.Get(node.ns.GetZKPath())
-		if err != nil {
+		if err == nil {
 			node.stat, err = node.mgr.zkConn.Set(node.ns.GetZKPath(), data, node.stat.Version)
 		}
 	} else {
