@@ -12,23 +12,8 @@ STANCHION_SOURCE_PKG ?= stanchion-2.1.0.tar.gz
 STANCHION_SOURCE_DOWNLOAD ?= http://s3.amazonaws.com/downloads.basho.com/stanchion/2.1/2.1.0/stanchion-2.1.0.tar.gz
 
 .PHONY: all clean
-all: riak_mesos_executor.tar.gz riak-bin.tar.gz
+all: riak-bin.tar.gz
 riak-s2: riak-s2-bin.tar.gz stanchion-bin.tar.gz riak-s2-init-bin.tar.gz
-
-### Executor begin
-riak-mesos-executor:
-	git clone https://github.com/basho-labs/riak-mesos-executor.git
-executor-bin: riak-mesos-executor
-	cd riak-mesos-executor && $(MAKE) rel
-	touch executor-bin
-riak_mesos_executor.tar.gz: executor-bin
-	-tar -C riak-mesos-executor/rel/ -czf riak_mesos_executor.tar.gz riak_mesos_executor || rm -rf riak_mesos_executor.tar.gz
-clean: clean_executor clean_executor_tar
-clean_executor:
-	-rm -rf riak-mesos-executor executor-bin
-clean_executor_tar:
-	-rm -rf riak_mesos_executor.tar.gz
-### Executor end
 
 ### Riak Explorer begin
 riak_explorer:

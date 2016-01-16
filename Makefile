@@ -1,10 +1,10 @@
 BASE_DIR         = $(shell pwd)
 export TAGS     ?= rel
-PACKAGE_VERSION ?= 0.3.0
+PACKAGE_VERSION ?= 0.2.1
 BUILD_DIR       ?= $(BASE_DIR)/_build
 export PROJECT_BASE    ?= riak-mesos
 export DEPLOY_BASE     ?= riak-tools/$(PROJECT_BASE)
-export DEPLOY_OS       ?= ubuntu
+export DEPLOY_OS       ?= centos
 export OS_ARCH		   ?= linux_amd64
 
 .PHONY: all clean clean_bin package clean_package sync
@@ -24,11 +24,23 @@ package: clean_package
 .bin.framework_$(OS_ARCH):
 	go build -o bin/framework_$(OS_ARCH) -tags=$(TAGS) ./framework/
 	$(shell touch .bin.framework_$(OS_ARCH))
-framework: .godep cepm artifacts .bin.framework_$(OS_ARCH)
+framework: .godep cepm artifacts executor .bin.framework_$(OS_ARCH)
 clean_bin: clean_framework
 clean_framework:
 	-rm -f .bin.framework_$(OS_ARCH) bin/framework_$(OS_ARCH)
 ### Framework end
+
+### Executor begin
+.PHONY: executor clean_executor .scheduler.data.executor_$(OS_ARCH)
+executor: .scheduler.data.executor_$(OS_ARCH)
+.scheduler.data.executor_$(OS_ARCH): cepm .process_manager.bindata_generated
+	GOOS=linux GOARCH=amd64 go build -o artifacts/data/executor_$(OS_ARCH) -tags=$(TAGS) ./executor/
+	$(shell touch .scheduler.data.executor_$(OS_ARCH))
+clean_bin: clean_executor
+clean_executor:
+	-rm -f .executor.bindata_generated executor/bindata_generated.go
+	-rm -f .scheduler.data.executor_$(OS_ARCH) artifacts/data/executor_$(OS_ARCH)
+### Executor end
 
 ### Artifact begin
 .PHONY: artifacts clean_artifacts
@@ -41,18 +53,27 @@ clean_artifacts:
 	-rm -rf artifacts/bindata_generated.go
 ### Artifact end
 
+### Process Manager begin
+.PHONY: .process_manager.bindata_generated
+.process_manager.bindata_generated:
+	go generate -tags=$(TAGS) ./process_manager/...
+	$(shell touch .process_manager.bindata_generated)
+clean_bin: clean_process_manager
+clean_process_manager:
+	rm -rf .process_manager.bindata_generated process_manager/bindata_generated.go
+### Process Manager end
+
 ### CEPMd begin
 .PHONY: cepm clean_cepmd erl_dist
 erl_dist:
 	cd erlang_dist && $(MAKE)
 .cepmd.cepm.bindata_generated: erl_dist
 	go generate -tags=$(TAGS) ./cepmd/cepm
-	go build -o artifacts/data/cepmd_$(OS_ARCH) -tags=$(TAGS) ./cepmd/
 	$(shell touch .cepmd.cepm.bindata_generated)
 cepm: .cepmd.cepm.bindata_generated
 clean_bin: clean_cepmd
 clean_cepmd:
-	-rm -f .cepmd.cepm.bindata_generated cepmd/cepm/bindata_generated.go artifacts/data/cepmd_$(OS_ARCH)
+	-rm -f .cepmd.cepm.bindata_generated cepmd/cepm/bindata_generated.go
 ### CEPMd end
 
 ### Go Tools begin
