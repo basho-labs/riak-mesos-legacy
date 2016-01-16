@@ -305,12 +305,13 @@ func (mgr *MetadataManager) getChildrenWWithRetry(ns Namespace, currentRetry int
 }
 
 func (mgr *MetadataManager) getChildren(ns Namespace) []*ZkNode {
-	mgr.getChildrenWithRetry(ns, 0, 10)
+	return mgr.getChildrenWithRetry(ns, 0, 10)
 }
 func (mgr *MetadataManager) getChildrenWithRetry(ns Namespace, currentRetry int, retry int) []*ZkNode {
 	children, _, err := mgr.zkConn.Children(ns.GetZKPath())
+	var result []*ZkNode
 	if err == nil {
-		result := make([]*ZkNode, len(children))
+		result = make([]*ZkNode, len(children))
 		for idx, name := range children {
 			result[idx], err = mgr.getNode(makeSubSpace(ns, name))
 			if err != nil {
