@@ -234,21 +234,6 @@ func (riakNode *RiakNode) Run() {
 	var fetchURI string
 	var resp *http.Response
 
-	os.Mkdir("root", 0777)
-
-	riakNode.decompress()
-
-	fetchURI = fmt.Sprintf("%s/static/riak-bin.tar.gz", riakNode.taskData.URI)
-	log.Info("Preparing to fetch riak from: ", fetchURI)
-	resp, err = http.Get(fetchURI)
-	if err != nil {
-		log.Panic("Unable to fetch riak root: ", err)
-	}
-	err = common.ExtractGZ("root", resp.Body)
-	if err != nil {
-		log.Panic("Unable to extract riak root: ", err)
-	}
-
 	config := riakNode.configureRiak(riakNode.taskData)
 
 	c := cepm.NewCPMd(0, riakNode.metadataManager)
@@ -368,8 +353,4 @@ func (riakNode *RiakNode) ForceFinish() {
 	}
 	riakNode.killStatus = runStatus
 	riakNode.pm.TearDown()
-}
-
-func (riakNode *RiakNode) decompress() {
-	log.Info("Native build, no need to get trusty root")
 }

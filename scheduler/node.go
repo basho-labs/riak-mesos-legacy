@@ -202,6 +202,10 @@ func (frn *FrameworkRiakNode) ApplyReservedOffer(offerHelper *common.OfferHelper
 						Value:      &(sc.schedulerHTTPServer.hostURI),
 						Executable: proto.Bool(true),
 					},
+					&mesos.CommandInfo_URI{
+						Value:      &(sc.schedulerHTTPServer.riakURI),
+						Executable: proto.Bool(false),
+					},
 				},
 				Shell:     proto.Bool(false),
 				Arguments: []string{sc.schedulerHTTPServer.executorName, "-logtostderr=true", "-taskinfo", frn.CurrentID()},
