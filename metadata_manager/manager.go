@@ -175,21 +175,29 @@ func NewMetadataManager(frameworkID string, zookeepers []string) *MetadataManage
 }
 
 func (mgr *MetadataManager) DeleteChildren(path string) {
+	mgr.DeleteChildrenWithRetry(path, 0, 10)
+}
+func (mgr *MetadataManager) DeleteChildrenWithRetry(path string, currentRetry int, retry int) {
 	children, _, _ := mgr.zkConn.Children(path)
 
 	// Leaf
 	if len(children) == 0 {
 		fmt.Println("Deleting ", path)
 		err := mgr.zkConn.Delete(path, -1)
-		if err != nil {
+		if err != nil && currentRetry >= retry {
 			log.Panic(err)
 		}
-		return
+		if err != nil {
+			log.Warning(err)
+			return mgr.DeleteChildrenWithRetry(path, currentRetry + 1, retry)
+		} else {
+			return
+		}
 	}
 
 	// Branches
 	for _, name := range children {
-		mgr.DeleteChildren(path + "/" + name)
+		mgr.DeleteChildrenWithRetry(path + "/" + name, currentRetry, retry)
 	}
 
 	return
@@ -229,77 +237,127 @@ func (mgr *MetadataManager) CreateNSIfNotExists(ns Namespace, ephemeral bool) {
 	}
 }
 func (mgr *MetadataManager) createIfNotExists(path string, ephemeral bool) {
+	return mgr.createIfNotExistsWithRetry(0, 10)
+}
+func (mgr *MetadataManager) createIfNotExistsWithRetry(path string, ephemeral bool, currentRetry int, retry int) {
 	exists, _, err := mgr.zkConn.Exists(path)
-	if err != nil {
+	if err == nil {
+		if !exists {
+			if ephemeral {
+				_, err = mgr.zkConn.Create(path, nil, zk.FlagEphemeral, zk.WorldACL(zk.PermAll))
+			} else {
+				_, err = mgr.zkConn.Create(path, nil, 0, zk.WorldACL(zk.PermAll))
+			}
+		}
+	}
+
+	if err != nil && currentRetry >= retry {
 		log.Panic(err)
 	}
-	if !exists {
-		var err error
-		if ephemeral {
-			_, err = mgr.zkConn.Create(path, nil, zk.FlagEphemeral, zk.WorldACL(zk.PermAll))
-		} else {
-			_, err = mgr.zkConn.Create(path, nil, 0, zk.WorldACL(zk.PermAll))
-		}
-		if err != nil {
-			log.Panic(err)
-		}
+	if err != nil {
+		log.Warning(err)
+		return createIfNotExistsWithRetry(path, ephemeral, currentRetry + 1, retry)
 	}
 }
 
 // This subspaces the node in the "current working namespace"
 func (mgr *MetadataManager) GetRootNode() *ZkNode {
+	mgr.GetRootNodeWithRetry(0, 10)
+}
+func (mgr *MetadataManager) GetRootNodeWithRetry(currentRetry int, retry int) *ZkNode {
 	node, err := mgr.getNode(mgr.namespace)
-	if err != nil {
-		log.Panic("Could not get Root node")
+	if err != nil && currentRetry >= retry {
+		log.Panic("Could not get Root node: ", err)
 	}
-	return node
+	if err != nil {
+		log.Warning("Could not get Root node: ", err)
+		return mgr.GetRootNodeWithRetry(currentRetry + 1, retry)
+	} else {
+		return node
+	}
 }
 
 func (mgr *MetadataManager) getChildrenW(ns Namespace) ([]*ZkNode, <-chan zk.Event) {
-	children, _, watchChan, err := mgr.zkConn.ChildrenW(ns.GetZKPath())
-	if err != nil {
-		log.Panic(err)
-	}
-	result := make([]*ZkNode, len(children))
-	for idx, name := range children {
-		result[idx], err = mgr.getNode(makeSubSpace(ns, name))
-		if err != nil {
-			log.Panic(err)
-		}
-	}
-	return result, watchChan
+	mgr.getChildrenWWithRetry(ns, 0, 10)
 }
-func (mgr *MetadataManager) getChildren(ns Namespace) []*ZkNode {
-	children, _, err := mgr.zkConn.Children(ns.GetZKPath())
-	if err != nil {
-		log.Panic(err)
-	}
-	result := make([]*ZkNode, len(children))
-	for idx, name := range children {
-		result[idx], err = mgr.getNode(makeSubSpace(ns, name))
-		if err != nil {
-			log.Panic(err)
+func (mgr *MetadataManager) getChildrenWWithRetry(ns Namespace, currentRetry int, retry int) ([]*ZkNode, <-chan zk.Event) {
+	children, _, watchChan, err := mgr.zkConn.ChildrenW(ns.GetZKPath())
+	if err == nil {
+		result := make([]*ZkNode, len(children))
+		for idx, name := range children {
+			result[idx], err = mgr.getNode(makeSubSpace(ns, name))
+			if err != nil {
+				break
+			}
 		}
 	}
-	return result
+
+	if err != nil && currentRetry >= retry {
+		log.Panic(err)
+	}
+	if err != nil {
+		log.Warning(err)
+		return mgr.getChildrenWWithRetry(ns, currentRetry + 1, retry)
+	} else {
+		return result, watchChan
+	}
+}
+
+func (mgr *MetadataManager) getChildren(ns Namespace) []*ZkNode {
+	mgr.getChildrenWithRetry(ns, 0, 10)
+}
+func (mgr *MetadataManager) getChildrenWithRetry(ns Namespace, currentRetry int, retry int) []*ZkNode {
+	children, _, err := mgr.zkConn.Children(ns.GetZKPath())
+	if err == nil {
+		result := make([]*ZkNode, len(children))
+		for idx, name := range children {
+			result[idx], err = mgr.getNode(makeSubSpace(ns, name))
+			if err != nil {
+				break
+			}
+		}
+	}
+	if err != nil && currentRetry >= retry {
+		log.Panic(err)
+	}
+	if err != nil {
+		log.Warning(err)
+		return mgr.getChildrenWithRetry(ns, currentRetry + 1, retry)
+	} else {
+		return result
+	}
 }
 
 func (mgr *MetadataManager) getNode(ns Namespace) (*ZkNode, error) {
+	return mgr.getNodeWithRetry(ns, 0, 10)
+}
+
+func (mgr *MetadataManager) getNodeWithRetry(ns Namespace, currentRetry int, retry int) (*ZkNode, error) {
 	// Namespaces are also nodes
 	data, stat, err := mgr.zkConn.Get(ns.GetZKPath())
-	if err != nil {
+	if err != nil && currentRetry >= retry {
 		return nil, err
 	}
-	node := &ZkNode{
-		mgr:  mgr,
-		data: data,
-		stat: stat,
-		ns:   ns,
+	if err != nil {
+		mgr.CreateConnection()
+		log.Warning(err)
+		return mgr.getNodeWithRetry(ns, currentRetry + 1, retry)
+	} else {
+		node := &ZkNode{
+			mgr:  mgr,
+			data: data,
+			stat: stat,
+			ns:   ns,
+		}
+		return node, nil
 	}
-	return node, nil
 }
 
 func (mgr *MetadataManager) makeNode(ns Namespace, ephemeral bool) (*ZkNode, error) {
+	return mgr.makeNodeWithRetry(ns, ephemeral, 0, 10)
+}
+
+func (mgr *MetadataManager) makeNodeWithRetry(ns Namespace, ephemeral bool, currentRetry int, retry int) (*ZkNode, error) {
 	var flags int32
 	if ephemeral {
 		flags = zk.FlagEphemeral
@@ -309,13 +367,23 @@ func (mgr *MetadataManager) makeNode(ns Namespace, ephemeral bool) (*ZkNode, err
 	// Namespaces are also nodes
 	log.Info("Making node")
 	_, err := mgr.zkConn.Create(ns.GetZKPath(), nil, flags, zk.WorldACL(zk.PermAll))
-	if err != nil {
+	if err != nil && currentRetry >= retry {
 		log.Panic(err)
 	}
-	return mgr.getNode(ns)
+	if err != nil {
+		mgr.CreateConnection()
+		log.Warning(err)
+		return mgr.makeNodeWithRetry(ns, ephemeral, currentRetry + 1, retry)
+	} else {
+		return mgr.getNode(ns)
+	}
 }
 
 func (mgr *MetadataManager) makeNodeWithData(ns Namespace, data []byte, ephemeral bool) (*ZkNode, error) {
+	return mgr.makeNodeWithDataWithRetry(ns, data, ephemeral, 0, 10)
+}
+
+func (mgr *MetadataManager) makeNodeWithDataWithRetry(ns Namespace, data []byte, ephemeral bool, currentRetry int, retry int) (*ZkNode, error) {
 	var flags int32
 	if ephemeral {
 		flags = zk.FlagEphemeral
@@ -325,8 +393,14 @@ func (mgr *MetadataManager) makeNodeWithData(ns Namespace, data []byte, ephemera
 	// Namespaces are also nodes
 	log.Info("Making node")
 	_, err := mgr.zkConn.Create(ns.GetZKPath(), data, flags, zk.WorldACL(zk.PermAll))
-	if err != nil {
-		return nil, err
+	if err != nil && currentRetry >= retry {
+		log.Panic(err)
 	}
-	return mgr.getNode(ns)
+	if err != nil {
+		mgr.CreateConnection()
+		log.Warning(err)
+		return mgr.makeNodeWithDataWithRetry(ns, data, ephemeral, currentRetry + 1, retry)
+	} else {
+		return mgr.getNode(ns)
+	}
 }
