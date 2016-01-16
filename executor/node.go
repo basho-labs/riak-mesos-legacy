@@ -231,8 +231,6 @@ func (riakNode *RiakNode) getCoordinatedChild() *metamgr.ZkNode {
 
 func (riakNode *RiakNode) Run() {
 	var err error
-	var fetchURI string
-	var resp *http.Response
 
 	config := riakNode.configureRiak(riakNode.taskData)
 
