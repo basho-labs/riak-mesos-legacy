@@ -47,9 +47,9 @@ riak-bin.tar.gz: riak-bin
 	tar -czf riak-bin.tar.gz root || rm -rf riak-bin.tar.gz
 clean: clean_riak clean_riak_tar
 clean_riak:
-	-rm -rf $(RIAK_SOURCE_DIR) riak-bin
+	-rm -rf $(RIAK_SOURCE_DIR)
 clean_riak_tar:
-	-rm -rf root riak-bin.tar.gz
+	-rm -rf root riak-bin.tar.gz riak-bin
 ### Riak end
 
 ### Riak S2 begin
