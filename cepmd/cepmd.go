@@ -27,7 +27,7 @@ func init() {
 func main() {
 	mgr := metamgr.NewMetadataManager(frameworkID, []string{zookeeperAddr})
 	c := cepm.NewCPMd(port, mgr)
-	cepm.InstallInto(riakLibDir, c.GetPort())
+	cepm.InstallIntoCli(riakLibDir, c.GetPort())
 	fmt.Println("CEPMd running on port: ", c.GetPort())
 	c.Foreground()
 }
