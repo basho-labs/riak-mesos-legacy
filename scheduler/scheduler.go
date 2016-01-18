@@ -39,7 +39,6 @@ type SchedulerCore struct {
 	mesosAuthPrincipal  string
 	mesosAuthSecretFile string
 	compatibilityMode   bool
-	executorName        string
 }
 
 func NewSchedulerCore(
@@ -55,8 +54,7 @@ func NewSchedulerCore(
 	authProvider string,
 	mesosAuthPrincipal string,
 	mesosAuthSecretFile string,
-	useReservations bool,
-  executorName string) *SchedulerCore {
+	useReservations bool) *SchedulerCore {
 
 	mgr := metamgr.NewMetadataManager(frameworkName, zookeepers)
 	ss := GetSchedulerState(mgr)
@@ -81,7 +79,6 @@ func NewSchedulerCore(
 		mesosAuthPrincipal:  mesosAuthPrincipal,
 		mesosAuthSecretFile: mesosAuthSecretFile,
 		compatibilityMode:   !useReservations,
-		executorName:        executorName,
 	}
 	scheduler.schedulerHTTPServer = ServeExecutorArtifact(scheduler, schedulerHostname)
 	return scheduler

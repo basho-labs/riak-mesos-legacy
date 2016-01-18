@@ -33,7 +33,6 @@ var (
 	mesosAuthPrincipal  string
 	mesosAuthSecretFile string
 	useReservations     bool
-	executorName        string
 )
 
 func init() {
@@ -54,7 +53,6 @@ func init() {
 		fmt.Sprintf("Authentication provider to use, default is SASL that supports mechanisms: %+v", mech.ListSupported()))
 	flag.StringVar(&mesosAuthPrincipal, "mesos_authentication_principal", "", "Mesos authentication principal.")
 	flag.StringVar(&mesosAuthSecretFile, "mesos_authentication_secret_file", "", "Mesos authentication secret file.")
-	flag.StringVar(&executorName, "executor_name", "./executor_linux_amd64", "Name of the executor executable. Use './riak_mesos_executor/bin/ermf-executor' for the Erlang Executor")
 	flag.Parse()
 }
 
@@ -87,7 +85,6 @@ func main() {
 		authProvider,
 		mesosAuthPrincipal,
 		mesosAuthSecretFile,
-		useReservations,
-	  executorName)
+		useReservations)
 	sched.Run(mesosMaster)
 }

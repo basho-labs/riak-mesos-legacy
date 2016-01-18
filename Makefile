@@ -6,6 +6,7 @@ export PROJECT_BASE    ?= riak-mesos
 export DEPLOY_BASE     ?= riak-tools/$(PROJECT_BASE)
 export DEPLOY_OS       ?= ubuntu
 export OS_ARCH		   ?= linux_amd64
+export EXECUTOR_LANG ?= golang
 
 .PHONY: all clean clean_bin package clean_package sync
 all: clean_bin framework
@@ -22,7 +23,7 @@ package: clean_package
 .PHONY: framework clean_framework
 # Depends on artifacts
 .bin.framework_$(OS_ARCH):
-	go build -o bin/framework_$(OS_ARCH) -tags=$(TAGS) ./framework/
+	go build -o bin/framework_$(OS_ARCH) -tags="$(TAGS) $(EXECUTOR_LANG)" ./framework/
 	$(shell touch .bin.framework_$(OS_ARCH))
 framework: .godep executor artifacts .bin.framework_$(OS_ARCH)
 clean_bin: clean_framework
@@ -34,7 +35,7 @@ clean_framework:
 .PHONY: executor clean_executor .scheduler.data.executor_$(OS_ARCH)
 executor: .scheduler.data.executor_$(OS_ARCH)
 .scheduler.data.executor_$(OS_ARCH): cepm
-	GOOS=linux GOARCH=amd64 go build -o artifacts/data/executor_$(OS_ARCH) -tags=$(TAGS) ./executor/
+	GOOS=linux GOARCH=amd64 go build -o artifacts/data/executor_$(OS_ARCH) -tags="$(TAGS) $(EXECUTOR_LANG)" ./executor/
 	$(shell touch .scheduler.data.executor_$(OS_ARCH))
 clean_bin: clean_executor
 clean_executor:
@@ -46,8 +47,8 @@ clean_executor:
 erl_dist:
 	cd erlang_dist && $(MAKE)
 .cepmd.cepm.bindata_generated: erl_dist
-	go generate -tags=$(TAGS) ./cepmd/cepm
-	go build -o artifacts/data/cepmd_$(OS_ARCH) -tags=$(TAGS) ./cepmd/
+	go generate -tags="$(TAGS) $(EXECUTOR_LANG)" ./cepmd/cepm
+	go build -o artifacts/data/cepmd_$(OS_ARCH) -tags="$(TAGS) $(EXECUTOR_LANG)" ./cepmd/
 	$(shell touch .cepmd.cepm.bindata_generated)
 cepm: .cepmd.cepm.bindata_generated
 clean_bin: clean_cepmd
@@ -59,7 +60,7 @@ clean_cepmd:
 .PHONY: artifacts clean_artifacts
 artifacts:
 	cd artifacts/data && $(MAKE)
-	go generate -tags=$(TAGS) ./artifacts
+	go generate -tags="$(TAGS) $(EXECUTOR_LANG)" ./artifacts
 clean: clean_artifacts
 clean_artifacts:
 	cd artifacts/data && $(MAKE) clean

@@ -17,12 +17,11 @@ import (
 )
 
 type SchedulerHTTPServer struct {
-	sc           *SchedulerCore
-	hostURI      string
-	riakURI      string
-	cepmdURI     string
-	executorName string
-	URI          string
+	sc       *SchedulerCore
+	hostURI  string
+	riakURI  string
+	cepmdURI string
+	URI      string
 }
 
 func parseIP(address string) net.IP {
@@ -516,12 +515,11 @@ func ServeExecutorArtifact(sc *SchedulerCore, schedulerHostname string) *Schedul
 	debugMux.Handle("/debug/pprof/symbol", http.HandlerFunc(pprof.Symbol))
 
 	schttp := &SchedulerHTTPServer{
-		sc:           sc,
-		hostURI:      hostURI,
-		riakURI:      riakURI,
-		cepmdURI:     cepmdURI,
-		executorName: sc.executorName,
-		URI:          URI,
+		sc:       sc,
+		hostURI:  hostURI,
+		riakURI:  riakURI,
+		cepmdURI: cepmdURI,
+		URI:      URI,
 	}
 
 	router.HandleFunc("/api/v1/clusters", schttp.serveClusters)

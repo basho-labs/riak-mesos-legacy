@@ -186,15 +186,6 @@ func (frn *FrameworkRiakNode) ApplyReservedOffer(offerHelper *common.OfferHelper
 		log.Panic(err)
 	}
 
-
-	execShell := proto.Bool(false)
-	execArgs := []string{sc.schedulerHTTPServer.executorName, "-logtostderr=true", "-taskinfo", frn.CurrentID()}
-
-	if sc.executorName == "./riak_mesos_executor/bin/ermf-executor" {
-		execShell = proto.Bool(true)
-		execArgs = []string{}
-	}
-
 	execName := fmt.Sprintf("%s Executor", frn.CurrentID())
 	taskInfo := &mesos.TaskInfo{
 		Name:    proto.String(frn.Name()),
@@ -205,7 +196,7 @@ func (frn *FrameworkRiakNode) ApplyReservedOffer(offerHelper *common.OfferHelper
 			Name:       proto.String(execName),
 			Source:     proto.String(frn.FrameworkName),
 			Command: &mesos.CommandInfo{
-				Value: proto.String(sc.schedulerHTTPServer.executorName),
+				Value: proto.String(ExecutorValue()),
 				Uris: []*mesos.CommandInfo_URI{
 					&mesos.CommandInfo_URI{
 						Value:      &(sc.schedulerHTTPServer.hostURI),
@@ -220,8 +211,8 @@ func (frn *FrameworkRiakNode) ApplyReservedOffer(offerHelper *common.OfferHelper
 						Executable: proto.Bool(true),
 					},
 				},
-				Shell:     execShell,
-				Arguments: execArgs,
+				Shell:     proto.Bool(ExecutorShell()),
+				Arguments: ExecutorArgs(frn.CurrentID()),
 			},
 			Resources: execAsk,
 		},
