@@ -10,10 +10,7 @@ gvm use go1.5
 export GOPATH=$REAL_GOPATH
 export PATH=$PATH:$GOPATH/bin:$HOME/.gvm/gos/go1.4/bin
 
-# Get switch to branch
-cd $GOPATH/src/github.com/basho-labs/riak-mesos
-git checkout $BRANCH && git pull
-
 # Cleanup, compile, package
+cd $GOPATH/src/github.com/basho-labs/riak-mesos
 make
 make package
