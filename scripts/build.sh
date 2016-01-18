@@ -15,6 +15,5 @@ cd $GOPATH/src/github.com/basho-labs/riak-mesos
 git checkout $BRANCH && git pull
 
 # Cleanup, compile, package
-make clean
 make
 make package
