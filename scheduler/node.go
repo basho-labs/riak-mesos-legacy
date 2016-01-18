@@ -192,7 +192,7 @@ func (frn *FrameworkRiakNode) ApplyReservedOffer(offerHelper *common.OfferHelper
 
 	if sc.executorName == "./riak_mesos_executor/bin/ermf-executor" {
 		execShell = proto.Bool(true)
-		execArgs = Arguments: []string{}
+		execArgs = []string{}
 	}
 
 	execName := fmt.Sprintf("%s Executor", frn.CurrentID())
