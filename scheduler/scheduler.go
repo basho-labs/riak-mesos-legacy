@@ -81,7 +81,7 @@ func NewSchedulerCore(
 		mesosAuthPrincipal:  mesosAuthPrincipal,
 		mesosAuthSecretFile: mesosAuthSecretFile,
 		compatibilityMode:   !useReservations,
-		executorName:        executorName
+		executorName:        executorName,
 	}
 	scheduler.schedulerHTTPServer = ServeExecutorArtifact(scheduler, schedulerHostname)
 	return scheduler
