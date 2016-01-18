@@ -4,7 +4,7 @@ PACKAGE_VERSION ?= 0.3.1
 BUILD_DIR       ?= $(BASE_DIR)/_build
 export PROJECT_BASE    ?= riak-mesos
 export DEPLOY_BASE     ?= riak-tools/$(PROJECT_BASE)
-export DEPLOY_OS       ?= centos
+export DEPLOY_OS       ?= ubuntu
 export OS_ARCH		   ?= linux_amd64
 
 .PHONY: all clean clean_bin package clean_package sync
