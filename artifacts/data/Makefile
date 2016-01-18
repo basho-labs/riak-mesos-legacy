@@ -21,11 +21,11 @@ riak-s2: riak-s2-bin.tar.gz stanchion-bin.tar.gz riak-s2-init-bin.tar.gz
 golang_advanced_config:
 	cp advanced.golang.config advanced.config
 golang_riak_conf:
-	cp riak.golang.conf riak.conf
+	cp $(RIAK_SOURCE_DIR).golang.conf riak.conf
 erlang_advanced_config:
 	cp advanced.erlang.config advanced.config
 erlang_riak_conf:
-	cp riak.erlang.conf riak.conf
+	cp $(RIAK_SOURCE_DIR).erlang.conf riak.conf
 ### Config end
 
 ### Riak Explorer begin
