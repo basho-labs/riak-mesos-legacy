@@ -13,7 +13,7 @@ STANCHION_SOURCE_DOWNLOAD ?= http://s3.amazonaws.com/downloads.basho.com/stanchi
 EXECUTOR_LANG ?= golang
 
 .PHONY: all clean
-all: riak-bin.tar.gz $(EXECUTOR_LANG)_advanced_config $(EXECUTOR_LANG)_riak_conf
+all: riak-bin.tar.gz riak_mesos_executor.tar.gz $(EXECUTOR_LANG)_advanced_config $(EXECUTOR_LANG)_riak_conf
 riak-s2: riak-s2-bin.tar.gz stanchion-bin.tar.gz riak-s2-init-bin.tar.gz
 
 ### Config begin
