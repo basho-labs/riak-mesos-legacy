@@ -61,6 +61,9 @@ clean_cepmd:
 artifacts:
 	cd artifacts/data && $(MAKE)
 	go generate -tags="$(TAGS) $(EXECUTOR_LANG)" ./artifacts
+clean_bin: clean_artifacts_bin
+clean_artifacts_bin:
+	cd artifacts/data && $(MAKE) clean_bin
 clean: clean_artifacts
 clean_artifacts:
 	cd artifacts/data && $(MAKE) clean

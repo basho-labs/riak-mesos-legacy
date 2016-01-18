@@ -14,6 +14,7 @@ EXECUTOR_LANG ?= golang
 
 .PHONY: all clean
 all: riak-bin.tar.gz riak_mesos_executor.tar.gz $(EXECUTOR_LANG)_advanced_config $(EXECUTOR_LANG)_riak_conf
+clean_bin: clean_executor_tar clean_riak_tar
 riak-s2: riak-s2-bin.tar.gz stanchion-bin.tar.gz riak-s2-init-bin.tar.gz
 
 ### Config begin
@@ -83,9 +84,9 @@ riak-bin.tar.gz: riak-bin
 	tar -czf riak-bin.tar.gz root || rm -rf riak-bin.tar.gz
 clean: clean_riak clean_riak_tar
 clean_riak:
-	-rm -rf $(RIAK_SOURCE_DIR)
+	-rm -rf $(RIAK_SOURCE_DIR) riak-bin
 clean_riak_tar:
-	-rm -rf root riak-bin.tar.gz riak-bin
+	-rm -rf root riak-bin.tar.gz
 ### Riak end
 
 ### Riak S2 begin
