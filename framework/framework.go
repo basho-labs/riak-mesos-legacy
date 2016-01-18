@@ -53,7 +53,6 @@ func init() {
 		fmt.Sprintf("Authentication provider to use, default is SASL that supports mechanisms: %+v", mech.ListSupported()))
 	flag.StringVar(&mesosAuthPrincipal, "mesos_authentication_principal", "", "Mesos authentication principal.")
 	flag.StringVar(&mesosAuthSecretFile, "mesos_authentication_secret_file", "", "Mesos authentication secret file.")
-
 	flag.Parse()
 }
 

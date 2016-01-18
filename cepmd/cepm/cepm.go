@@ -154,7 +154,18 @@ func NewCPMd(port int, mgr *metamgr.MetadataManager) *CEPM {
 }
 
 // Drops the ERL files into the given directory
-func InstallInto(dir string, port int) error {
+func InstallInto(dir string) error {
+	var err error
+
+	err = RestoreAssets(dir, "")
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func InstallIntoCli(dir string, port int) error {
 	var err error
 
 	kernelDirs, err := filepath.Glob(fmt.Sprint(dir, "/kernel*"))

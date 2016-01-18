@@ -1,11 +1,12 @@
 BASE_DIR         = $(shell pwd)
 export TAGS     ?= rel
-PACKAGE_VERSION ?= 0.3.0
+PACKAGE_VERSION ?= 0.3.1
 BUILD_DIR       ?= $(BASE_DIR)/_build
 export PROJECT_BASE    ?= riak-mesos
 export DEPLOY_BASE     ?= riak-tools/$(PROJECT_BASE)
 export DEPLOY_OS       ?= ubuntu
 export OS_ARCH		   ?= linux_amd64
+export EXECUTOR_LANG ?= golang
 
 .PHONY: all clean clean_bin package clean_package sync
 all: clean_bin framework
@@ -22,38 +23,52 @@ package: clean_package
 .PHONY: framework clean_framework
 # Depends on artifacts
 .bin.framework_$(OS_ARCH):
-	go build -o bin/framework_$(OS_ARCH) -tags=$(TAGS) ./framework/
+	go build -o bin/framework_$(OS_ARCH) -tags="$(TAGS) $(EXECUTOR_LANG)" ./framework/
 	$(shell touch .bin.framework_$(OS_ARCH))
-framework: .godep cepm artifacts .bin.framework_$(OS_ARCH)
+framework: .godep executor artifacts .bin.framework_$(OS_ARCH)
 clean_bin: clean_framework
 clean_framework:
 	-rm -f .bin.framework_$(OS_ARCH) bin/framework_$(OS_ARCH)
 ### Framework end
 
-### Artifact begin
-.PHONY: artifacts clean_artifacts
-artifacts:
-	cd artifacts/data && $(MAKE)
-	go generate -tags=$(TAGS) ./artifacts
-clean: clean_artifacts
-clean_artifacts:
-	cd artifacts/data && $(MAKE) clean
-	-rm -rf artifacts/bindata_generated.go
-### Artifact end
+### Executor begin
+.PHONY: executor clean_executor .scheduler.data.executor_$(OS_ARCH)
+executor: .scheduler.data.executor_$(OS_ARCH)
+.scheduler.data.executor_$(OS_ARCH): cepm
+	GOOS=linux GOARCH=amd64 go build -o artifacts/data/executor_$(OS_ARCH) -tags="$(TAGS) $(EXECUTOR_LANG)" ./executor/
+	$(shell touch .scheduler.data.executor_$(OS_ARCH))
+clean_bin: clean_executor
+clean_executor:
+	-rm -f .scheduler.data.executor_$(OS_ARCH) artifacts/data/executor_$(OS_ARCH)
+### Executor end
 
 ### CEPMd begin
 .PHONY: cepm clean_cepmd erl_dist
 erl_dist:
 	cd erlang_dist && $(MAKE)
 .cepmd.cepm.bindata_generated: erl_dist
-	go generate -tags=$(TAGS) ./cepmd/cepm
-	go build -o artifacts/data/cepmd_$(OS_ARCH) -tags=$(TAGS) ./cepmd/
+	go generate -tags="$(TAGS) $(EXECUTOR_LANG)" ./cepmd/cepm
+	go build -o artifacts/data/cepmd_$(OS_ARCH) -tags="$(TAGS) $(EXECUTOR_LANG)" ./cepmd/
 	$(shell touch .cepmd.cepm.bindata_generated)
 cepm: .cepmd.cepm.bindata_generated
 clean_bin: clean_cepmd
 clean_cepmd:
 	-rm -f .cepmd.cepm.bindata_generated cepmd/cepm/bindata_generated.go artifacts/data/cepmd_$(OS_ARCH)
 ### CEPMd end
+
+### Artifact begin
+.PHONY: artifacts clean_artifacts
+artifacts:
+	cd artifacts/data && $(MAKE)
+	go generate -tags="$(TAGS) $(EXECUTOR_LANG)" ./artifacts
+clean_bin: clean_artifacts_bin
+clean_artifacts_bin:
+	cd artifacts/data && $(MAKE) clean_bin
+clean: clean_artifacts
+clean_artifacts:
+	cd artifacts/data && $(MAKE) clean
+	-rm -rf artifacts/bindata_generated.go
+### Artifact end
 
 ### Go Tools begin
 test:

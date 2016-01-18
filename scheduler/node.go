@@ -196,7 +196,7 @@ func (frn *FrameworkRiakNode) ApplyReservedOffer(offerHelper *common.OfferHelper
 			Name:       proto.String(execName),
 			Source:     proto.String(frn.FrameworkName),
 			Command: &mesos.CommandInfo{
-				Value: proto.String(sc.schedulerHTTPServer.executorName),
+				Value: proto.String(ExecutorValue()),
 				Uris: []*mesos.CommandInfo_URI{
 					&mesos.CommandInfo_URI{
 						Value:      &(sc.schedulerHTTPServer.hostURI),
@@ -211,8 +211,8 @@ func (frn *FrameworkRiakNode) ApplyReservedOffer(offerHelper *common.OfferHelper
 						Executable: proto.Bool(true),
 					},
 				},
-				Shell:     proto.Bool(true),
-				Arguments: []string{},
+				Shell:     proto.Bool(ExecutorShell()),
+				Arguments: ExecutorArgs(frn.CurrentID()),
 			},
 			Resources: execAsk,
 		},

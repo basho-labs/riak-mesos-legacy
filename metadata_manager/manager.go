@@ -58,7 +58,7 @@ func (node *ZkNode) SetDataWithRetry(data []byte, currentRetry int, retry int) e
 	if err != nil {
 		log.Warning("Error persisting data, retrying: ", err)
 		node.mgr.CreateConnection()
-		return node.SetDataWithRetry(data, currentRetry + 1, retry)
+		return node.SetDataWithRetry(data, currentRetry+1, retry)
 	}
 
 	return nil
@@ -165,7 +165,7 @@ func NewMetadataManager(frameworkID string, zookeepers []string) *MetadataManage
 	manager := &MetadataManager{
 		lock:        &sync.Mutex{},
 		frameworkID: frameworkID,
-	  zookeepers:  zookeepers,
+		zookeepers:  zookeepers,
 	}
 
 	manager.CreateConnection()
@@ -189,7 +189,7 @@ func (mgr *MetadataManager) DeleteChildrenWithRetry(path string, currentRetry in
 		}
 		if err != nil {
 			log.Warning(err)
-			mgr.DeleteChildrenWithRetry(path, currentRetry + 1, retry)
+			mgr.DeleteChildrenWithRetry(path, currentRetry+1, retry)
 		} else {
 			return
 		}
@@ -197,7 +197,7 @@ func (mgr *MetadataManager) DeleteChildrenWithRetry(path string, currentRetry in
 
 	// Branches
 	for _, name := range children {
-		mgr.DeleteChildrenWithRetry(path + "/" + name, currentRetry, retry)
+		mgr.DeleteChildrenWithRetry(path+"/"+name, currentRetry, retry)
 	}
 
 	return
@@ -214,8 +214,20 @@ func (mgr *MetadataManager) createPathIfNotExists(path string, ephemeral bool) {
 }
 
 func (mgr *MetadataManager) CreateConnection() {
+	if mgr.zkConn != nil {
+		// Return if the connection is good already
+		if mgr.zkConn.State() == zk.StateConnected ||
+			mgr.zkConn.State() == zk.StateHasSession ||
+			mgr.zkConn.State() == zk.StateConnecting {
+			return
+		}
+		// Close the connection because it probably expired
+		mgr.zkConn.Close()
+	}
+
 	conn, _, err := zk.Connect(mgr.zookeepers, time.Second)
 	if err != nil {
+		conn.Close()
 		log.Panic(err)
 	}
 	bns := baseNamespace{}
@@ -256,7 +268,7 @@ func (mgr *MetadataManager) createIfNotExistsWithRetry(path string, ephemeral bo
 	}
 	if err != nil {
 		log.Warning(err)
-		mgr.createIfNotExistsWithRetry(path, ephemeral, currentRetry + 1, retry)
+		mgr.createIfNotExistsWithRetry(path, ephemeral, currentRetry+1, retry)
 	}
 }
 
@@ -271,7 +283,7 @@ func (mgr *MetadataManager) GetRootNodeWithRetry(currentRetry int, retry int) *Z
 	}
 	if err != nil {
 		log.Warning("Could not get Root node: ", err)
-		return mgr.GetRootNodeWithRetry(currentRetry + 1, retry)
+		return mgr.GetRootNodeWithRetry(currentRetry+1, retry)
 	} else {
 		return node
 	}
@@ -298,7 +310,7 @@ func (mgr *MetadataManager) getChildrenWWithRetry(ns Namespace, currentRetry int
 	}
 	if err != nil {
 		log.Warning(err)
-		return mgr.getChildrenWWithRetry(ns, currentRetry + 1, retry)
+		return mgr.getChildrenWWithRetry(ns, currentRetry+1, retry)
 	} else {
 		return result, watchChan
 	}
@@ -324,7 +336,7 @@ func (mgr *MetadataManager) getChildrenWithRetry(ns Namespace, currentRetry int,
 	}
 	if err != nil {
 		log.Warning(err)
-		return mgr.getChildrenWithRetry(ns, currentRetry + 1, retry)
+		return mgr.getChildrenWithRetry(ns, currentRetry+1, retry)
 	} else {
 		return result
 	}
@@ -343,7 +355,7 @@ func (mgr *MetadataManager) getNodeWithRetry(ns Namespace, currentRetry int, ret
 	if err != nil {
 		mgr.CreateConnection()
 		log.Warning(err)
-		return mgr.getNodeWithRetry(ns, currentRetry + 1, retry)
+		return mgr.getNodeWithRetry(ns, currentRetry+1, retry)
 	} else {
 		node := &ZkNode{
 			mgr:  mgr,
@@ -375,7 +387,7 @@ func (mgr *MetadataManager) makeNodeWithRetry(ns Namespace, ephemeral bool, curr
 	if err != nil {
 		mgr.CreateConnection()
 		log.Warning(err)
-		return mgr.makeNodeWithRetry(ns, ephemeral, currentRetry + 1, retry)
+		return mgr.makeNodeWithRetry(ns, ephemeral, currentRetry+1, retry)
 	} else {
 		return mgr.getNode(ns)
 	}
@@ -401,7 +413,7 @@ func (mgr *MetadataManager) makeNodeWithDataWithRetry(ns Namespace, data []byte,
 	if err != nil {
 		mgr.CreateConnection()
 		log.Warning(err)
-		return mgr.makeNodeWithDataWithRetry(ns, data, ephemeral, currentRetry + 1, retry)
+		return mgr.makeNodeWithDataWithRetry(ns, data, ephemeral, currentRetry+1, retry)
 	} else {
 		return mgr.getNode(ns)
 	}

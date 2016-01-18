@@ -10,25 +10,23 @@ RIAK_S2_SOURCE_DOWNLOAD ?= http://s3.amazonaws.com/downloads.basho.com/riak-cs/2
 STANCHION_SOURCE_DIR ?= stanchion-2.1.0
 STANCHION_SOURCE_PKG ?= stanchion-2.1.0.tar.gz
 STANCHION_SOURCE_DOWNLOAD ?= http://s3.amazonaws.com/downloads.basho.com/stanchion/2.1/2.1.0/stanchion-2.1.0.tar.gz
+EXECUTOR_LANG ?= golang
 
 .PHONY: all clean
-all: riak_mesos_executor.tar.gz riak-bin.tar.gz
+all: riak-bin.tar.gz riak_mesos_executor.tar.gz $(EXECUTOR_LANG)_advanced_config $(EXECUTOR_LANG)_riak_conf
+clean_bin: clean_executor_tar clean_riak_tar
 riak-s2: riak-s2-bin.tar.gz stanchion-bin.tar.gz riak-s2-init-bin.tar.gz
 
-### Executor begin
-riak-mesos-executor:
-	git clone https://github.com/basho-labs/riak-mesos-executor.git
-executor-bin: riak-mesos-executor
-	cd riak-mesos-executor && $(MAKE) rel
-	touch executor-bin
-riak_mesos_executor.tar.gz: executor-bin
-	-tar -C riak-mesos-executor/rel/ -czf riak_mesos_executor.tar.gz riak_mesos_executor || rm -rf riak_mesos_executor.tar.gz
-clean: clean_executor clean_executor_tar
-clean_executor:
-	-rm -rf riak-mesos-executor executor-bin
-clean_executor_tar:
-	-rm -rf riak_mesos_executor.tar.gz
-### Executor end
+### Config begin
+golang_advanced_config:
+	cp advanced.golang.config advanced.config
+golang_riak_conf:
+	cp $(RIAK_SOURCE_DIR).golang.conf riak.conf
+erlang_advanced_config:
+	cp advanced.erlang.config advanced.config
+erlang_riak_conf:
+	cp $(RIAK_SOURCE_DIR).erlang.conf riak.conf
+### Config end
 
 ### Riak Explorer begin
 riak_explorer:
@@ -42,6 +40,30 @@ clean: clean_riak_explorer
 clean_riak_explorer:
 	-rm -rf riak_explorer riak_explorer-bin
 ### Riak Explorer end
+
+### Erlang Top Level begin
+riak_mesos_executor.tar.gz: executor-$(EXECUTOR_LANG)
+### Erlang Top Level end
+
+### Erlang Executor begin
+riak-mesos-executor:
+	git clone https://github.com/basho-labs/riak-mesos-executor.git
+executor-bin: riak-mesos-executor
+	cd riak-mesos-executor && $(MAKE) rel
+	touch executor-bin
+executor-erlang: executor-bin
+	-tar -C riak-mesos-executor/rel/ -czf riak_mesos_executor.tar.gz riak_mesos_executor || rm -rf riak_mesos_executor.tar.gz
+clean: clean_executor clean_executor_tar
+clean_executor:
+	-rm -rf riak-mesos-executor executor-bin
+clean_executor_tar:
+	-rm -rf riak_mesos_executor.tar.gz
+### Erlang Executor end
+
+### Golang Executor begin
+executor-golang:
+	-tar -czf riak_mesos_executor.tar.gz executor_linux_amd64 || rm -rf riak_mesos_executor.tar.gz
+### Golang Executor end
 
 ### Riak begin
 $(RIAK_SOURCE_DIR):
