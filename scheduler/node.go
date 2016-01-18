@@ -200,11 +200,15 @@ func (frn *FrameworkRiakNode) ApplyReservedOffer(offerHelper *common.OfferHelper
 				Uris: []*mesos.CommandInfo_URI{
 					&mesos.CommandInfo_URI{
 						Value:      &(sc.schedulerHTTPServer.hostURI),
-						Executable: proto.Bool(true),
+						Executable: proto.Bool(false),
 					},
 					&mesos.CommandInfo_URI{
 						Value:      &(sc.schedulerHTTPServer.riakURI),
 						Executable: proto.Bool(false),
+					},
+					&mesos.CommandInfo_URI{
+						Value:      &(sc.schedulerHTTPServer.cepmdURI),
+						Executable: proto.Bool(true),
 					},
 				},
 				Shell:     proto.Bool(false),

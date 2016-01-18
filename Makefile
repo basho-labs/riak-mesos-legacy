@@ -47,11 +47,12 @@ erl_dist:
 	cd erlang_dist && $(MAKE)
 .cepmd.cepm.bindata_generated: erl_dist
 	go generate -tags=$(TAGS) ./cepmd/cepm
+  go build -o artifacts/data/cepmd_$(OS_ARCH) -tags=$(TAGS) ./cepmd/
 	$(shell touch .cepmd.cepm.bindata_generated)
 cepm: .cepmd.cepm.bindata_generated
 clean_bin: clean_cepmd
 clean_cepmd:
-	-rm -f .cepmd.cepm.bindata_generated cepmd/cepm/bindata_generated.go
+	-rm -f .cepmd.cepm.bindata_generated cepmd/cepm/bindata_generated.go artifacts/data/cepmd_$(OS_ARCH)
 ### CEPMd end
 
 ### Artifact begin
