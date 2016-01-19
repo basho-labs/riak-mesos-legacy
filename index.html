@@ -99,12 +99,12 @@
 
                 <div class="content-to-populate-in-modal" id="modal-content-1">
                   <p>The Riak Mesos Framework is managed by Marathon and coordinates with Mesos to keep large Riak KV clusters connected and running. The Riak Mesos Framework scheduler will attempt to spread Riak KV nodes across as many different mesos agents as possible to increase fault tolerance. If there are more nodes requested than there are agents available, the scheduler will then start adding more Riak KV nodes to existing agents.</p>
-                  <p><img width="600px" data-img-src="assets/images/basho_images/RiakMesosDiagramme.png" class="lazy"></p>
+                  <p><img width="600px" data-img-src="assets/images/basho_images/riak-mesos-framework-architecture.png" class="lazy"></p>
                 </div><!-- #modal-content-1 -->
                 <div class="content-to-populate-in-modal" id="modal-content-2">
                   <p>Applications outside of Mesos can communicate with Riak on Mesos via a smart proxy called the "Riak Mesos Director". Due to the nature of Apache Mesos and the potential for Riak KV nodes to come and go on a regular basis, client applications using a Mesos based cluster must be kept up to date on the cluster's current state. Instead of requiring this intelligence to be built into Riak client libraries, a smart proxy application named Director has been created which can run alongside client applications.</p>
                   <p>The Director communicates with Zookeeper to keep up to date with Riak KV cluster changes. The Director in turn will update it's list of balanced Riak KV connections.</p>
-                  <p><img width="600px" data-img-src="assets/images/basho_images/RiakMesosControlFrame.png" class="lazy"></p>
+                  <p><img width="600px" data-img-src="assets/images/basho_images/riak-mesos-director-architecture.png" class="lazy"></p>
                 </div><!-- #modal-content-2 -->
             </div><!-- .col-sm-10 -->
           </div><!-- .content-wrapper -->
@@ -122,7 +122,7 @@
                 <div class="content-to-populate-in-modal" id="modal-content-3">
                   <h6>Install the Package</h6>
                   <p>This demonstration DCOS environment has 3 masters, 5 private agents, and 1 public agent. Running "dcos package install riak" will start the scheduler and other framework components.</p>
-                  <p><img data-img-src="assets/images/basho_images/gifs/mesoscon_demo.1.gif" class="lazy full-width" alt="Package Install"></p>
+                  <p><img data-img-src="assets/images/basho_images/gifs/riak-mesos.1.gif" class="lazy full-width" alt="Package Install"></p>
                 </div><!-- #modal-content-3 -->
 
             </div><!-- .col-sm-10 -->
@@ -138,18 +138,13 @@
                 <p class="feature-paragraph">Creating large Riak KV clusters on Mesos is as simple as a few commands, no more complex and error prone deployment scripts.</p>
                 <p>
                   <a href="" onclick="populate_and_open_modal(event, 'modal-content-4');" class="btn btn-outline-inverse btn-sm">create a cluster</a>
-                  <a href="" onclick="populate_and_open_modal(event, 'modal-content-5');" class="btn btn-outline-inverse btn-sm">add nodes</a>
                 </p>
                 <div class="content-to-populate-in-modal" id="modal-content-4">
                   <h6>Create a cluster</h6>
                   <p>Running "dcos riak cluster create" will create a namespace for your Riak KV nodes.</p>
-                  <p><img data-img-src="assets/images/basho_images/gifs/mesoscon_demo.2.gif" class="lazy full-width" alt="Cluster Create"></p>
-                </div><!-- #modal-content-4 -->
-                <div class="content-to-populate-in-modal" id="modal-content-5">
-                  <h6>Add nodes</h6>
                   <p>The second command needed to get a Riak KV cluster running is "dcos riak node add". To increase the initial scale of the cluster, supply the "--nodes 3" option.</p>
-                  <p><img data-img-src="assets/images/basho_images/gifs/mesoscon_demo.3.gif" class="lazy full-width" alt="Node Add"></p>
-                </div><!-- #modal-content-5 -->
+                  <p><img data-img-src="assets/images/basho_images/gifs/riak-mesos.2.gif" class="lazy full-width" alt="Cluster Create"></p>
+                </div><!-- #modal-content-4 -->
             </div><!-- .col-sm-10 -->
           </div><!-- .content-wrapper -->
         </article><!-- .section-wrapper -->
@@ -168,8 +163,8 @@
                 <div class="content-to-populate-in-modal" id="modal-content-6">
                   <h6>Install the Riak Mesos Director</h6>
                   <p>The Director is an application which sits on a Riak agent that is accessible to applications outside of Mesos. Automatically install and configure the smart proxy with "dcos riak proxy install."</p>
-                  <p><img data-img-src="assets/images/basho_images/gifs/mesoscon_demo.4.gif" class="lazy full-width" alt="Proxy Install"></p>
-                  <p>In addition to proxying HTTP and Protobuf traffic to the cluster, the Director also creates a proxy to a web UI running on the scheduler called Riak Explorer.</p>
+                  <p><img data-img-src="assets/images/basho_images/gifs/riak-mesos.4.gif" class="lazy full-width" alt="Proxy Install"></p>
+                  <p>The Director will proxy incoming HTTP and Protobuf traffic to each of the new Riak cluster nodes.</p>
                 </div><!-- #modal-content-6 -->
 
             </div><!-- .col-sm-10 -->
@@ -190,12 +185,12 @@
                  <div class="content-to-populate-in-modal" id="modal-content-7">
                    <h6>Add more nodes to the cluster</h6>
                    <p>Simply repeat the "dcos riak node add" command to increase the size of the cluster.</p>
-                   <p><img data-img-src="assets/images/basho_images/gifs/mesoscon_demo.5.gif" class="lazy full-width" alt="Node Add"></p>
+                   <p><img data-img-src="assets/images/basho_images/gifs/riak-mesos.5.gif" class="lazy full-width" alt="Node Add"></p>
                  </div><!-- #modal-content-7 -->
                  <div class="content-to-populate-in-modal" id="modal-content-8">
                    <h6>Create another cluster</h6>
                    <p>Best practices for operating Riak KV include creating a new cluster for each use case. This is easier than ever with the Riak Mesos Framework.</p>
-                   <p><img data-img-src="assets/images/basho_images/gifs/mesoscon_demo.6.gif" class="lazy full-width" alt="Cluster Create"></p>
+                   <p><img data-img-src="assets/images/basho_images/gifs/riak-mesos.6.gif" class="lazy full-width" alt="Cluster Create"></p>
                  </div><!-- #modal-content-8 -->
 
              </div><!-- .col-sm-10 -->
