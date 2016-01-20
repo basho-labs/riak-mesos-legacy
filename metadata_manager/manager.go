@@ -404,17 +404,30 @@ func (mgr *MetadataManager) makeNodeWithDataWithRetry(ns Namespace, data []byte,
 	} else {
 		flags = 0
 	}
-	// Namespaces are also nodes
-	log.Info("Making node")
-	_, err := mgr.zkConn.Create(ns.GetZKPath(), data, flags, zk.WorldACL(zk.PermAll))
+
+	var err error
+	exists, _, err := mgr.zkConn.Exists(ns.GetZKPath())
+	if err == nil {
+		log.Info("Making node")
+		if exists {
+			_, stat, err := mgr.zkConn.Get(ns.GetZKPath())
+			if err == nil {
+				_, err = mgr.zkConn.Set(ns.GetZKPath(), data, stat.Version)
+			}
+		} else {
+			_, err = mgr.zkConn.Create(ns.GetZKPath(), data, flags, zk.WorldACL(zk.PermAll))
+		}
+	}
+
 	if err != nil && currentRetry >= retry {
-		log.Panic(err)
+		log.Panic("Error persisting data: ", err)
+		return nil, err
 	}
 	if err != nil {
+		log.Warning("Error persisting data, retrying: ", err)
 		mgr.CreateConnection()
-		log.Warning(err)
 		return mgr.makeNodeWithDataWithRetry(ns, data, ephemeral, currentRetry+1, retry)
-	} else {
-		return mgr.getNode(ns)
 	}
+
+	return mgr.getNode(ns)
 }
