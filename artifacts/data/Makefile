@@ -49,15 +49,16 @@ riak_mesos_executor.tar.gz: executor-$(EXECUTOR_LANG)
 riak-mesos-executor:
 	git clone https://github.com/basho-labs/riak-mesos-executor.git
 executor-bin: riak-mesos-executor
+	cd riak-mesos-executor/deps/erlang_mesos && ./rebar clean
 	cd riak-mesos-executor && $(MAKE) rel
 	touch executor-bin
 executor-erlang: executor-bin
 	-tar -C riak-mesos-executor/rel/ -czf riak_mesos_executor.tar.gz riak_mesos_executor || rm -rf riak_mesos_executor.tar.gz
 clean: clean_executor clean_executor_tar
 clean_executor:
-	-rm -rf riak-mesos-executor executor-bin
+	-rm -rf riak-mesos-executor
 clean_executor_tar:
-	-rm -rf riak_mesos_executor.tar.gz
+	-rm -rf executor-bin riak_mesos_executor.tar.gz
 ### Erlang Executor end
 
 ### Golang Executor begin
