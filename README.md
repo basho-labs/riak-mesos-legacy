@@ -88,9 +88,9 @@ The node failure workflow looks like the following:
 	a. If the failure was intentional, remove the node from the Riak cluster, and continue normal operation.
 	b. If the failure was unintentional, attempt to relaunch the task with a `LAUNCH` operation on the same Mesos agent and the same persistence id by looking up metadata for that Riak node previously stored in Zookeeper.
 3. If the executor is relaunched, the executor and Riak software will be redeployed to the same Mesos agent. The Riak software will get extracted (from a tarball) into the already existing persistent volume.
-	a. If there is already Riak data in the persistent volume, the extraction will overwrite all of the old Riak software files while preserving the Riak data directory from the previous instance of Riak. This mechanism also allows us to perform upgrades for the version of Riak desired.
-	b. The executor will then ask the scheduler for the current `riak.conf` and `advanced.config` templates which could have been updated via the scheduler's API.
-	c. The executor can then attempt to start the Riak node, and send a `TASK_RUNNING` upate to the scheduler through Mesos. The scheduler can then perform cluster logic operations as described above.
+	    a. If there is already Riak data in the persistent volume, the extraction will overwrite all of the old Riak software files while preserving the Riak data directory from the previous instance of Riak. This mechanism also allows us to perform upgrades for the version of Riak desired.
+	    b. The executor will then ask the scheduler for the current `riak.conf` and `advanced.config` templates which could have been updated via the scheduler's API.
+	    c. The executor can then attempt to start the Riak node, and send a `TASK_RUNNING` upate to the scheduler through Mesos. The scheduler can then perform cluster logic operations as described above.
 
 ## Director ##
 
