@@ -22,7 +22,7 @@ export GOPATH=~/go
 export PATH=$PATH:$GOPATH/bin:$HOME/.gvm/gos/go1.5/bin:$HOME/bin
 ### .bashrc changes
 echo '# Golang' >> $HOME/.bashrc
-echo [[ -s "$HOME/.gvm/scripts/gvm" ]] && source "$HOME/.gvm/scripts/gvm"' >> $HOME/.bashrc
+echo '[[ -s "$HOME/.gvm/scripts/gvm" ]] && source "$HOME/.gvm/scripts/gvm"' >> $HOME/.bashrc
 echo 'gvm use go1.5' >> $HOME/.bashrc
 echo 'export GOPATH=~/go' >> $HOME/.bashrc
 echo 'export PATH=$PATH:$GOPATH/bin:$HOME/.gvm/gos/go1.5/bin:$HOME/bin' >> $HOME/.bashrc
