@@ -47,8 +47,9 @@ riak_mesos_executor.tar.gz: executor-$(EXECUTOR_LANG)
 
 ### Erlang Executor begin
 riak-mesos-executor:
-	git clone https://github.com/basho-labs/riak-mesos-executor.git
+	git clone git@github.com:basho-labs/riak-mesos-executor.git
 executor-bin: riak-mesos-executor
+	cd riak-mesos-executor && $(MAKE) deps
 	cd riak-mesos-executor/deps/erlang_mesos && ./rebar clean
 	cd riak-mesos-executor && $(MAKE) rel
 	touch executor-bin
@@ -70,9 +71,7 @@ executor-golang:
 $(RIAK_SOURCE_DIR):
 	git clone $(RIAK_GIT)
 	cd $(RIAK_SOURCE_DIR) && git checkout $(RIAK_TAG)
-riak-bin: riak_explorer-bin $(RIAK_SOURCE_DIR)
-	rm -rf $(RIAK_SOURCE_DIR)/deps/node_package
-	git clone https://github.com/basho/node_package.git --branch no-epmd $(RIAK_SOURCE_DIR)/deps/node_package
+riak-bin: executor-bin riak_explorer-bin $(RIAK_SOURCE_DIR)
 	cd $(RIAK_SOURCE_DIR) && $(MAKE) rel
 	cp riak_explorer/rel/riak-addon/ebin/* $(RIAK_SOURCE_DIR)/rel/riak/lib/basho-patches/
 	-rm -rf $(RIAK_SOURCE_DIR)/rel/riak/priv
@@ -82,6 +81,7 @@ riak-bin.tar.gz: riak-bin
 	-rm -rf root
 	mkdir -p root
 	cp -R $(RIAK_SOURCE_DIR)/rel/riak root/
+	cp -R riak-mesos-executor/patches/root/riak/ root/
 	tar -czf riak-bin.tar.gz root || rm -rf riak-bin.tar.gz
 clean: clean_riak clean_riak_tar
 clean_riak:

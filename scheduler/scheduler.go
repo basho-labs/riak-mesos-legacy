@@ -2,7 +2,6 @@ package scheduler
 
 import (
 	log "github.com/Sirupsen/logrus"
-	"github.com/basho-labs/riak-mesos/cepmd/cepm"
 	"github.com/basho-labs/riak-mesos/common"
 	metamgr "github.com/basho-labs/riak-mesos/metadata_manager"
 	"github.com/golang/protobuf/proto"
@@ -28,7 +27,6 @@ type SchedulerCore struct {
 	rServer             *ReconcilationServer
 	user                string
 	zookeepers          []string
-	cepm                *cepm.CEPM
 	frameworkName       string
 	frameworkRole       string
 	nodeCpus            string
@@ -59,16 +57,12 @@ func NewSchedulerCore(
 	mgr := metamgr.NewMetadataManager(frameworkName, zookeepers)
 	ss := GetSchedulerState(mgr)
 
-	c := cepm.NewCPMd(0, mgr)
-	c.Background()
-
 	scheduler := &SchedulerCore{
 		lock:                &sync.Mutex{},
 		schedulerIPAddr:     schedulerIPAddr,
 		mgr:                 mgr,
 		user:                user,
 		zookeepers:          zookeepers,
-		cepm:                c,
 		frameworkName:       frameworkName,
 		frameworkRole:       frameworkRole,
 		nodeCpus:            nodeCpus,

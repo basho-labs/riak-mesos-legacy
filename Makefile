@@ -34,7 +34,7 @@ clean_framework:
 ### Executor begin
 .PHONY: executor clean_executor .scheduler.data.executor_$(OS_ARCH)
 executor: .scheduler.data.executor_$(OS_ARCH)
-.scheduler.data.executor_$(OS_ARCH): cepm
+.scheduler.data.executor_$(OS_ARCH):
 	GOOS=linux GOARCH=amd64 go build -o artifacts/data/executor_$(OS_ARCH) -tags="$(TAGS) $(EXECUTOR_LANG)" ./executor/
 	$(shell touch .scheduler.data.executor_$(OS_ARCH))
 clean_bin: clean_executor
@@ -43,17 +43,17 @@ clean_executor:
 ### Executor end
 
 ### CEPMd begin
-.PHONY: cepm clean_cepmd erl_dist
-erl_dist:
-	cd erlang_dist && $(MAKE)
-.cepmd.cepm.bindata_generated: erl_dist
-	go generate -tags="$(TAGS) $(EXECUTOR_LANG)" ./cepmd/cepm
-	go build -o artifacts/data/cepmd_$(OS_ARCH) -tags="$(TAGS) $(EXECUTOR_LANG)" ./cepmd/
-	$(shell touch .cepmd.cepm.bindata_generated)
-cepm: .cepmd.cepm.bindata_generated
-clean_bin: clean_cepmd
-clean_cepmd:
-	-rm -f .cepmd.cepm.bindata_generated cepmd/cepm/bindata_generated.go artifacts/data/cepmd_$(OS_ARCH)
+#.PHONY: cepm clean_cepmd erl_dist
+#erl_dist:
+#	cd erlang_dist && $(MAKE)
+#.cepmd.cepm.bindata_generated: erl_dist
+#	go generate -tags="$(TAGS) $(EXECUTOR_LANG)" ./cepmd/cepm
+#	go build -o artifacts/data/cepmd_$(OS_ARCH) -tags="$(TAGS) $(EXECUTOR_LANG)" ./cepmd/
+#	$(shell touch .cepmd.cepm.bindata_generated)
+#cepm: .cepmd.cepm.bindata_generated
+#clean_bin: clean_cepmd
+#clean_cepmd:
+#	-rm -f .cepmd.cepm.bindata_generated cepmd/cepm/bindata_generated.go artifacts/data/cepmd_$(OS_ARCH)
 ### CEPMd end
 
 ### Artifact begin

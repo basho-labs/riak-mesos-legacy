@@ -13,7 +13,6 @@ import (
 	"errors"
 	log "github.com/Sirupsen/logrus"
 	mesos "github.com/mesos/mesos-go/mesosproto"
-	"github.com/basho-labs/riak-mesos/cepmd/cepm"
 	"github.com/basho-labs/riak-mesos/common"
 	metamgr "github.com/basho-labs/riak-mesos/metadata_manager"
 	"github.com/basho-labs/riak-mesos/process_manager"
@@ -234,10 +233,6 @@ func (riakNode *RiakNode) Run() {
 
 	config := riakNode.configureRiak(riakNode.taskData)
 
-	c := cepm.NewCPMd(0, riakNode.metadataManager)
-	c.Background()
-	riakNode.configureAdvanced(c.GetPort())
-
 	args := []string{"console", "-noinput"}
 
 	kernelDirs, err := filepath.Glob("root/riak/lib/kernel*")
@@ -246,17 +241,6 @@ func (riakNode *RiakNode) Run() {
 	}
 
 	log.Infof("Found kernel dirs: %v", kernelDirs)
-
-	err = cepm.InstallInto(fmt.Sprint(kernelDirs[0], "/ebin"))
-	if err != nil {
-		log.Panic(err)
-	}
-	if err := common.KillEPMD("root/riak"); err != nil {
-		log.Fatal("Could not kill EPMd: ", err)
-	}
-	args = append(args, "-no_epmd")
-	os.MkdirAll(fmt.Sprint(kernelDirs[0], "/priv"), 0777)
-	ioutil.WriteFile(fmt.Sprint(kernelDirs[0], "/priv/cepmd_port"), []byte(fmt.Sprintf("%d.", c.GetPort())), 0777)
 
 	HealthCheckFun := func() error {
 		log.Info("Checking is Riak is started")
