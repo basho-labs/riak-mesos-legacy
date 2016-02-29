@@ -10,7 +10,7 @@ RIAK_S2_SOURCE_DOWNLOAD ?= http://s3.amazonaws.com/downloads.basho.com/riak-cs/2
 STANCHION_SOURCE_DIR ?= stanchion-2.1.0
 STANCHION_SOURCE_PKG ?= stanchion-2.1.0.tar.gz
 STANCHION_SOURCE_DOWNLOAD ?= http://s3.amazonaws.com/downloads.basho.com/stanchion/2.1/2.1.0/stanchion-2.1.0.tar.gz
-EXECUTOR_LANG ?= golang
+EXECUTOR_LANG ?= erlang
 
 .PHONY: all clean
 all: riak-bin.tar.gz riak_mesos_executor.tar.gz $(EXECUTOR_LANG)_advanced_config $(EXECUTOR_LANG)_riak_conf
@@ -47,17 +47,19 @@ riak_mesos_executor.tar.gz: executor-$(EXECUTOR_LANG)
 
 ### Erlang Executor begin
 riak-mesos-executor:
-	git clone git@github.com:basho-labs/riak-mesos-executor.git
+	git clone git@github.com:basho-labs/riak-mesos-executor.git --branch mtc-erlpmd-take2
+
 executor-bin: riak-mesos-executor
 	cd riak-mesos-executor && $(MAKE) deps
 	cd riak-mesos-executor/deps/erlang_mesos && ./rebar clean
 	cd riak-mesos-executor && $(MAKE) rel
+	cd riak-mesos-executor && $(MAKE) patches
 	touch executor-bin
 executor-erlang: executor-bin
 	-tar -C riak-mesos-executor/rel/ -czf riak_mesos_executor.tar.gz riak_mesos_executor || rm -rf riak_mesos_executor.tar.gz
 clean: clean_executor clean_executor_tar
 clean_executor:
-	-rm -rf riak-mesos-executor
+	$(MAKE) -C riak-mesos-executor clean
 clean_executor_tar:
 	-rm -rf executor-bin riak_mesos_executor.tar.gz
 ### Erlang Executor end
